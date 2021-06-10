@@ -1,0 +1,62 @@
+set(ND_NAMESPACE "uitk")
+
+set(UITK_HEADERS Application.h
+                 Button.h
+                 Events.h
+                 Label.h
+                 OSApplication.h
+                 OSWindow.h
+                 UIContext.h
+                 Widget.h
+                 Window.h
+                 themes/Theme.h
+                 themes/EmpireTheme.h
+                 themes/VectorBaseTheme.h
+                 )
+set(UITK_SOURCES Application.cpp
+                 Button.cpp
+                 Label.cpp
+                 Widget.cpp
+                 Window.cpp
+                 themes/EmpireTheme.cpp
+                 themes/VectorBaseTheme.cpp
+                 )
+set(UITK_LIBS "")
+
+set(LIBNATIVEDRAW_PREFIX "${CMAKE_BINARY_DIR}/libnativedraw")
+ExternalProject_Add(libnativedraw
+#                    GIT_REPOSITORY "https://github.com/eightbrains/libnativedraw"
+                    URL "file:///Users/xerxes/eightbrains/src/libnativedraw"
+                    PREFIX ${LIBNATIVEDRAW_PREFIX}
+                    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${LIBNATIVEDRAW_PREFIX} "-DCMAKE_CXX_FLAGS:STRING=-DND_NAMESPACE=${ND_NAMESPACE}"
+                   )
+list(APPEND UITK_LIBS "${LIBNATIVEDRAW_PREFIX}/lib/libnativedraw.a")
+
+if (APPLE)
+    list(APPEND UITK_HEADERS macos/MacOSApplication.h
+                             macos/MacOSWindow.h)
+    list(APPEND UITK_SOURCES macos/MacOSApplication.mm
+                             macos/MacOSWindow.mm)
+    find_library(CORE_GRAPHICS CoreGraphics)
+    find_library(APPKIT AppKit)
+    list(APPEND UITK_LIBS ${APPKIT} ${CORE_GRAPHICS})
+elseif (WIN32)
+    list(APPEND UITK_SOURCES win32/Win32Application.cpp
+                             win32/Win32Window.cpp)
+elseif (UNIX)  # note that APPLE is UNIX, so need to check that first
+    list(APPEND UITK_SOURCES x11/Application.cpp
+                             x11/Window.cpp)
+endif()
+
+add_library(uitk ${UITK_HEADERS} ${UITK_SOURCES})
+add_dependencies(uitk libnativedraw)
+target_compile_definitions(uitk PRIVATE ND_NAMESPACE=${ND_NAMESPACE})
+target_include_directories(uitk SYSTEM PRIVATE
+                           "${LIBNATIVEDRAW_PREFIX}/include")
+target_link_libraries(uitk ${UITK_LIBS})
+
+if (APPLE)
+    # We have to enable ARC automatically. All ObjC objects are internal, so
+    # callers do not need to have ARC enabled, hence PRIVATE is sufficient.
+    target_compile_options(uitk PRIVATE "-fobjc-arc")
+endif()

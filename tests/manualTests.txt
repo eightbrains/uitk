@@ -1,0 +1,6 @@
+Buttons
+- mouse-in highlights, mouse-out unhighlights, mouse-down activates,
+  mouse-drag outside changes back to normal, mouse-drag inside activates.
+- mouse-up inside presses button, mouse-up outside does not
+- Alt-Tab to another app while highlighted unhighlits;
+  Alt-Tab from another app highlights if mouse is over button.
