@@ -30,7 +30,7 @@
 #elif defined(_WIN32) || defined(_WIN64)
 #include "win32/Win32Application.h"
 #else
-#include "linux/LinuxApplication.h"
+#include "x11/X11Application.h"
 #endif
 
 #include <assert.h>
@@ -60,7 +60,7 @@ Application::Application()
 #elif defined(_WIN32) || defined(_WIN64)
     mImpl->osApp = std::make_unique<Win32Application>();
 #else
-    mImpl->osApp = std::make_unique<LinuxApplication>();
+    mImpl->osApp = std::make_unique<X11Application>();
 #endif
 
     assert(!Application::Impl::instance);
@@ -71,6 +71,8 @@ Application::~Application()
 {
     Application::Impl::instance = nullptr;
 }
+
+OSApplication& Application::osApplication() { return *mImpl->osApp; }
 
 void Application::setExitWhenLastWindowCloses(bool exits)
 {

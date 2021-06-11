@@ -68,7 +68,9 @@ void VectorBaseTheme::setParams(const Params& params)
 
 void VectorBaseTheme::drawWindowBackground(UIContext& ui, const Size& size) const
 {
-    // keep the background of the OS window
+    if (mParams.windowBackgroundColor.alpha() > 0.0f) {
+        ui.dc.fill(mParams.windowBackgroundColor);
+    }
 }
 
 void VectorBaseTheme::drawFrame(UIContext& ui, const Rect& frame,

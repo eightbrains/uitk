@@ -24,6 +24,43 @@
 
 using namespace uitk;
 
+class SizeTest : public Widget
+{
+    using Super = Widget;
+public:
+    SizeTest()
+    {
+        mRect = new Widget();
+        mRect->setBorderColor(Color::kWhite);
+        mRect->setBorderWidth(PicaPt(1));
+        mRect->setFrame(Rect(PicaPt::kZero, PicaPt::kZero,
+                             PicaPt(36), PicaPt(18)));
+        addChild(mRect);
+
+        mWidth = new Label("1/2 inch");
+        mWidth->setAlignment(Alignment::kHCenter);
+        mWidth->setFrame(Rect(mRect->frame().x, mRect->frame().maxY(),
+                              mRect->frame().width, mRect->frame().height));
+        addChild(mWidth);
+
+        mHeight = new Label("1/4 inch");
+        mHeight->setAlignment(Alignment::kVCenter);
+        mHeight->setFrame(Rect(mRect->frame().maxX(), mRect->frame().y,
+                               PicaPt(36), mRect->frame().height));
+        addChild(mHeight);
+    }
+
+    Size preferredSize(const LayoutContext& context) const
+    {
+        return Size(PicaPt(72), PicaPt(36));
+    }
+
+private:
+    Widget *mRect;
+    Label *mWidth;
+    Label *mHeight;
+};
+
 class LabelTest : public Widget
 {
     using Super = Widget;
@@ -175,6 +212,8 @@ class AllWidgetsTest : public Widget
 public:
     AllWidgetsTest()
     {
+        mSizing = new SizeTest();
+        addChild(mSizing);
         mLabels = new LabelTest();
         addChild(mLabels);
         mButtons = new ButtonTest();
@@ -183,15 +222,19 @@ public:
 
     void layout(const LayoutContext& context)
     {
-        auto pref = mLabels->preferredSize(context);
-        mLabels->setFrame(Rect(PicaPt::kZero, PicaPt::kZero, pref.width, pref.height));
+        auto x = PicaPt::kZero;
+        auto pref = mSizing->preferredSize(context);
+        mSizing->setFrame(Rect(x, PicaPt::kZero, pref.width, pref.height));
+        pref = mLabels->preferredSize(context);
+        mLabels->setFrame(Rect(x, mSizing->frame().maxY(), pref.width, pref.height));
         pref = mButtons->preferredSize(context);
-        mButtons->setFrame(Rect(PicaPt::kZero, mLabels->frame().maxY(), pref.width, pref.height));
+        mButtons->setFrame(Rect(x, mLabels->frame().maxY(), pref.width, pref.height));
 
         Super::layout(context);
     }
 
 private:
+    SizeTest *mSizing;
     LabelTest *mLabels;
     ButtonTest *mButtons;
 };

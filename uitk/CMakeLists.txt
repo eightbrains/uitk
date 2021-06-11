@@ -25,8 +25,7 @@ set(UITK_LIBS "")
 
 set(LIBNATIVEDRAW_PREFIX "${CMAKE_BINARY_DIR}/libnativedraw")
 ExternalProject_Add(libnativedraw
-#                    GIT_REPOSITORY "https://github.com/eightbrains/libnativedraw"
-                    URL "file:///Users/xerxes/eightbrains/src/libnativedraw"
+                    GIT_REPOSITORY "https://github.com/eightbrains/libnativedraw"
                     PREFIX ${LIBNATIVEDRAW_PREFIX}
                     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${LIBNATIVEDRAW_PREFIX} "-DCMAKE_CXX_FLAGS:STRING=-DND_NAMESPACE=${ND_NAMESPACE}"
                    )
@@ -44,8 +43,27 @@ elseif (WIN32)
     list(APPEND UITK_SOURCES win32/Win32Application.cpp
                              win32/Win32Window.cpp)
 elseif (UNIX)  # note that APPLE is UNIX, so need to check that first
-    list(APPEND UITK_SOURCES x11/Application.cpp
-                             x11/Window.cpp)
+    list(APPEND UITK_SOURCES x11/X11Application.cpp
+                             x11/X11Window.cpp)
+    find_package(X11)
+    find_path(CAIRO_INCLUDE_DIRS
+              NAMES cairo.h
+              HINTS /usr/include/cairo
+                    /usr/local/include/cairo
+                    /opt/include/cairo
+                    /opt/local/include/cairo)
+    if ("${CAIRO_INCLUDE_DIRS}" MATCHES "NOTFOUND")
+        message(FATAL_ERROR "Cannot find cairo.h")
+    endif()
+    find_library(CAIRO_LIBRARIES NAMES cairo)
+    if ("${CAIRO_LIBRARIES}" MATCHES "NOTFOUND")
+        message(FATAL_ERROR "Cannot find Cairo library")
+    endif()
+
+    include_directories(${X11_INCLUDE_DIRS} ${CAIRO_INCLUDE_DIRS})
+    list(APPEND UITK_LIBS ${CAIRO_LIBRARIES}
+                          ${X11_Xrender_LIB}
+                          ${X11_LIBRARIES})
 endif()
 
 add_library(uitk ${UITK_HEADERS} ${UITK_SOURCES})

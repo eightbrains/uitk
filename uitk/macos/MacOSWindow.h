@@ -24,7 +24,6 @@
 #define UITK_MACOS_WINDOW_H
 
 #include "../OSWindow.h"
-#include "../Window.h"
 
 namespace uitk {
 
@@ -53,6 +52,7 @@ public:
     void raiseToTop() const override;
 
     void* nativeHandle() override;
+    IWindowCallbacks& callbacks() override;
 
 public:
     struct Impl;

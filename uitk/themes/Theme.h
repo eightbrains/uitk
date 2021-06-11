@@ -90,6 +90,7 @@ public:
 
     struct Params
     {
+        Color windowBackgroundColor;
         Color nonEditableBackgroundColor;
         Color editableBackgroundColor;
         Color disabledBackgroundColor;

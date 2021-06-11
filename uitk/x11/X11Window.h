@@ -20,39 +20,53 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#include "EmpireTheme.h"
+#ifndef UITK_X11_WINDOW_H
+#define UITK_X11_WINDOW_H
+
+#include "../OSWindow.h"
+#include "../Window.h" // for Window::Flags
+
+#include <memory>
 
 namespace uitk {
 
-Theme::Params EmpireTheme::defaultParams()
+class X11Window : public OSWindow
 {
-    Theme::Params params;
-    params.windowBackgroundColor = Color(0.176f, 0.176f, 0.176f);
-    params.nonEditableBackgroundColor = Color(0.4f, 0.4f, 0.4f);
-    params.editableBackgroundColor = Color(0.1f, 0.1f, 0.1f);
-    params.disabledBackgroundColor = Color(0.3f, 0.3f, 0.3f);
-    params.borderColor = Color(0.2f, 0.2f, 0.2f);
-    params.textColor = Color(0.875f, 0.875f, 0.875f);
-    params.accentedBackgroundTextColor = params.textColor;
-    params.disabledTextColor = Color(0.6f, 0.6f, 0.6f);
-    params.accentColor = Color(0.22f, 0.45f, 0.90f);
-    params.selectionColor = Color(0.11f, 0.23f, 0.45f);
-    params.labelFont = Font("Arial", PicaPt::fromPixels(10.0f, 72.0f));
-    return params;
-}
+public:
+    X11Window(IWindowCallbacks& callbacks,
+              const std::string& title, int width, int height,
+              Window::Flags::Value flags);
+    X11Window(IWindowCallbacks& callbacks,
+              const std::string& title, int x, int y, int width, int height,
+              Window::Flags::Value flags);
+    ~X11Window();
 
-EmpireTheme::EmpireTheme()
-    : EmpireTheme(defaultParams())
-{
-}
+    bool isShowing() const override;
+    void show(bool show) override;
 
-EmpireTheme::EmpireTheme(const Params& params)
-    : VectorBaseTheme(params,
-                      PicaPt::fromPixels(0.5, 72),  // borderWidth
-                      PicaPt(4)                     // borderRadius
-                     )
-{
-}
+    void close() override;
 
+    void setTitle(const std::string& title) override;
+
+    Rect contentRect() const override;
+
+    void postRedraw() const override;
+
+    void raiseToTop() const override;
+
+    void* nativeHandle() override;
+
+    void onResize();
+    void onLayout();
+    void onDraw();
+    void onMouse(MouseEvent& e, int x, int y);
+    void onActivated(const Point& currentMousePos);
+    void onDeactivated();
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
+};
 
 }  // namespace uitk
+#endif // UITK_X11_WINDOW_H

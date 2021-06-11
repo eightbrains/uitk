@@ -95,6 +95,11 @@ public:
     virtual void mouseEntered();
     virtual void mouseExited();
 
+    /// Draws the widget. Classes inheriting from Widget must draw the frame
+    /// themselves with Theme::drawFrame() or the desired equivalent. (This
+    /// permits widgets to draw the frame differently if they desire.
+    /// For example, the slider uses the frame styling to draw the slider
+    /// track, but does not want the track to be the full frame.)
     virtual void draw(UIContext& context);
 
 protected:

@@ -29,7 +29,21 @@
 
 namespace uitk {
 
-class Widget;
+class MouseEvent;
+
+class IWindowCallbacks
+{
+public:
+    IWindowCallbacks() {}
+    virtual ~IWindowCallbacks() {}
+
+    virtual void onResize(const DrawContext& dc) = 0;
+    virtual void onLayout(const DrawContext& dc) = 0;
+    virtual void onDraw(DrawContext& dc) = 0;
+    virtual void onMouse(const MouseEvent& e) = 0;
+    virtual void onActivated(const Point& currentMousePos) = 0;
+    virtual void onDeactivated() = 0;
+};
 
 class OSWindow
 {

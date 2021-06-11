@@ -35,8 +35,23 @@ struct Widget::Impl {
     Rect frame;
     Theme::WidgetStyle styles[kNStyles];
     Theme::WidgetState state = Theme::WidgetState::kNormal;
+    bool drawsFrame = false;
     bool visible = true;
     bool enabled = true;
+
+    void updateDrawsFrame(const Widget *w)
+    {
+        // typeid() == typeid() should be fast, see
+        //     https://stackoverflow.com/a/13894738/218226
+        // but it is (hopefully) faster to only do the check when a
+        // frame value has been altered, since we almost never have a
+        // true Widget with a frame (but it should still work).
+        // Note that typeid(w) == typeid(Widget*) is always true, and is not
+        // a usable check that we are an actual base class.
+        if (typeid(*w) == typeid(Widget)) {
+            this->drawsFrame = true;
+        }
+    }
 };
 
 const PicaPt Widget::kDimGrow = PicaPt::fromPixels(32000.0f, 72.0f);
@@ -105,6 +120,7 @@ Widget* Widget::setBackgroundColor(const Color& bg)
         mImpl->styles[i].bgColor = bg;
         mImpl->styles[i].flags |= int(Theme::WidgetStyle::kBGColorSet);
     }
+    mImpl->updateDrawsFrame(this);
     return this;
 }
 
@@ -119,6 +135,7 @@ Widget* Widget::setBorderColor(const Color& color)
         mImpl->styles[i].borderColor = color;
         mImpl->styles[i].flags |= int(Theme::WidgetStyle::kBorderColorSet);
     }
+    mImpl->updateDrawsFrame(this);
     return this;
 }
 
@@ -133,6 +150,7 @@ Widget* Widget::setBorderWidth(const PicaPt& width)
         mImpl->styles[i].borderWidth = width;
         mImpl->styles[i].flags |= int(Theme::WidgetStyle::kBorderWidthSet);
     }
+    mImpl->updateDrawsFrame(this);
     return this;
 }
 
@@ -147,6 +165,7 @@ Widget* Widget::setBorderRadius(const PicaPt& radius)
         mImpl->styles[i].borderRadius = radius;
         mImpl->styles[i].flags |= int(Theme::WidgetStyle::kBorderRadiusSet);
     }
+    mImpl->updateDrawsFrame(this);
     return this;
 }
 
@@ -262,6 +281,16 @@ void Widget::mouseExited()
 void Widget::draw(UIContext& ui)
 {
     auto ul = frame().upperLeft();
+
+    // If we are truly just a Widget (instead of a derived class that is
+    // supering), then draw the frame. It would be nice to do this only if
+    // draw() has been overridden, but it is not possible to know that.
+    if (mImpl->drawsFrame) {
+        // The frame should always be the normal; Widget does not process
+        // events and so should not have mouseover or activated appearances.
+        ui.theme.drawFrame(ui, frame(), style(Theme::WidgetState::kNormal));
+    }
+
     ui.dc.translate(ul.x, ul.y);
     for (auto *child : mImpl->children) {
         child->draw(ui);

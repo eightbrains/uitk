@@ -258,6 +258,7 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 namespace uitk {
 
 struct MacOSWindow::Impl {
+    IWindowCallbacks& callbacks;
     NSWindow* window;
     UITKWindowDelegate* winDelegate;  // NSWindow doesn't retain the delegate
     ContentView* contentView;
@@ -273,7 +274,7 @@ MacOSWindow::MacOSWindow(IWindowCallbacks& callbacks,
 MacOSWindow::MacOSWindow(IWindowCallbacks& callbacks,
                          const std::string& title, int x, int y, int width, int height,
                          Window::Flags::Value flags)
-    : mImpl(new Impl())
+    : mImpl(new Impl{callbacks})
 {
     int nsflags = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
                   NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable;
@@ -300,6 +301,7 @@ MacOSWindow::~MacOSWindow()
 }
 
 void* MacOSWindow::nativeHandle() { return (__bridge void*)mImpl->window; }
+IWindowCallbacks& MacOSWindow::callbacks() { return mImpl->callbacks; }
 
 bool MacOSWindow::isShowing() const
 {

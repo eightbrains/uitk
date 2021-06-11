@@ -20,39 +20,41 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#include "EmpireTheme.h"
+#ifndef UITK_X11_APPLICATION_H
+#define UITK_X11_APPLICATION_H
+
+#include "../OSApplication.h"
+
+#include <memory>
 
 namespace uitk {
 
-Theme::Params EmpireTheme::defaultParams()
+class X11Window;
+
+class X11Application : public OSApplication
 {
-    Theme::Params params;
-    params.windowBackgroundColor = Color(0.176f, 0.176f, 0.176f);
-    params.nonEditableBackgroundColor = Color(0.4f, 0.4f, 0.4f);
-    params.editableBackgroundColor = Color(0.1f, 0.1f, 0.1f);
-    params.disabledBackgroundColor = Color(0.3f, 0.3f, 0.3f);
-    params.borderColor = Color(0.2f, 0.2f, 0.2f);
-    params.textColor = Color(0.875f, 0.875f, 0.875f);
-    params.accentedBackgroundTextColor = params.textColor;
-    params.disabledTextColor = Color(0.6f, 0.6f, 0.6f);
-    params.accentColor = Color(0.22f, 0.45f, 0.90f);
-    params.selectionColor = Color(0.11f, 0.23f, 0.45f);
-    params.labelFont = Font("Arial", PicaPt::fromPixels(10.0f, 72.0f));
-    return params;
-}
+public:
+    X11Application();
+    ~X11Application();
 
-EmpireTheme::EmpireTheme()
-    : EmpireTheme(defaultParams())
-{
-}
+    void setExitWhenLastWindowCloses(bool exits) override;
+    int run() override;
 
-EmpireTheme::EmpireTheme(const Params& params)
-    : VectorBaseTheme(params,
-                      PicaPt::fromPixels(0.5, 72),  // borderWidth
-                      PicaPt(4)                     // borderRadius
-                     )
-{
-}
+    Theme::Params themeParams() const override;
 
+public:
+    // This returns the Display. It is void* to avoid including Xlib.h 
+    // which pollutes the namespace badly (in particular, Font).
+    void* display() const;
 
-}  // namespace uitk
+    void registerWindow(long unsigned int xwindow, X11Window *window);
+
+    float dpiForScreen(int screen);
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
+};
+
+} // namespace uitk
+#endif // UITK_X11_APPLICATION_H

@@ -27,6 +27,7 @@
 
 namespace uitk {
 
+class OSApplication;
 class Theme;
 
 class Application
@@ -57,9 +58,12 @@ public:
     /// Runs the event loop
     int run();
 
+    /// Gets the application's theme.
     std::shared_ptr<Theme> theme() const;
 
     void onSystemThemeChanged();
+
+    OSApplication& osApplication();  // for internal use
 
 private:
     struct Impl;
