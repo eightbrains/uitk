@@ -64,6 +64,7 @@ public:
     virtual void raiseToTop() const = 0;
 
     virtual void* nativeHandle() = 0;
+    virtual IWindowCallbacks& callbacks() = 0;
 };
 
 }  // namespace uitk

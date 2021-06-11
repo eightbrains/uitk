@@ -24,6 +24,7 @@
 #define UITK_MACOS_WINDOW_H
 
 #include "../OSWindow.h"
+#include "../Window.h"
 
 namespace uitk {
 
