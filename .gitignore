@@ -1,0 +1,5 @@
+# Ignore Vim temporary files
+*~
+
+# Ignore files in the build directory
+build/**
