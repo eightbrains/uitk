@@ -28,6 +28,14 @@
 
 namespace uitk {
 
+struct KeyModifier {
+    enum Values {
+        kNone = 0,
+        kShift = (1 << 0),
+        kCtrl = (1 << 1),
+    };
+};
+
 enum class MouseButton {
     kNone = 0, kLeft, kRight, kMiddle, kButton4, kButton5
 };
@@ -38,6 +46,7 @@ struct MouseEvent
 
     Type type;
     Point pos;
+    int keymods;
     union {
         struct {
             MouseButton button;

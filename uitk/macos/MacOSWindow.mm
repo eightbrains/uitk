@@ -38,6 +38,12 @@ namespace {
 // smaller, so the fonts are scaled, the images are scaled, etc.
 const float kDPI = 72.0f;
 
+int toKeymods(NSEventModifierFlags flags)
+{
+    // TODO: handle these
+    return 0;
+}
+
 uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 {
     switch (buttonNumber) {
@@ -129,6 +135,7 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     me.type = uitk::MouseEvent::Type::kMove;
     me.pos = uitk::Point(uitk::PicaPt::fromPixels(pt.x, kDPI),
                          uitk::PicaPt::fromPixels(self.frame.size.height - pt.y, kDPI));
+    me.keymods = toKeymods(e.modifierFlags);
 
     self.callbacks->onMouse(me);
 }
@@ -151,6 +158,7 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     me.type = uitk::MouseEvent::Type::kButtonDown;
     me.pos = uitk::Point(uitk::PicaPt::fromPixels(pt.x, kDPI),
                          uitk::PicaPt::fromPixels(self.frame.size.height - pt.y, kDPI));
+    me.keymods = toKeymods(e.modifierFlags);
     me.button.button = toUITKMouseButton(e.buttonNumber);
 
     self.callbacks->onMouse(me);
@@ -164,6 +172,7 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     me.type = uitk::MouseEvent::Type::kDrag;
     me.pos = uitk::Point(uitk::PicaPt::fromPixels(pt.x, kDPI),
                          uitk::PicaPt::fromPixels(self.frame.size.height - pt.y, kDPI));
+    me.keymods = toKeymods(e.modifierFlags);
     me.drag.buttons = 0;
     if (NSEvent.pressedMouseButtons & (1 << 0)) {
         me.drag.buttons |= int(uitk::MouseButton::kLeft);
@@ -202,6 +211,7 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     me.type = uitk::MouseEvent::Type::kButtonUp;
     me.pos = uitk::Point(uitk::PicaPt::fromPixels(pt.x, kDPI),
                          uitk::PicaPt::fromPixels(self.frame.size.height - pt.y, kDPI));
+    me.keymods = toKeymods(e.modifierFlags);
     me.button.button = toUITKMouseButton(e.buttonNumber);
 
     self.callbacks->onMouse(me);

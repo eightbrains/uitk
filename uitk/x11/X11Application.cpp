@@ -163,6 +163,7 @@ int X11Application::run()
                     me.type = MouseEvent::Type::kDrag;
                     me.drag.buttons = buttons;
                 }
+                me.keymods = 0; // TODO: handle these
                 w->onMouse(me, event.xmotion.x, event.xmotion.y);
                 break;
             }
@@ -177,6 +178,7 @@ int X11Application::run()
                     me.type = MouseEvent::Type::kButtonUp;
                     me.button.nClicks = 0;
                 }
+                me.keymods = 0; // TODO: handle these
                 switch (event.xbutton.button) {
                     default:
                     case Button1:

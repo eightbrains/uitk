@@ -27,8 +27,8 @@
 
 namespace uitk {
 
-class LayoutContext;
-class UIContext;
+struct LayoutContext;
+struct UIContext;
 
 class Theme {
 public:

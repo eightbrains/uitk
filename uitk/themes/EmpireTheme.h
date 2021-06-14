@@ -31,6 +31,8 @@ class EmpireTheme : public VectorBaseTheme
 {
 public:
     static Theme::Params defaultParams();
+    static Theme::Params darkModeParams(const Color& accent);
+    static Theme::Params lightModeParams(const Color& accent);
 
     EmpireTheme();
     explicit EmpireTheme(const Params& params);

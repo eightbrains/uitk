@@ -29,7 +29,9 @@ ExternalProject_Add(libnativedraw
                     PREFIX ${LIBNATIVEDRAW_PREFIX}
                     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${LIBNATIVEDRAW_PREFIX} "-DCMAKE_CXX_FLAGS:STRING=-DND_NAMESPACE=${ND_NAMESPACE}"
                    )
-list(APPEND UITK_LIBS "${LIBNATIVEDRAW_PREFIX}/lib/libnativedraw.a")
+add_library(nativedraw STATIC IMPORTED)
+set_target_properties(nativedraw PROPERTIES IMPORTED_LOCATION "${LIBNATIVEDRAW_PREFIX}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}nativedraw${CMAKE_STATIC_LIBRARY_SUFFIX}")
+list(APPEND UITK_LIBS nativedraw)
 
 if (APPLE)
     list(APPEND UITK_HEADERS macos/MacOSApplication.h
@@ -42,6 +44,7 @@ if (APPLE)
 elseif (WIN32)
     list(APPEND UITK_SOURCES win32/Win32Application.cpp
                              win32/Win32Window.cpp)
+    list(APPEND UITK_LIBS d3d11 d2d1 dwrite shcore WindowsApp)
 elseif (UNIX)  # note that APPLE is UNIX, so need to check that first
     list(APPEND UITK_SOURCES x11/X11Application.cpp
                              x11/X11Window.cpp)

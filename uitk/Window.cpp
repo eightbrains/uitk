@@ -60,7 +60,11 @@ Window::Window(const std::string& title, int x, int y, int width, int height,
                Flags::Value flags /*= Flags::kNone*/)
     : mImpl(new Impl())
 {
+    // Create theme before the window, in case a draw is requested immediately
+    // on creation (as it is on Win32).
+    mImpl->theme = Application::instance().theme();
     mImpl->rootWidget = std::make_unique<Widget>();
+
 #if defined(__APPLE__)
     mImpl->window = std::make_unique<MacOSWindow>(*this, title, x, y, width, height, flags);
 #elif defined(_WIN32) || defined(_WIN64)
@@ -68,7 +72,6 @@ Window::Window(const std::string& title, int x, int y, int width, int height,
 #else
     mImpl->window = std::make_unique<X11Window>(*this, title, x, y, width, height, flags);
 #endif
-    mImpl->theme = Application::instance().theme();
 }
 
 Window::~Window()
@@ -142,9 +145,10 @@ void Window::onDraw(DrawContext& dc)
     UIContext context { *mImpl->theme, dc };
     auto size = Size(PicaPt::fromPixels(float(dc.width()), dc.dpi()),
                      PicaPt::fromPixels(float(dc.height()), dc.dpi()));
+    dc.beginDraw();
     mImpl->theme->drawWindowBackground(context, size);
-
     mImpl->rootWidget->draw(context);
+    dc.endDraw();
 }
 
 void Window::onActivated(const Point& currentMousePos)

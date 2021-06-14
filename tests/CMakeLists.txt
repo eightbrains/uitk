@@ -3,5 +3,9 @@ include_directories(AFTER SYSTEM ..
                    )
 
 set(TEST_WIDGET_SOURCES test-widgets.cpp)
-add_executable(test-widgets ${TEST_WIDGET_SOURCES})
+if (WIN32)
+    add_executable(test-widgets WIN32 ${TEST_WIDGET_SOURCES})
+else()
+    add_executable(test-widgets ${TEST_WIDGET_SOURCES})
+endif()
 target_link_libraries(test-widgets uitk)

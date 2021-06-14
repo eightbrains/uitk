@@ -20,52 +20,54 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_OSWINDOW_H
-#define UITK_OSWINDOW_H
+#ifndef UITK_WIN32_WINDOW_H
+#define UITK_WIN32_WINDOW_H
 
-#include <nativedraw.h>
-
-#include <string>
+#include "../OSWindow.h"
+#include "../Window.h"
 
 namespace uitk {
 
-struct MouseEvent;
-
-class IWindowCallbacks
+class Win32Window : public OSWindow
 {
 public:
-    IWindowCallbacks() {}
-    virtual ~IWindowCallbacks() {}
+    Win32Window(IWindowCallbacks& callbacks,
+                const std::string& title, int width, int height,
+                Window::Flags::Value flags);
+    Win32Window(IWindowCallbacks& callbacks,
+                const std::string& title, int x, int y, int width, int height,
+                Window::Flags::Value flags);
+    ~Win32Window();
 
-    virtual void onResize(const DrawContext& dc) = 0;
-    virtual void onLayout(const DrawContext& dc) = 0;
-    virtual void onDraw(DrawContext& dc) = 0;
-    virtual void onMouse(const MouseEvent& e) = 0;
-    virtual void onActivated(const Point& currentMousePos) = 0;
-    virtual void onDeactivated() = 0;
-};
+    bool isShowing() const override;
+    void show(bool show) override;
 
-class OSWindow
-{
+    void close() override;
+
+    void setTitle(const std::string& title) override;
+
+    Rect contentRect() const override;
+
+    void postRedraw() const override;
+
+    void raiseToTop() const override;
+
+    void* nativeHandle() override;
+    IWindowCallbacks& callbacks() override;
+
 public:
-    virtual ~OSWindow() {}
+    void onMoved();
+    void onResize();
+    void onLayout();
+    void onDraw();
+    void onMouse(MouseEvent& e, int x, int y);
+    void onActivated(const Point& currentMousePos);
+    void onDeactivated();
 
-    virtual bool isShowing() const = 0;
-    virtual void show(bool show) = 0;
-
-    virtual void close() = 0;
-
-    virtual void setTitle(const std::string& title) = 0;
-
-    virtual Rect contentRect() const = 0;
-
-    virtual void postRedraw() const = 0;
-
-    virtual void raiseToTop() const = 0;
-
-    virtual void* nativeHandle() = 0;
-    virtual IWindowCallbacks& callbacks() = 0;
+private:
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
 };
 
 }  // namespace uitk
-#endif // UITK_OSWINDOW_H
+#endif // UITK_WIN32_WINDOW_H

@@ -31,7 +31,7 @@ public:
     SizeTest()
     {
         mRect = new Widget();
-        mRect->setBorderColor(Color::kWhite);
+        mRect->setBorderColor(Color(0.5f, 0.5f, 0.5f));
         mRect->setBorderWidth(PicaPt(1));
         mRect->setFrame(Rect(PicaPt::kZero, PicaPt::kZero,
                              PicaPt(36), PicaPt(18)));
@@ -239,7 +239,13 @@ private:
     ButtonTest *mButtons;
 };
 
+#if defined(_WIN32) || defined(_WIN64)
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
+#else
 int main(int argc, char *argv[])
+#endif
 {
     Application app;
     app.setExitWhenLastWindowCloses(true);

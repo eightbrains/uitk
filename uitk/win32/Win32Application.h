@@ -20,52 +20,37 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_OSWINDOW_H
-#define UITK_OSWINDOW_H
+#ifndef UITK_WIN32_APPLICATION_H
+#define UITK_WIN32_APPLICATION_H
 
-#include <nativedraw.h>
+#include "../OSApplication.h"
 
-#include <string>
+#include <memory>
 
 namespace uitk {
 
-struct MouseEvent;
+class Win32Window;
 
-class IWindowCallbacks
+class Win32Application : public OSApplication
 {
 public:
-    IWindowCallbacks() {}
-    virtual ~IWindowCallbacks() {}
+    Win32Application();
+    ~Win32Application();
 
-    virtual void onResize(const DrawContext& dc) = 0;
-    virtual void onLayout(const DrawContext& dc) = 0;
-    virtual void onDraw(DrawContext& dc) = 0;
-    virtual void onMouse(const MouseEvent& e) = 0;
-    virtual void onActivated(const Point& currentMousePos) = 0;
-    virtual void onDeactivated() = 0;
-};
+    void setExitWhenLastWindowCloses(bool exits) override;
+    int run() override;
 
-class OSWindow
-{
+    Theme::Params themeParams() const override;
+
 public:
-    virtual ~OSWindow() {}
+    // HWND is void* to keep Windows headers out
+    void registerWindow(void* hwnd, Win32Window* w);
+    void unregisterWindow(void* hwnd);
 
-    virtual bool isShowing() const = 0;
-    virtual void show(bool show) = 0;
-
-    virtual void close() = 0;
-
-    virtual void setTitle(const std::string& title) = 0;
-
-    virtual Rect contentRect() const = 0;
-
-    virtual void postRedraw() const = 0;
-
-    virtual void raiseToTop() const = 0;
-
-    virtual void* nativeHandle() = 0;
-    virtual IWindowCallbacks& callbacks() = 0;
+private:
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
 };
 
-}  // namespace uitk
-#endif // UITK_OSWINDOW_H
+} // namespace uitk
+#endif // UITK_WIN32_APPLICATION_H

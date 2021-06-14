@@ -30,7 +30,7 @@
 
 namespace uitk {
 
-class MouseEvent;
+struct MouseEvent;
 struct LayoutContext;
 struct UIContext;
 

@@ -126,9 +126,11 @@ void X11Window::show(bool show)
 
 void X11Window::close()
 {
-    mImpl->dc = nullptr;
-    XDestroyWindow(mImpl->display, mImpl->xwindow);
-    mImpl->xwindow = 0;
+    if (mImpl->xwindow) {
+        mImpl->dc = nullptr;
+        XDestroyWindow(mImpl->display, mImpl->xwindow);
+        mImpl->xwindow = 0;
+    }
 }
 
 void X11Window::setTitle(const std::string& title)

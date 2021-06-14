@@ -50,6 +50,7 @@ Button::~Button()
 Button* Button::setOnClicked(std::function<void(Button*)> onClicked)
 {
     mImpl->onClicked = onClicked;
+    return this;
 }
 
 Label* Button::label() const { return mImpl->label; }

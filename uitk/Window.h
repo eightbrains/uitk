@@ -31,9 +31,9 @@
 namespace uitk {
 
 class DrawContext;
-class Point;
+struct Point;
 
-class MouseEvent;
+struct MouseEvent;
 class Widget;
 
 class Window : public IWindowCallbacks
