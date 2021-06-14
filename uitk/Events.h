@@ -32,7 +32,11 @@ struct KeyModifier {
     enum Values {
         kNone = 0,
         kShift = (1 << 0),
-        kCtrl = (1 << 1),
+        kCtrl = (1 << 1),  // this is the Command key on macOS
+        kAlt = (1 << 2),   // this is the Option key on macOS
+        kMeta = (1 << 3),  // this is the Control key on macOS
+        kCapsLock = (1 << 4),
+        kNumLock = (1 << 5)
     };
 };
 

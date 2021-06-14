@@ -40,8 +40,23 @@ const float kDPI = 72.0f;
 
 int toKeymods(NSEventModifierFlags flags)
 {
-    // TODO: handle these
-    return 0;
+    int keymods = 0;
+    if (flags & NSEventModifierFlagShift) {
+        keymods |= uitk::KeyModifier::kShift;
+    }
+    if (flags & NSEventModifierFlagCommand) {
+        keymods |= uitk::KeyModifier::kCtrl;
+    }
+    if (flags & NSEventModifierFlagControl) {
+        keymods |= uitk::KeyModifier::kMeta;
+    }
+    if (flags & NSEventModifierFlagOption) {
+        keymods |= uitk::KeyModifier::kAlt;
+    }
+    if (flags & NSEventModifierFlagCapsLock) {
+        keymods |= uitk::KeyModifier::kCapsLock;
+    }
+    return keymods;
 }
 
 uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
