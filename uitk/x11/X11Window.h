@@ -55,6 +55,7 @@ public:
     void raiseToTop() const override;
 
     void* nativeHandle() override;
+    IWindowCallbacks& callbacks() override;
 
     void onResize();
     void onLayout();

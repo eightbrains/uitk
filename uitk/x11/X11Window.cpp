@@ -173,10 +173,8 @@ void X11Window::raiseToTop() const
     XRaiseWindow(mImpl->display, mImpl->xwindow);
 }
 
-void* X11Window::nativeHandle()
-{
-    return (void*)mImpl->xwindow;
-}
+void* X11Window::nativeHandle() { return (void*)mImpl->xwindow; }
+IWindowCallbacks& X11Window::callbacks() { return mImpl->callbacks;}
 
 void X11Window::onResize()
 {

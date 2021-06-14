@@ -35,6 +35,30 @@
 namespace {
 static const char *kDB_XftDPI = "Xft.dpi";
 static const char *kDB_XftDPI_alt = "Xft.Dpi";
+
+int toKeymods(unsigned int xstate) {
+    int keymods = 0;
+    if (xstate & ShiftMask) {
+        keymods |= uitk::KeyModifier::kShift;
+    }
+    if (xstate & ControlMask) {
+        keymods |= uitk::KeyModifier::kCtrl;
+    }
+    if (xstate & Mod1Mask) {
+        keymods |= uitk::KeyModifier::kAlt;
+    }
+    //if (xstate & Mod2Mask) {
+    //    keymods |= uitk::KeyModifier::kNumLock;
+    //}
+    if (xstate & Mod4Mask) {
+        keymods |= uitk::KeyModifier::kMeta;
+    }
+    if (xstate & LockMask) {
+        keymods |= uitk::KeyModifier::kCapsLock;
+    }
+    return keymods;
+}
+
 }
 
 namespace uitk {
@@ -155,7 +179,6 @@ int X11Application::run()
                 if (event.xmotion.state & Button5MotionMask) {
                     buttons |= int(MouseButton::kButton5);
                 }
-                // TODO: keymods also use event.xmotion.state
                 MouseEvent me;
                 if (buttons == 0) {
                     me.type = MouseEvent::Type::kMove;
@@ -163,7 +186,7 @@ int X11Application::run()
                     me.type = MouseEvent::Type::kDrag;
                     me.drag.buttons = buttons;
                 }
-                me.keymods = 0; // TODO: handle these
+                me.keymods = toKeymods(event.xmotion.state);
                 w->onMouse(me, event.xmotion.x, event.xmotion.y);
                 break;
             }
@@ -178,7 +201,7 @@ int X11Application::run()
                     me.type = MouseEvent::Type::kButtonUp;
                     me.button.nClicks = 0;
                 }
-                me.keymods = 0; // TODO: handle these
+                me.keymods = toKeymods(event.xmotion.state);
                 switch (event.xbutton.button) {
                     default:
                     case Button1:
@@ -197,7 +220,6 @@ int X11Application::run()
                         me.button.button = MouseButton::kButton5;
                         break;
                 }
-                // TODO: event.xbutton.state has keymods + button down state
                 w->onMouse(me, event.xbutton.x, event.xbutton.y);
                 break;
             }
