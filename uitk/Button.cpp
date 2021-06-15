@@ -31,6 +31,8 @@ namespace uitk {
 
 struct Button::Impl {
     Label *label;
+    bool isOn = false;
+    bool isToggleable = false;
     std::function<void(Button*)> onClicked = nullptr;
 };
 
@@ -45,6 +47,20 @@ Button::Button(const std::string& text)
 Button::~Button()
 {
     // Super owns mImpl->label
+}
+
+bool Button::toggleable() const { return mImpl->isToggleable; }
+
+Button* Button::setToggleable(bool toggleable) {
+    mImpl->isToggleable = toggleable;
+}
+
+bool Button::isOn() const { return mImpl->isOn; }
+
+Button* Button::setOn(bool isOn) {
+    if (mImpl->isToggleable) {
+        mImpl->isOn = isOn;
+    }
 }
 
 Button* Button::setOnClicked(std::function<void(Button*)> onClicked)
@@ -75,6 +91,13 @@ Widget::EventResult Button::mouse(const MouseEvent &e)
 
     if (e.type == MouseEvent::Type::kButtonUp) {
         result = EventResult::kConsumed;
+
+        if (mImpl->isToggleable) {
+            mImpl->isOn = !mImpl->isOn;
+        } else {
+            mImpl->isOn = false;
+        }
+
         if (mImpl->onClicked) {
             mImpl->onClicked(this);
         }
@@ -85,8 +108,11 @@ Widget::EventResult Button::mouse(const MouseEvent &e)
 
 void Button::draw(UIContext& context)
 {
-    context.theme.drawButton(context, frame(), style(state()), state());
-    mImpl->label->setWidgetState(state());
+    auto state = this->state();
+    context.theme.drawButton(context, frame(), style(state), state, isOn());
+    mImpl->label->setWidgetState(state);
+    auto ws = context.theme.buttonTextStyle(state, mImpl->isOn);
+    mImpl->label->setTextColor(ws.fgColor);
 
     Super::draw(context);
 }

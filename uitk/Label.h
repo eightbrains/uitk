@@ -53,12 +53,18 @@ public:
     int alignment() const;
     Label* setAlignment(int align);
 
+    const Color& textColor() const;
+    /// Sets the text color. If the color is Color(0, 0, 0, 0), the color
+    /// will be automatically chosen. (Use show(false) if you wish to hide
+    /// the label.)
+    Label* setTextColor(const Color& c);
+
     Size preferredSize(const LayoutContext& context) const override;
     void draw(UIContext& context) override;
 
-    // Widgets that use a label as a child can set the label state
-    // as the parent's state changes so that the colors are correct.
-    // This should not be called if using a Label as a UI element directly.
+    /// Widgets that use a label as a child can set the label state
+    /// as the parent's state changes so that the colors are correct.
+    /// This should not be called if using a Label as a UI element directly.
     void setWidgetState(Theme::WidgetState state);
 
 private:

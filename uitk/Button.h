@@ -37,6 +37,13 @@ public:
     Button(const std::string& text);
     ~Button();
 
+    bool toggleable() const;
+    Button* setToggleable(bool toggleable);
+
+    bool isOn() const;
+    /// Requires isToggleable to be true
+    Button* setOn(bool isOn);
+
     Button* setOnClicked(std::function<void(Button*)> onClicked);
 
     Label* label() const;

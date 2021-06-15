@@ -43,7 +43,9 @@ public:
     void drawFrame(UIContext& ui, const Rect& frame,
                    const WidgetStyle& style) const override;
     void drawButton(UIContext& ui, const Rect& frame,
-                    const WidgetStyle& style, WidgetState state) const override;
+                    const WidgetStyle& style, WidgetState state,
+                    bool isOn) const override;
+    const WidgetStyle& buttonTextStyle(WidgetState state, bool isOn) const override;
 
 protected:
     void setVectorParams(const Params& params);
@@ -54,6 +56,7 @@ protected:
     PicaPt mBorderRadius;
 
     WidgetStyle mButtonStyles[4];
+    WidgetStyle mButtonOnStyles[4];
 };
 
 }  // namespace uitk

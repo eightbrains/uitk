@@ -168,6 +168,16 @@ public:
         mDisabled->setEnabled(false);
         mDisabled->setOnClicked([this](Button*) { mLabel->setText(" :("); });
         addChild(mDisabled);
+
+        mOnOff = new Button("On/Off");
+        mOnOff->setToggleable(true);
+        addChild(mOnOff);
+
+        mOnOffDisabled = new Button("On/Off");
+        mOnOffDisabled->setToggleable(true);
+        mOnOffDisabled->setOn(true);
+        mOnOffDisabled->setEnabled(false);
+        addChild(mOnOffDisabled);
     }
 
     Size preferredSize(const LayoutContext& context) const
@@ -175,7 +185,7 @@ public:
         auto button = context.theme.calcPreferredButtonSize(context,
                                                             context.theme.params().labelFont,
                                                             mDisabled->label()->text());
-        return Size(5.0f * button.width, button.height);
+        return Size(5.0f * button.width, 2.25f * button.height);
     }
 
     void layout(const LayoutContext& context)
@@ -196,6 +206,11 @@ public:
         mDisabled->setFrame(Rect(mAngry->frame().maxX(), y, mDisabled->frame().width, mDisabled->frame().height));
         mLabel->setFrame(Rect(mDisabled->frame().maxX(), y, 3.0f * mLabel->frame().height, mLabel->frame().height));
 
+        y += 1.5f * mHappy->frame().height;
+        mOnOff->setFrame(Rect(x, y, mOnOff->frame().width, mOnOff->frame().height));
+        mOnOffDisabled->setFrame(Rect(mOnOff->frame().maxX(), y,
+                                      mOnOffDisabled->frame().width, mOnOffDisabled->frame().height));
+
         Super::layout(context);
     }
 
@@ -203,6 +218,8 @@ private:
     Button *mHappy;
     Button *mAngry;
     Button *mDisabled;
+    Button *mOnOff;
+    Button *mOnOffDisabled;
     Label *mLabel;
 };
 

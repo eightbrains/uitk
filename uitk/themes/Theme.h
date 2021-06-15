@@ -117,7 +117,9 @@ public:
     virtual void drawFrame(UIContext& ui, const Rect& frame,
                            const WidgetStyle& style) const = 0;
     virtual void drawButton(UIContext& ui, const Rect& frame,
-                            const WidgetStyle& style, WidgetState state) const = 0;
+                            const WidgetStyle& style, WidgetState state,
+                            bool isOn) const = 0;
+    virtual const WidgetStyle& buttonTextStyle(WidgetState state, bool isOn) const = 0;
 };
 
 }  // namespace uitk

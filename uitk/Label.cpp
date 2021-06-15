@@ -35,6 +35,7 @@ struct Label::Impl
 {
     std::string text;
     int alignment = Alignment::kLeft | Alignment::kTop;
+    Color textColor = Color(0.0f, 0.0f, 0.0f, 0.0f);
 };
 
 Label::Label(const std::string& text)
@@ -62,6 +63,10 @@ Label* Label::setAlignment(int align)
     mImpl->alignment = align;
     return this;
 }
+
+const Color& Label::textColor() const { return mImpl->textColor; }
+
+Label* Label::setTextColor(const Color& c) { mImpl->textColor = c; }
 
 void Label::setWidgetState(Theme::WidgetState state)
 {
@@ -113,17 +118,10 @@ void Label::draw(UIContext& ui)
         pt.x = r.minX() + margin;
     }
 
-    switch (state()) {
-        case Theme::WidgetState::kNormal:
-        case Theme::WidgetState::kMouseOver:
-            ui.dc.setFillColor(ui.theme.params().textColor);
-            break;
-        case Theme::WidgetState::kMouseDown:
-            ui.dc.setFillColor(ui.theme.params().accentedBackgroundTextColor);
-            break;
-        case Theme::WidgetState::kDisabled:
-            ui.dc.setFillColor(ui.theme.params().disabledTextColor);
-            break;
+    if (mImpl->textColor.alpha() == 0.0f) {  // color is unset
+        ui.dc.setFillColor(ui.theme.params().textColor);
+    } else {
+        ui.dc.setFillColor(mImpl->textColor);
     }
     ui.dc.drawText(mImpl->text.c_str(), pt, font, kPaintFill);
 

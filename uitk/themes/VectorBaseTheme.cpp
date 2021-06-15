@@ -45,6 +45,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     const int OVER = int(WidgetState::kMouseOver);
     const int DOWN = int(WidgetState::kMouseDown);
 
+    // Normal button
     mButtonStyles[NORMAL].bgColor = params.nonEditableBackgroundColor;
     mButtonStyles[NORMAL].fgColor = params.textColor;
     mButtonStyles[NORMAL].borderColor = params.borderColor;
@@ -57,6 +58,22 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mButtonStyles[OVER].bgColor = mButtonStyles[NORMAL].bgColor.lighter();
     mButtonStyles[DOWN] = mButtonStyles[NORMAL];
     mButtonStyles[DOWN].bgColor = params.accentColor;
+    mButtonStyles[DOWN].fgColor = params.accentedBackgroundTextColor;
+
+    // Button that is ON
+    mButtonOnStyles[NORMAL] = mButtonStyles[NORMAL];
+    mButtonOnStyles[DISABLED] = mButtonStyles[DISABLED];
+    mButtonOnStyles[OVER] = mButtonStyles[OVER];
+    mButtonOnStyles[DOWN] = mButtonStyles[DOWN];
+
+    mButtonOnStyles[NORMAL].bgColor = params.accentColor.darker(0.2f);
+    mButtonOnStyles[NORMAL].fgColor = params.accentedBackgroundTextColor;
+    mButtonOnStyles[DISABLED].bgColor = mButtonStyles[DISABLED].bgColor.blend(params.accentColor, 0.333f);
+    mButtonOnStyles[DISABLED].fgColor = params.disabledTextColor;
+    mButtonOnStyles[OVER].bgColor = params.accentColor;
+    mButtonOnStyles[OVER].fgColor = params.accentedBackgroundTextColor;
+    mButtonOnStyles[DOWN].bgColor = params.accentColor.lighter();
+    mButtonOnStyles[DOWN].fgColor = params.accentedBackgroundTextColor;
 }
 
 const Theme::Params& VectorBaseTheme::params() const { return mParams; }
@@ -131,11 +148,25 @@ Size VectorBaseTheme::calcPreferredButtonSize(const LayoutContext& ui, const Fon
 }
 
 void VectorBaseTheme::drawButton(UIContext& ui, const Rect& frame,
-                                 const WidgetStyle& style, WidgetState state) const
+                                 const WidgetStyle& style, WidgetState state,
+                                 bool isOn) const
 {
-    drawFrame(ui, frame, mButtonStyles[int(state)].merge(style));
+    const WidgetStyle *bs;
+    if (isOn) {
+        bs = &mButtonOnStyles[int(state)];
+    } else {
+        bs = &mButtonStyles[int(state)];
+    }
+    drawFrame(ui, frame, bs->merge(style));
+}
+
+const Theme::WidgetStyle& VectorBaseTheme::buttonTextStyle(WidgetState state, bool isOn) const
+{
+    if (isOn) {
+        return mButtonOnStyles[int(state)];
+    } else {
+        return mButtonStyles[int(state)];
+    }
 }
 
 }  // namespace uitk
-
-
