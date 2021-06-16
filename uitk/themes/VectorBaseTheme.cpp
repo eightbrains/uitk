@@ -45,6 +45,10 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     const int OVER = int(WidgetState::kMouseOver);
     const int DOWN = int(WidgetState::kMouseDown);
 
+    // Check text color to determine dark mode; params.windowBackgroundColor
+    // may be transparent.
+    bool isDarkMode = (params.textColor.toGrey().red() > 0.5f);
+
     // Normal button
     mButtonStyles[NORMAL].bgColor = params.nonEditableBackgroundColor;
     mButtonStyles[NORMAL].fgColor = params.textColor;
@@ -74,6 +78,29 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mButtonOnStyles[OVER].fgColor = params.accentedBackgroundTextColor;
     mButtonOnStyles[DOWN].bgColor = params.accentColor.lighter();
     mButtonOnStyles[DOWN].fgColor = params.accentedBackgroundTextColor;
+
+    // Checkbox
+    mCheckboxStyles[NORMAL] = mButtonStyles[NORMAL];
+    mCheckboxStyles[DISABLED] = mButtonStyles[DISABLED];
+    mCheckboxStyles[OVER] = mButtonStyles[OVER];
+    mCheckboxStyles[DOWN] = mButtonStyles[DOWN];
+    mCheckboxStyles[DOWN].bgColor = mCheckboxStyles[OVER].bgColor;
+    if (isDarkMode) {
+        mCheckboxStyles[DOWN].bgColor = mCheckboxStyles[OVER].bgColor.lighter(0.2f);
+    } else {
+        mCheckboxStyles[DOWN].bgColor = mCheckboxStyles[OVER].bgColor.darker(0.2f);
+    }
+
+    mCheckboxOnStyles[NORMAL] = mButtonOnStyles[NORMAL];
+    mCheckboxOnStyles[NORMAL].bgColor = params.accentColor;
+    mCheckboxOnStyles[DISABLED] = mButtonOnStyles[DISABLED];
+    mCheckboxOnStyles[OVER] = mButtonOnStyles[OVER];
+    if (isDarkMode) {
+        mCheckboxOnStyles[OVER].bgColor = params.accentColor.lighter(0.2f);
+    } else {
+        mCheckboxOnStyles[OVER].bgColor = params.accentColor.darker(0.2f);
+    }
+    mCheckboxOnStyles[DOWN] = mButtonOnStyles[DOWN];
 }
 
 const Theme::Params& VectorBaseTheme::params() const { return mParams; }
@@ -147,6 +174,13 @@ Size VectorBaseTheme::calcPreferredButtonSize(const LayoutContext& ui, const Fon
                 ui.dc.ceilToNearestPixel(fm.capHeight) + 2.0f * margin);
 }
 
+Size VectorBaseTheme::calcPreferredCheckboxSize(const LayoutContext& ui,
+                                                const Font& font) const
+{
+    auto size = calcPreferredButtonSize(ui, font, "Ag");
+    return Size(size.height, size.height);
+}
+
 void VectorBaseTheme::drawButton(UIContext& ui, const Rect& frame,
                                  const WidgetStyle& style, WidgetState state,
                                  bool isOn) const
@@ -166,6 +200,35 @@ const Theme::WidgetStyle& VectorBaseTheme::buttonTextStyle(WidgetState state, bo
         return mButtonOnStyles[int(state)];
     } else {
         return mButtonStyles[int(state)];
+    }
+}
+
+void VectorBaseTheme::drawCheckbox(UIContext& ui, const Rect& frame,
+                                   const WidgetStyle& style, WidgetState state,
+                                   bool isOn) const
+{
+    const WidgetStyle *bs;
+    if (isOn) {
+        bs = &mCheckboxOnStyles[int(state)];
+    } else {
+        bs = &mCheckboxStyles[int(state)];
+    }
+    drawFrame(ui, frame, bs->merge(style));
+
+    if (isOn) {
+        auto margin = ui.dc.ceilToNearestPixel(0.25f * frame.width);
+        auto thirdW = (frame.width - 2.0f * margin) / 3.0f;
+        auto thirdH = (frame.height - 2.0f * margin) / 3.0f;
+        ui.dc.save();
+        ui.dc.setStrokeColor(bs->fgColor);
+        ui.dc.setStrokeWidth(PicaPt(2));
+        ui.dc.setStrokeEndCap(kEndCapRound);
+        ui.dc.setStrokeJoinStyle(kJoinRound);
+        Point p1(frame.x + margin, frame.y + margin + 2.0f * thirdH);
+        Point p2(frame.x + margin + thirdW, frame.y + margin + 3.0f * thirdH);
+        Point p3(frame.x + margin + 3.0f * thirdW, frame.y + margin);
+        ui.dc.drawLines({ p1, p2, p3 });
+        ui.dc.restore();
     }
 }
 

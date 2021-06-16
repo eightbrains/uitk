@@ -20,21 +20,26 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
+#ifndef UITK_CHECKBOX_H
+#define UITK_CHECKBOX_H
 
-#define ND_NAMESPACE uitk
-
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
-
-#include "Application.h"
 #include "Button.h"
-#include "Checkbox.h"
-#include "Label.h"
-#include "UIContext.h"
-#include "Window.h"
 
-#include <nativedraw.h>
+namespace uitk {
 
-#endif // UITK_H
+class Checkbox : public Button {
+    using Super = Button;
+public:
+    Checkbox(const std::string& text);
+    ~Checkbox();
+
+    Size preferredSize(const LayoutContext& context) const override;
+    void layout(const LayoutContext& context) override;
+
+    void draw(UIContext& context) override;
+};
+
+}  // namespace uitk
+#endif // UITK_CHECKBOX_H
+
+

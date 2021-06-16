@@ -2,6 +2,7 @@ set(ND_NAMESPACE "uitk")
 
 set(UITK_HEADERS Application.h
                  Button.h
+                 Checkbox.h
                  Events.h
                  Label.h
                  OSApplication.h
@@ -15,6 +16,7 @@ set(UITK_HEADERS Application.h
                  )
 set(UITK_SOURCES Application.cpp
                  Button.cpp
+                 Checkbox.cpp
                  Label.cpp
                  Widget.cpp
                  Window.cpp

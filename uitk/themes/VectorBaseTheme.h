@@ -38,6 +38,9 @@ public:
 
     Size calcPreferredButtonSize(const LayoutContext& ui, const Font& font,
                                  const std::string& text) const override;
+    // Returns the size for the checkbox, not the checkbox + text
+    Size calcPreferredCheckboxSize(const LayoutContext& ui,
+                                   const Font& font) const override;
 
     void drawWindowBackground(UIContext& ui, const Size& size) const override;
     void drawFrame(UIContext& ui, const Rect& frame,
@@ -46,6 +49,9 @@ public:
                     const WidgetStyle& style, WidgetState state,
                     bool isOn) const override;
     const WidgetStyle& buttonTextStyle(WidgetState state, bool isOn) const override;
+    void drawCheckbox(UIContext& ui, const Rect& frame,
+                      const WidgetStyle& style, WidgetState state,
+                      bool isOn) const override;
 
 protected:
     void setVectorParams(const Params& params);
@@ -57,6 +63,8 @@ protected:
 
     WidgetStyle mButtonStyles[4];
     WidgetStyle mButtonOnStyles[4];
+    WidgetStyle mCheckboxStyles[4];
+    WidgetStyle mCheckboxOnStyles[4];
 };
 
 }  // namespace uitk

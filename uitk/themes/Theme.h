@@ -112,6 +112,8 @@ public:
 
     virtual Size calcPreferredButtonSize(const LayoutContext& ui, const Font& font,
                                          const std::string& text) const = 0;
+    virtual Size calcPreferredCheckboxSize(const LayoutContext& ui,
+                                           const Font& font) const = 0;
 
     virtual void drawWindowBackground(UIContext& ui, const Size& size) const = 0;
     virtual void drawFrame(UIContext& ui, const Rect& frame,
@@ -120,6 +122,9 @@ public:
                             const WidgetStyle& style, WidgetState state,
                             bool isOn) const = 0;
     virtual const WidgetStyle& buttonTextStyle(WidgetState state, bool isOn) const = 0;
+    virtual void drawCheckbox(UIContext& ui, const Rect& frame,
+                              const WidgetStyle& style, WidgetState state,
+                              bool isOn) const = 0;
 };
 
 }  // namespace uitk

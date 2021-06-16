@@ -178,6 +178,9 @@ public:
         mOnOffDisabled->setOn(true);
         mOnOffDisabled->setEnabled(false);
         addChild(mOnOffDisabled);
+
+        mCheckbox = new Checkbox("Checkbox");
+        addChild(mCheckbox);
     }
 
     Size preferredSize(const LayoutContext& context) const
@@ -185,7 +188,7 @@ public:
         auto button = context.theme.calcPreferredButtonSize(context,
                                                             context.theme.params().labelFont,
                                                             mDisabled->label()->text());
-        return Size(5.0f * button.width, 2.25f * button.height);
+        return Size(5.0f * button.width, 3.25f * button.height);
     }
 
     void layout(const LayoutContext& context)
@@ -211,6 +214,9 @@ public:
         mOnOffDisabled->setFrame(Rect(mOnOff->frame().maxX(), y,
                                       mOnOffDisabled->frame().width, mOnOffDisabled->frame().height));
 
+        y += 1.5f * mHappy->frame().height;
+        mCheckbox->setFrame(Rect(x, y, mCheckbox->frame().width, mCheckbox->frame().height));
+
         Super::layout(context);
     }
 
@@ -220,6 +226,7 @@ private:
     Button *mDisabled;
     Button *mOnOff;
     Button *mOnOffDisabled;
+    Checkbox *mCheckbox;
     Label *mLabel;
 };
 
