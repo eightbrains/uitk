@@ -73,10 +73,8 @@ public:
     /// Adds the child to the Window. Returns pointer this window.
     Window* addChild(Widget *child);
 
-    /// Posts a redraw message to the event loop scheduling a redraw.
-    /// Note that this does not immediately redraw the window, that only
-    /// happens when the event loop handles the redraw event.
-    void postRedraw() const;
+    /// Schedules a redraw.
+    void setNeedsDraw();
 
     void raiseToTop() const;
 
@@ -89,6 +87,12 @@ public:
     void onMouse(const MouseEvent& e) override;
     void onActivated(const Point& currentMousePos) override;
     void onDeactivated() override;
+
+protected:
+    /// Posts a redraw message to the event loop scheduling a redraw.
+    /// Note that this does not immediately redraw the window, that only
+    /// happens when the event loop handles the redraw event.
+    void postRedraw() const;
 
 private:
     struct Impl;

@@ -53,6 +53,7 @@ const std::string& Label::text() const { return mImpl->text; }
 Label* Label::setText(const std::string& text)
 {
     mImpl->text = text;
+    setNeedsDraw();
     return this;
 }
 
@@ -61,12 +62,17 @@ int Label::alignment() const { return mImpl->alignment; }
 Label* Label::setAlignment(int align)
 {
     mImpl->alignment = align;
+    setNeedsDraw();
     return this;
 }
 
 const Color& Label::textColor() const { return mImpl->textColor; }
 
-Label* Label::setTextColor(const Color& c) { mImpl->textColor = c; }
+Label* Label::setTextColor(const Color& c)
+{
+    mImpl->textColor = c;
+    setNeedsDraw();
+}
 
 void Label::setWidgetState(Theme::WidgetState state)
 {

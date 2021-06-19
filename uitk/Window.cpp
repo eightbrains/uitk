@@ -48,6 +48,9 @@ struct Window::Impl
     std::unique_ptr<OSWindow> window;
     std::string title;
     std::unique_ptr<Widget> rootWidget;
+    bool inResize = false;
+    bool inMouse = false;
+    bool needsDraw = false;
 };
 
 Window::Window(const std::string& title, int width, int height,
@@ -64,6 +67,7 @@ Window::Window(const std::string& title, int x, int y, int width, int height,
     // on creation (as it is on Win32).
     mImpl->theme = Application::instance().theme();
     mImpl->rootWidget = std::make_unique<Widget>();
+    mImpl->rootWidget->setWindow(this);
 
 #if defined(__APPLE__)
     mImpl->window = std::make_unique<MacOSWindow>(*this, title, x, y, width, height, flags);
@@ -102,6 +106,15 @@ Window* Window::setTitle(const std::string& title)
     return this;
 }
 
+void Window::setNeedsDraw()
+{
+    if (mImpl->inMouse || mImpl->inResize) {
+        mImpl->needsDraw = true;
+    } else {
+        postRedraw();
+    }
+}
+
 void Window::postRedraw() const { mImpl->window->postRedraw(); }
 
 void Window::raiseToTop() const { mImpl->window->raiseToTop(); }
@@ -114,12 +127,16 @@ Window* Window::addChild(Widget *child)
 
 void Window::onMouse(const MouseEvent& e)
 {
-    mImpl->rootWidget->setState(Theme::WidgetState::kMouseOver);  // so onDeactivated works
+    mImpl->inMouse = true;
 
+    mImpl->rootWidget->setState(Theme::WidgetState::kMouseOver);  // so onDeactivated works
     mImpl->rootWidget->mouse(e);
 
-    // TODO: don't draw if nothing has changed (i.e. state())
-    postRedraw();
+    mImpl->inMouse = false;
+    if (mImpl->needsDraw) {
+        postRedraw();
+        mImpl->needsDraw = false;
+    }
 }
 
 void Window::onResize(const DrawContext& dc)
@@ -128,10 +145,12 @@ void Window::onResize(const DrawContext& dc)
         return;
     }
 
+    mImpl->inResize = true;
     auto contentRect = mImpl->window->contentRect();
     mImpl->rootWidget->setFrame(Rect(PicaPt::kZero, PicaPt::kZero,
                                      contentRect.width, contentRect.height));
     onLayout(dc);
+    mImpl->inResize = false;
 }
 
 void Window::onLayout(const DrawContext& dc)
@@ -149,6 +168,8 @@ void Window::onDraw(DrawContext& dc)
     mImpl->theme->drawWindowBackground(context, size);
     mImpl->rootWidget->draw(context);
     dc.endDraw();
+
+    mImpl->needsDraw = false;  // should be false anyway, just in case
 }
 
 void Window::onActivated(const Point& currentMousePos)

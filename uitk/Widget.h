@@ -33,6 +33,7 @@ namespace uitk {
 struct MouseEvent;
 struct LayoutContext;
 struct UIContext;
+struct Window;
 
 class Widget {
     friend class Window;
@@ -40,13 +41,16 @@ public:
     Widget();
     virtual ~Widget();
 
+    /// Ensures that the widget is redrawn
+    void setNeedsDraw();
+
     virtual const Rect& frame() const;
-    /// The frame's coordinates are relative to its parent.
+    /// The frame's coordinates are relative to its parent
     virtual Widget* setFrame(const Rect& frame);
 
-    /// Convenience function that calls setFrame underneath.
+    /// Convenience function that calls setFrame underneath
     Widget* setPosition(const Point& p);
-    /// Convenience function that calls setFrame underneath.
+    /// Convenience function that calls setFrame underneath
     Widget* setSize(const Size& size);
 
     /// The bounds' coordinates are relative to the upper left of the widget
@@ -76,6 +80,9 @@ public:
     Widget* addChild(Widget *w);
 
     const std::vector<Widget*> children() const;
+
+    /// Returns the Window that owns this widget, or nullptr
+    Window* window() const;
 
     /// returned by size calculations to indicate that the widget wants
     /// as much space as possible in that dimension.
@@ -109,6 +116,8 @@ public:
                                  int indent = 0) const;
 
 protected:
+    void setWindow(Window* window);  // for Window
+
     Theme::WidgetState state() const;
     void setState(Theme::WidgetState state);
 

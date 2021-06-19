@@ -60,6 +60,7 @@ bool Button::isOn() const { return mImpl->isOn; }
 Button* Button::setOn(bool isOn) {
     if (mImpl->isToggleable) {
         mImpl->isOn = isOn;
+        setNeedsDraw();
     }
 }
 

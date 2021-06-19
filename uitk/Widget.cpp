@@ -24,6 +24,7 @@
 
 #include "Events.h"
 #include "UIContext.h"
+#include "Window.h"
 #include <nativedraw.h>
 
 namespace uitk {
@@ -31,7 +32,9 @@ namespace uitk {
 static const int kNStyles = 4;
 
 struct Widget::Impl {
-    std::vector<Widget*> children;
+    Window* window = nullptr;  // we do not own this
+    Widget* parent = nullptr;  // we do not own this
+    std::vector<Widget*> children;  // we own these
     Rect frame;
     Rect bounds;
     Theme::WidgetStyle styles[kNStyles];
@@ -149,6 +152,7 @@ Widget* Widget::setBackgroundColor(const Color& bg)
         mImpl->styles[i].flags |= int(Theme::WidgetStyle::kBGColorSet);
     }
     mImpl->updateDrawsFrame(this);
+    setNeedsDraw();
     return this;
 }
 
@@ -164,6 +168,7 @@ Widget* Widget::setBorderColor(const Color& color)
         mImpl->styles[i].flags |= int(Theme::WidgetStyle::kBorderColorSet);
     }
     mImpl->updateDrawsFrame(this);
+    setNeedsDraw();
     return this;
 }
 
@@ -179,6 +184,7 @@ Widget* Widget::setBorderWidth(const PicaPt& width)
         mImpl->styles[i].flags |= int(Theme::WidgetStyle::kBorderWidthSet);
     }
     mImpl->updateDrawsFrame(this);
+    setNeedsDraw();
     return this;
 }
 
@@ -194,18 +200,38 @@ Widget* Widget::setBorderRadius(const PicaPt& radius)
         mImpl->styles[i].flags |= int(Theme::WidgetStyle::kBorderRadiusSet);
     }
     mImpl->updateDrawsFrame(this);
+    setNeedsDraw();
     return this;
 }
 
 Widget* Widget::addChild(Widget *w)
 {
     mImpl->children.push_back(w);
+    w->mImpl->parent = this;
     return this;
 }
 
 const std::vector<Widget*> Widget::children() const
 {
     return mImpl->children;
+}
+
+Window* Widget::window() const
+{
+    const Widget *w = this;
+    while (w->mImpl->parent) {
+        w = w->mImpl->parent;
+    }
+    return w->mImpl->window;
+}
+
+void Widget::setWindow(Window *window) { mImpl->window = window; }
+
+void Widget::setNeedsDraw()
+{
+    if (Window *win = window()) {
+        win->setNeedsDraw();
+    }
 }
 
 Theme::WidgetState Widget::state() const { return mImpl->state; }
@@ -219,6 +245,10 @@ void Widget::setState(Theme::WidgetState state)
         mouseEntered();
     } else if (oldState != Theme::WidgetState::kNormal && state == Theme::WidgetState::kNormal) {
         mouseExited();
+    }
+
+    if (oldState != state) {
+        setNeedsDraw();
     }
 }
 
