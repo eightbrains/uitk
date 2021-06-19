@@ -90,7 +90,7 @@ void Label::draw(UIContext& ui)
 {
     Super::draw(ui);
 
-    auto &r = frame();
+    auto &r = bounds();
     ui.theme.drawFrame(ui, r, style(state()));
 
     auto &font = ui.theme.params().labelFont;

@@ -49,6 +49,9 @@ public:
     /// Convenience function that calls setFrame underneath.
     Widget* setSize(const Size& size);
 
+    /// The bounds' coordinates are relative to the upper left of the widget
+    virtual const Rect& bounds() const;
+
     virtual bool visible() const;
     virtual Widget* setVisible(bool vis);
 
@@ -101,6 +104,9 @@ public:
     /// For example, the slider uses the frame styling to draw the slider
     /// track, but does not want the track to be the full frame.)
     virtual void draw(UIContext& context);
+
+    std::string debugDescription(const Point& offset = Point(PicaPt::kZero, PicaPt::kZero),
+                                 int indent = 0) const;
 
 protected:
     Theme::WidgetState state() const;

@@ -188,7 +188,7 @@ public:
         auto button = context.theme.calcPreferredButtonSize(context,
                                                             context.theme.params().labelFont,
                                                             mDisabled->label()->text());
-        return Size(5.0f * button.width, 3.25f * button.height);
+        return Size(5.0f * button.width, 4.25f * button.height);
     }
 
     void layout(const LayoutContext& context)

@@ -109,7 +109,7 @@ Widget::EventResult Button::mouse(const MouseEvent &e)
 void Button::draw(UIContext& context)
 {
     auto state = this->state();
-    context.theme.drawButton(context, frame(), style(state), state, isOn());
+    context.theme.drawButton(context, bounds(), style(state), state, isOn());
     mImpl->label->setWidgetState(state);
     auto ws = context.theme.buttonTextStyle(state, mImpl->isOn);
     mImpl->label->setTextColor(ws.fgColor);

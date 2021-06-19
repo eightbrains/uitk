@@ -33,6 +33,7 @@ static const int kNStyles = 4;
 struct Widget::Impl {
     std::vector<Widget*> children;
     Rect frame;
+    Rect bounds;
     Theme::WidgetStyle styles[kNStyles];
     Theme::WidgetState state = Theme::WidgetState::kNormal;
     bool drawsFrame = false;
@@ -68,11 +69,33 @@ Widget::~Widget()
     }
 }
 
+std::string Widget::debugDescription(const Point& offset /*= Point(PicaPt::kZero, PicaPt::kZero)*/,
+                                     int indent /*= 0*/) const
+{
+    std::string s;
+    for (int i = 0;  i < indent;  ++i) {
+        s += "  ";
+    }
+    s += std::string(typeid(*this).name()) + " (";
+    auto f = frame();
+    s += std::to_string((f.x + offset.x).asFloat()) + ", ";
+    s += std::to_string((f.y + offset.y).asFloat()) + ") ";
+    s += std::to_string(f.width.asFloat()) + " x " + std::to_string(f.height.asFloat());
+    s += "\n";
+
+    for (auto child : mImpl->children) {
+        s += child->debugDescription(Point(offset.x + f.x, offset.y + f.y), indent + 1);
+    }
+
+    return s;
+}
+
 const Rect& Widget::frame() const { return mImpl->frame; }
 
 Widget* Widget::setFrame(const Rect& frame)
 {
     mImpl->frame = frame;
+    mImpl->bounds = Rect(PicaPt::kZero, PicaPt::kZero, frame.width, frame.height);
     return this;
 }
 
@@ -90,6 +113,11 @@ Widget* Widget::setSize(const Size& size)
     r.width = size.width;
     r.height = size.height;
     return setFrame(r);  // need to call setFrame in case it is overridden
+}
+
+const Rect& Widget::bounds() const
+{
+    return mImpl->bounds;
 }
 
 bool Widget::visible() const { return mImpl->visible; }
@@ -280,22 +308,21 @@ void Widget::mouseExited()
 
 void Widget::draw(UIContext& ui)
 {
-    auto ul = frame().upperLeft();
-
     // If we are truly just a Widget (instead of a derived class that is
     // supering), then draw the frame. It would be nice to do this only if
     // draw() has been overridden, but it is not possible to know that.
     if (mImpl->drawsFrame) {
         // The frame should always be the normal; Widget does not process
         // events and so should not have mouseover or activated appearances.
-        ui.theme.drawFrame(ui, frame(), style(Theme::WidgetState::kNormal));
+        ui.theme.drawFrame(ui, bounds(), style(Theme::WidgetState::kNormal));
     }
 
-    ui.dc.translate(ul.x, ul.y);
     for (auto *child : mImpl->children) {
+        auto ul = child->frame().upperLeft();
+        ui.dc.translate(ul.x, ul.y);
         child->draw(ui);
+        ui.dc.translate(-ul.x, -ul.y);
     }
-    ui.dc.translate(-ul.x, -ul.y);
 }
 
 }  // namespace uitk

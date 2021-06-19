@@ -66,7 +66,8 @@ void Checkbox::layout(const LayoutContext& context)
 
 void Checkbox::draw(UIContext& context)
 {
-    Rect r(frame().x, frame().y, frame().height, frame().height);
+    auto size = bounds().height;
+    Rect r(bounds().x, bounds().y, size, size);
     context.theme.drawCheckbox(context, r, style(state()), state(), isOn());
 
     // Unsually, we don't want to Super::draw(), because Button changes
