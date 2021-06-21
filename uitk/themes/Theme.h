@@ -114,6 +114,8 @@ public:
                                          const std::string& text) const = 0;
     virtual Size calcPreferredCheckboxSize(const LayoutContext& ui,
                                            const Font& font) const = 0;
+    virtual Size calcPreferredSegmentSize(const LayoutContext& ui, const Font& font,
+                                          const std::string& text) const = 0;
 
     virtual void drawWindowBackground(UIContext& ui, const Size& size) const = 0;
     virtual void drawFrame(UIContext& ui, const Rect& frame,
@@ -125,6 +127,16 @@ public:
     virtual void drawCheckbox(UIContext& ui, const Rect& frame,
                               const WidgetStyle& style, WidgetState state,
                               bool isOn) const = 0;
+    virtual void drawSegmentedControl(UIContext& ui, const Rect& frame,
+                                      const WidgetStyle& style,
+                                      WidgetState state) const = 0;
+    virtual void drawSegment(UIContext& ui, const Rect& frame, WidgetState state,
+                             bool isButton, bool isOn,
+                             int segmentIndex, int nSegments) const = 0;
+    virtual void drawSegmentDivider(UIContext& ui, const Point& top, const Point& bottom,
+                                    const WidgetStyle& ctrlStyle,
+                                    WidgetState ctrlState) const = 0;
+    virtual const WidgetStyle& segmentTextStyle(WidgetState state, bool isOn) const = 0;
 };
 
 }  // namespace uitk

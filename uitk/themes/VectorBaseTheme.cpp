@@ -45,6 +45,14 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     const int OVER = int(WidgetState::kMouseOver);
     const int DOWN = int(WidgetState::kMouseDown);
 
+    auto copyStyles = [NORMAL, DISABLED, OVER, DOWN]
+                      (const WidgetStyle src[], WidgetStyle dest[]) {
+        dest[NORMAL] = src[NORMAL];
+        dest[DISABLED] = src[DISABLED];
+        dest[OVER] = src[OVER];
+        dest[DOWN] = src[DOWN];
+    };
+
     // Check text color to determine dark mode; params.windowBackgroundColor
     // may be transparent.
     bool isDarkMode = (params.textColor.toGrey().red() > 0.5f);
@@ -65,11 +73,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mButtonStyles[DOWN].fgColor = params.accentedBackgroundTextColor;
 
     // Button that is ON
-    mButtonOnStyles[NORMAL] = mButtonStyles[NORMAL];
-    mButtonOnStyles[DISABLED] = mButtonStyles[DISABLED];
-    mButtonOnStyles[OVER] = mButtonStyles[OVER];
-    mButtonOnStyles[DOWN] = mButtonStyles[DOWN];
-
+    copyStyles(mButtonStyles, mButtonOnStyles);
     mButtonOnStyles[NORMAL].bgColor = params.accentColor.darker(0.2f);
     mButtonOnStyles[NORMAL].fgColor = params.accentedBackgroundTextColor;
     mButtonOnStyles[DISABLED].bgColor = mButtonStyles[DISABLED].bgColor.blend(params.accentColor, 0.333f);
@@ -80,27 +84,86 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mButtonOnStyles[DOWN].fgColor = params.accentedBackgroundTextColor;
 
     // Checkbox
-    mCheckboxStyles[NORMAL] = mButtonStyles[NORMAL];
-    mCheckboxStyles[DISABLED] = mButtonStyles[DISABLED];
-    mCheckboxStyles[OVER] = mButtonStyles[OVER];
-    mCheckboxStyles[DOWN] = mButtonStyles[DOWN];
-    mCheckboxStyles[DOWN].bgColor = mCheckboxStyles[OVER].bgColor;
+    copyStyles(mButtonStyles, mCheckboxStyles);
     if (isDarkMode) {
-        mCheckboxStyles[DOWN].bgColor = mCheckboxStyles[OVER].bgColor.lighter(0.2f);
+        mCheckboxStyles[DOWN].bgColor = mCheckboxStyles[OVER].bgColor.lighter(0.1f);
     } else {
-        mCheckboxStyles[DOWN].bgColor = mCheckboxStyles[OVER].bgColor.darker(0.2f);
+        mCheckboxStyles[DOWN].bgColor = mCheckboxStyles[OVER].bgColor.darker(0.1f);
     }
 
-    mCheckboxOnStyles[NORMAL] = mButtonOnStyles[NORMAL];
+    copyStyles(mButtonOnStyles, mCheckboxOnStyles);
     mCheckboxOnStyles[NORMAL].bgColor = params.accentColor;
-    mCheckboxOnStyles[DISABLED] = mButtonOnStyles[DISABLED];
-    mCheckboxOnStyles[OVER] = mButtonOnStyles[OVER];
     if (isDarkMode) {
-        mCheckboxOnStyles[OVER].bgColor = params.accentColor.lighter(0.2f);
+        mCheckboxOnStyles[OVER].bgColor = params.accentColor.lighter(0.05f);
+        mCheckboxOnStyles[DOWN].bgColor = params.accentColor.lighter(0.15f);
     } else {
-        mCheckboxOnStyles[OVER].bgColor = params.accentColor.darker(0.2f);
+        mCheckboxOnStyles[OVER].bgColor = params.accentColor.darker(0.05f);
+        mCheckboxOnStyles[DOWN].bgColor = params.accentColor.darker(0.15f);
     }
-    mCheckboxOnStyles[DOWN] = mButtonOnStyles[DOWN];
+
+    // SegmentedControl (background)
+    copyStyles(mButtonStyles, mSegmentedControlStyles);  // only NORMAL, DISABLED matter
+
+    // SegmentedControl active segment (button)
+    // Note: OVER and DOWN are used for button segments
+    copyStyles(mButtonStyles, mSegmentStyles);
+    // On macOS the colors can have alpha. This is normally okay, but because we
+    // draw the segments on top of the background the alpha gets applied twice,
+    // which results in the value being brighter than the equivalent for buttons.
+    // We need to adjust the alpha values to be the equivalent of if we could
+    // draw the segment directly on top of the background
+    auto adjustSegmentBG = [widgetBG = mSegmentStyles[NORMAL].bgColor](const Color& segmentBG) {
+        if (segmentBG.alpha() < 1.0f) {
+            // If segmentBG is color, I don't think you can simply adjust the alpha,
+            // but it should look reasonably good.
+            float greyWidget = widgetBG.toGrey().red();
+            float greySegment = segmentBG.toGrey().red();
+            float widget = greyWidget * widgetBG.alpha();
+            float desired = greySegment * segmentBG.alpha();
+            // Simplify: desired = (1 - a) * widget + a * greySegment
+            float alpha = (desired - widget) / (greySegment - widget);
+            return Color(segmentBG.red(), segmentBG.green(), segmentBG.blue(), alpha);
+        }
+        return segmentBG;
+    };
+    mSegmentStyles[NORMAL].borderRadius = PicaPt::kZero;
+    mSegmentStyles[NORMAL].borderWidth = PicaPt::kZero;
+    mSegmentStyles[DISABLED].borderRadius = PicaPt::kZero;
+    mSegmentStyles[DISABLED].borderWidth = PicaPt::kZero;
+    mSegmentStyles[OVER].bgColor = adjustSegmentBG(mSegmentStyles[OVER].bgColor);
+    mSegmentStyles[OVER].borderRadius = PicaPt::kZero;
+    mSegmentStyles[OVER].borderWidth = PicaPt::kZero;
+    mSegmentStyles[DOWN].bgColor = adjustSegmentBG(mSegmentStyles[DOWN].bgColor);
+    mSegmentStyles[DOWN].borderRadius = PicaPt::kZero;
+    mSegmentStyles[DOWN].borderWidth = PicaPt::kZero;
+
+    // SegmentedControl active segment (toggleable)
+    copyStyles(mCheckboxStyles, mSegmentOffStyles);
+    mSegmentOffStyles[NORMAL].bgColor = adjustSegmentBG(mSegmentOffStyles[NORMAL].bgColor);
+    mSegmentOffStyles[NORMAL].borderRadius = PicaPt::kZero;
+    mSegmentOffStyles[NORMAL].borderWidth = PicaPt::kZero;
+    mSegmentOffStyles[DISABLED].bgColor = adjustSegmentBG(mSegmentOffStyles[DISABLED].bgColor);
+    mSegmentOffStyles[DISABLED].borderRadius = PicaPt::kZero;
+    mSegmentOffStyles[DISABLED].borderWidth = PicaPt::kZero;
+    mSegmentOffStyles[OVER].bgColor = adjustSegmentBG(mSegmentOffStyles[OVER].bgColor);
+    mSegmentOffStyles[OVER].borderRadius = PicaPt::kZero;
+    mSegmentOffStyles[OVER].borderWidth = PicaPt::kZero;
+    mSegmentOffStyles[DOWN].bgColor = adjustSegmentBG(mSegmentOffStyles[DOWN].bgColor);
+    mSegmentOffStyles[DOWN].borderRadius = PicaPt::kZero;
+    mSegmentOffStyles[DOWN].borderWidth = PicaPt::kZero;
+    copyStyles(mCheckboxOnStyles, mSegmentOnStyles);
+    mSegmentOnStyles[NORMAL].bgColor = adjustSegmentBG(mSegmentOnStyles[NORMAL].bgColor);
+    mSegmentOnStyles[NORMAL].borderRadius = PicaPt::kZero;
+    mSegmentOnStyles[NORMAL].borderWidth = PicaPt::kZero;
+    mSegmentOnStyles[DISABLED].bgColor = adjustSegmentBG(mSegmentOnStyles[DISABLED].bgColor);
+    mSegmentOnStyles[DISABLED].borderRadius = PicaPt::kZero;
+    mSegmentOnStyles[DISABLED].borderWidth = PicaPt::kZero;
+    mSegmentOnStyles[OVER].bgColor = adjustSegmentBG(mSegmentOnStyles[OVER].bgColor);
+    mSegmentOnStyles[OVER].borderRadius = PicaPt::kZero;
+    mSegmentOnStyles[OVER].borderWidth = PicaPt::kZero;
+    mSegmentOnStyles[DOWN].bgColor = adjustSegmentBG(mSegmentOnStyles[DOWN].bgColor);
+    mSegmentOnStyles[DOWN].borderRadius = PicaPt::kZero;
+    mSegmentOnStyles[DOWN].borderWidth = PicaPt::kZero;
 }
 
 const Theme::Params& VectorBaseTheme::params() const { return mParams; }
@@ -181,6 +244,17 @@ Size VectorBaseTheme::calcPreferredCheckboxSize(const LayoutContext& ui,
     return Size(size.height, size.height);
 }
 
+Size VectorBaseTheme::calcPreferredSegmentSize(const LayoutContext& ui,
+                                               const Font& font,
+                                               const std::string& text) const
+{
+    auto pref = calcPreferredButtonSize(ui, font, text);
+    auto tm = ui.dc.textMetrics(text.c_str(), font, kPaintFill);
+    auto margin = tm.height;  // 0.5*em on either side
+    return Size(ui.dc.ceilToNearestPixel(tm.width + margin),
+                pref.height);  // height is already ceil'd.
+}
+
 void VectorBaseTheme::drawButton(UIContext& ui, const Rect& frame,
                                  const WidgetStyle& style, WidgetState state,
                                  bool isOn) const
@@ -229,6 +303,121 @@ void VectorBaseTheme::drawCheckbox(UIContext& ui, const Rect& frame,
         Point p3(frame.x + margin + 3.0f * thirdW, frame.y + margin);
         ui.dc.drawLines({ p1, p2, p3 });
         ui.dc.restore();
+    }
+}
+
+void VectorBaseTheme::drawSegmentedControl(UIContext& ui,
+                                           const Rect& frame,
+                                           const WidgetStyle& style,
+                                           WidgetState state) const
+{
+    if (state == WidgetState::kDisabled) {
+        drawFrame(ui, frame, mSegmentedControlStyles[int(state)].merge(style));
+    } else {
+        drawFrame(ui, frame, mSegmentedControlStyles[int(WidgetState::kNormal)].merge(style));
+    }
+}
+
+void VectorBaseTheme::drawSegment(UIContext& ui, const Rect& frame, WidgetState state,
+                                  bool isButton, bool isOn, int segmentIndex, int nSegments) const
+{
+    auto &widgetStyle = mSegmentedControlStyles[int(WidgetState::kNormal)];
+    Rect r(frame.x, frame.y + widgetStyle.borderWidth,
+           frame.width, frame.height - 2.0f * widgetStyle.borderWidth);
+
+    Color bg;
+    if (isButton) {
+        bg = mSegmentStyles[int(state)].bgColor;
+    } else {
+        if (isOn) {
+            bg = mSegmentOnStyles[int(state)].bgColor;
+        } else {
+            bg = mSegmentOffStyles[int(state)].bgColor;
+        }
+    }
+    ui.dc.setFillColor(bg);
+
+    if (widgetStyle.borderRadius > PicaPt::kZero && (segmentIndex == 0 || segmentIndex == nSegments - 1)) {
+        PicaPt radius = widgetStyle.borderRadius * 1.4142135f;  // br * sqrt(2)
+        if (segmentIndex == 0) {
+            r.x += widgetStyle.borderWidth;
+        }
+        r.width -= widgetStyle.borderWidth;
+
+        auto path = ui.dc.createBezierPath();
+
+        // (This is copied from libnativedraw)
+        // This is the weight for control points for a 4-curve sphere.
+        // Normally 4 cubic splines use 0.55228475, but a better number was
+        // computed by http://www.tinaja.com/glib/ellipse4.pdf.
+        // It has an error of .76 px/in at 1200 DPI (0.0633%).
+        PicaPt tangentWeight(0.551784f);
+        PicaPt zero(0);
+        PicaPt dTangent = tangentWeight * radius;
+
+        auto topLeft = r.upperLeft() + Point(radius, zero);
+        auto topRight = r.upperRight() + Point(-radius, zero);
+        auto rightTop = r.upperRight() + Point(zero, radius);
+        auto rightBottom = r.lowerRight() + Point(zero, -radius);
+        auto bottomLeft = r.lowerLeft() + Point(radius, zero);
+        auto bottomRight = r.lowerRight() + Point(-radius, zero);
+        auto leftTop = r.upperLeft() + Point(zero, radius);
+        auto leftBottom = r.lowerLeft() + Point(zero, -radius);
+
+        if (segmentIndex == 0) {
+            path->moveTo(leftTop);
+            path->cubicTo(leftTop + Point(zero, -dTangent),
+                          topLeft + Point(-dTangent, zero),
+                          topLeft);
+            path->lineTo(r.upperRight());
+            path->lineTo(r.lowerRight());
+            path->lineTo(bottomLeft);
+            path->cubicTo(bottomLeft + Point(-dTangent, zero),
+                          leftBottom + Point(zero, dTangent),
+                          leftBottom);
+        } else {
+            path->moveTo(r.upperLeft());
+            path->lineTo(topRight);
+            path->cubicTo(topRight + Point(dTangent, zero),
+                          rightTop + Point(zero, -dTangent),
+                          rightTop);
+            path->lineTo(rightBottom);
+            path->cubicTo(rightBottom + Point(zero, dTangent),
+                          bottomRight + Point(dTangent, zero),
+                          bottomRight);
+            path->lineTo(r.lowerLeft());
+        }
+
+        ui.dc.drawPath(path, kPaintFill);
+    } else {
+        ui.dc.drawRect(r, kPaintFill);
+    }
+}
+
+void VectorBaseTheme::drawSegmentDivider(UIContext& ui, const Point& top, const Point& bottom,
+                                         const WidgetStyle& ctrlStyle, WidgetState ctrlState) const
+{
+    auto style = mSegmentedControlStyles[int(ctrlState)].merge(ctrlStyle);
+    auto p1 = top;
+    p1.y += style.borderWidth;
+    auto p2 = bottom;
+    p2.y -= style.borderWidth;
+
+    auto onePx = ui.dc.onePixel();
+    int nPixels = int(ui.dc.roundToNearestPixel(style.borderWidth) / onePx);
+    if (nPixels % 2 == 1) {
+        p1.x += 0.5f * onePx;
+        p2.x += 0.5f * onePx;
+    }
+    ui.dc.drawLines({p1, p2});
+}
+
+const Theme::WidgetStyle& VectorBaseTheme::segmentTextStyle(WidgetState state, bool isOn) const
+{
+    if (isOn) {
+        return mSegmentOnStyles[int(state)];
+    } else {
+        return mSegmentOffStyles[int(state)];
     }
 }
 

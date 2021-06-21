@@ -32,6 +32,7 @@
 #include "Button.h"
 #include "Checkbox.h"
 #include "Label.h"
+#include "SegmentedControl.h"
 #include "UIContext.h"
 #include "Window.h"
 

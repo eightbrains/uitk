@@ -50,7 +50,7 @@ public:
         addChild(mHeight);
     }
 
-    Size preferredSize(const LayoutContext& context) const
+    Size preferredSize(const LayoutContext& context) const override
     {
         return Size(PicaPt(72), PicaPt(36));
     }
@@ -72,33 +72,42 @@ public:
         mLabel->setBorderWidth(PicaPt(1));
         addChild(mLabel);
 
-        mLeft = new Button("L");
-        mLeft->setOnClicked([this](Button*) { setHoriz(Alignment::kLeft); } );
-        addChild(mLeft);
-        mHCenter = new Button("C");
-        mHCenter->setOnClicked([this](Button*) { setHoriz(Alignment::kHCenter); } );
-        addChild(mHCenter);
-        mRight = new Button("R");
-        mRight->setOnClicked([this](Button*) { setHoriz(Alignment::kRight); } );
-        addChild(mRight);
-        mTop = new Button("T");
-        mTop->setOnClicked([this](Button*) { setVert(Alignment::kTop); } );
-        addChild(mTop);
-        mVCenter = new Button("C");
-        mVCenter->setOnClicked([this](Button*) { setVert(Alignment::kVCenter); } );
-        addChild(mVCenter);
-        mBottom = new Button("B");
-        mBottom->setOnClicked([this](Button*) { setVert(Alignment::kBottom); } );
-        addChild(mBottom);
+        mHoriz = new SegmentedControl({ "L", "C", "R" });
+        mHoriz->setAction(SegmentedControl::Action::kSelectOne);
+        mHoriz->setSegmentOn(0, true);
+        mHoriz->setOnClicked([this](int indexClicked) {
+            if (indexClicked == 0) {
+                setHoriz(Alignment::kLeft);
+            } else if (indexClicked == 1) {
+                setHoriz(Alignment::kHCenter);
+            } else if (indexClicked == 2) {
+                setHoriz(Alignment::kRight);
+            }
+        });
+        addChild(mHoriz);
+
+        mVert = new SegmentedControl({"T", "C", "B"});
+        mVert->setAction(SegmentedControl::Action::kSelectOne);
+        mVert->setSegmentOn(0, true);
+        mVert->setOnClicked([this](int indexClicked) {
+            if (indexClicked == 0) {
+                setVert(Alignment::kTop);
+            } else if (indexClicked == 1) {
+                setVert(Alignment::kVCenter);
+            } else if (indexClicked == 2) {
+                setVert(Alignment::kBottom);
+            }
+        });
+        addChild(mVert);
     }
 
-    Size preferredSize(const LayoutContext& context) const
+    Size preferredSize(const LayoutContext& context) const override
     {
         auto em = context.theme.params().labelFont.metrics(context.dc).lineHeight;
         return Size(20.0f * em, 7.0f * em);
     }
 
-    void layout(const LayoutContext& context)
+    void layout(const LayoutContext& context) override
     {
         auto setToPref = [&context](Widget *w) {
             auto pref = w->preferredSize(context);
@@ -110,15 +119,11 @@ public:
         }
 
         PicaPt y(8);
-        mLeft->setPosition(Point(PicaPt(8), y));
-        mHCenter->setPosition(Point(mLeft->frame().maxX(), y));
-        mRight->setPosition(Point(mHCenter->frame().maxX(), y));
-        mTop->setPosition(Point(mRight->frame().maxX() + PicaPt(8), y));
-        mVCenter->setPosition(Point(mTop->frame().maxX(), y));
-        mBottom->setPosition(Point(mVCenter->frame().maxX(), y));
+        mHoriz->setPosition(Point(PicaPt(8), y));
+        mVert->setPosition(Point(mHoriz->frame().maxX() + PicaPt(8), y));
 
-        mLabel->setFrame(Rect(mLeft->frame().x, mLeft->frame().maxY() + PicaPt(8),
-                              mBottom->frame().maxX() - mLeft->frame().x,
+        mLabel->setFrame(Rect(mHoriz->frame().x, mHoriz->frame().maxY() + PicaPt(8),
+                              15.0f * mHoriz->frame().height,
                               3.0f * mLabel->frame().height));
 
         Super::layout(context);
@@ -138,12 +143,8 @@ public:
 
 private:
     Label *mLabel;
-    Button *mLeft;
-    Button *mHCenter;
-    Button *mRight;
-    Button *mTop;
-    Button *mVCenter;
-    Button *mBottom;
+    SegmentedControl *mHoriz;
+    SegmentedControl *mVert;
 };
 
 class ButtonTest : public Widget
@@ -183,15 +184,15 @@ public:
         addChild(mCheckbox);
     }
 
-    Size preferredSize(const LayoutContext& context) const
+    Size preferredSize(const LayoutContext& context) const override
     {
         auto button = context.theme.calcPreferredButtonSize(context,
                                                             context.theme.params().labelFont,
                                                             mDisabled->label()->text());
-        return Size(5.0f * button.width, 4.25f * button.height);
+        return Size(5.0f * button.width, 5.5f * button.height);
     }
 
-    void layout(const LayoutContext& context)
+    void layout(const LayoutContext& context) override
     {
         auto setToPref = [&context](Widget *w) {
             auto pref = w->preferredSize(context);
@@ -230,6 +231,60 @@ private:
     Label *mLabel;
 };
 
+class SegmentsTest : public Widget
+{
+    using Super = Widget;
+public:
+    SegmentsTest()
+    {
+        mTooSmall = new SegmentedControl({"duck", "partridge", "quail"});
+        addChild(mTooSmall);
+
+        mTooLarge = new SegmentedControl({"duck", "partridge", "quail"});
+        addChild(mTooLarge);
+
+        mSelectOne = new SegmentedControl({"Left", "Center", "Right"});
+        mSelectOne->setAction(SegmentedControl::Action::kSelectOne);
+        addChild(mSelectOne);
+
+        mSelectMany = new SegmentedControl({"B", "I", "U"});
+        mSelectMany->setAction(SegmentedControl::Action::kSelectMultiple);
+        addChild(mSelectMany);
+    }
+
+    Size preferredSize(const LayoutContext& context) const override
+    {
+        auto pref1 = mTooSmall->preferredSize(context);
+        auto pref2 = mTooLarge->preferredSize(context);
+        return Size(pref1.width + pref1.height + 1.3 * pref2.width, 3.0f * pref1.height);
+    }
+
+    void layout(const LayoutContext& context) override
+    {
+        auto prefSm = mTooSmall->preferredSize(context);
+        auto prefLg = mTooLarge->preferredSize(context);
+        auto prefOne = mSelectOne->preferredSize(context);
+        auto prefMany = mSelectMany->preferredSize(context);
+
+        auto y = PicaPt::kZero;
+        mTooSmall->setFrame(Rect(PicaPt::kZero, y, 0.8f * prefSm.width, prefSm.height));
+        mTooLarge->setFrame(Rect(mTooSmall->frame().maxX() + 0.5f * prefSm.height, y,
+                                 1.333f * prefLg.width, prefLg.height));
+        y += 1.25f * prefSm.height;
+        mSelectOne->setFrame(Rect(PicaPt::kZero, y, prefOne.width, prefOne.height));
+        mSelectMany->setFrame(Rect(mSelectOne->frame().maxX() + 0.5f * prefSm.height, y,
+                                   prefMany.width, prefMany.height));
+
+        Super::layout(context);
+    }
+
+private:
+    SegmentedControl *mTooSmall;
+    SegmentedControl *mTooLarge;
+    SegmentedControl *mSelectOne;
+    SegmentedControl *mSelectMany;
+};
+
 class AllWidgetsTest : public Widget
 {
     using Super = Widget;
@@ -242,6 +297,8 @@ public:
         addChild(mLabels);
         mButtons = new ButtonTest();
         addChild(mButtons);
+        mSegments = new SegmentsTest();
+        addChild(mSegments);
     }
 
     void layout(const LayoutContext& context)
@@ -253,6 +310,8 @@ public:
         mLabels->setFrame(Rect(x, mSizing->frame().maxY(), pref.width, pref.height));
         pref = mButtons->preferredSize(context);
         mButtons->setFrame(Rect(x, mLabels->frame().maxY(), pref.width, pref.height));
+        pref = mSegments->preferredSize(context);
+        mSegments->setFrame(Rect(x, mButtons->frame().maxY(), pref.width, pref.height));
 
         Super::layout(context);
     }
@@ -261,6 +320,7 @@ private:
     SizeTest *mSizing;
     LabelTest *mLabels;
     ButtonTest *mButtons;
+    SegmentsTest *mSegments;
 };
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -277,7 +337,7 @@ int main(int argc, char *argv[])
     Window w("UITK test widgets", 1024, 768);
 
     w.addChild((new AllWidgetsTest())
-               ->setFrame(Rect(PicaPt(0), PicaPt(0), PicaPt(300), PicaPt(600))));
+               ->setFrame(Rect(PicaPt(0), PicaPt(0), PicaPt(300), PicaPt(768))));
 //    w.addChild((new Label("Egypt"))
 //               ->setFrame(Rect(PicaPt(0), PicaPt(0), PicaPt(300), PicaPt(600))));
     w.show(true);

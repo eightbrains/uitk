@@ -211,6 +211,17 @@ Widget* Widget::addChild(Widget *w)
     return this;
 }
 
+Widget* Widget::removeChild(Widget *w)
+{
+    for (auto it = mImpl->children.begin();  it != mImpl->children.end();  ++it) {
+        if (*it == w) {
+            mImpl->children.erase(it);
+            return w;
+        }
+    }
+    return nullptr;
+}
+
 const std::vector<Widget*> Widget::children() const
 {
     return mImpl->children;
@@ -278,13 +289,11 @@ Widget::EventResult Widget::mouse(const MouseEvent& e)
     auto &r = frame();
 
     auto result = EventResult::kIgnored;
-    auto childE = e;
-    childE.pos -= r.upperLeft();
     for (auto *child : mImpl->children) {
         if (!child->enabled()) {
             continue;
         }
-        if (child->frame().contains(childE.pos)) {
+        if (child->frame().contains(e.pos)) {
             // Mouse is in child, check if we just entered
             switch (e.type) {
                 case MouseEvent::Type::kMove:
@@ -302,6 +311,8 @@ Widget::EventResult Widget::mouse(const MouseEvent& e)
             // Send the event to the child if an earlier widget has not already
             // consumed this event.
             if (result != EventResult::kConsumed) {
+                auto childE = e;
+                childE.pos -= child->frame().upperLeft();
                 if (child->mouse(childE) == EventResult::kConsumed) {
                     result = EventResult::kConsumed;
                 }
@@ -327,11 +338,12 @@ void Widget::mouseExited()
     // have moved.
     if (state() != Theme::WidgetState::kNormal) {
         setState(Theme::WidgetState::kNormal);
+    }
 
-        for (auto *child : mImpl->children) {
-            if (child->state() != Theme::WidgetState::kNormal) {
-                child->mouseExited();
-            }
+    for (auto *child : mImpl->children) {
+        if (child->state() == Theme::WidgetState::kMouseOver
+            || child->state() == Theme::WidgetState::kMouseDown) {
+            child->mouseExited();
         }
     }
 }

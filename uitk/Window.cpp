@@ -122,6 +122,7 @@ void Window::raiseToTop() const { mImpl->window->raiseToTop(); }
 Window* Window::addChild(Widget *child)
 {
     mImpl->rootWidget->addChild(child);
+    setNeedsDraw();
     return this;
 }
 

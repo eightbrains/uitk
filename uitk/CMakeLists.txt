@@ -7,6 +7,7 @@ set(UITK_HEADERS Application.h
                  Label.h
                  OSApplication.h
                  OSWindow.h
+                 SegmentedControl.h
                  UIContext.h
                  Widget.h
                  Window.h
@@ -18,6 +19,7 @@ set(UITK_SOURCES Application.cpp
                  Button.cpp
                  Checkbox.cpp
                  Label.cpp
+                 SegmentedControl.cpp
                  Widget.cpp
                  Window.cpp
                  themes/EmpireTheme.cpp

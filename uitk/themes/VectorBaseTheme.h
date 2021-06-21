@@ -41,6 +41,8 @@ public:
     // Returns the size for the checkbox, not the checkbox + text
     Size calcPreferredCheckboxSize(const LayoutContext& ui,
                                    const Font& font) const override;
+    Size calcPreferredSegmentSize(const LayoutContext& ui, const Font& font,
+                                  const std::string& text) const override;
 
     void drawWindowBackground(UIContext& ui, const Size& size) const override;
     void drawFrame(UIContext& ui, const Rect& frame,
@@ -52,6 +54,17 @@ public:
     void drawCheckbox(UIContext& ui, const Rect& frame,
                       const WidgetStyle& style, WidgetState state,
                       bool isOn) const override;
+    void drawSegmentedControl(UIContext& ui,
+                              const Rect& frame,
+                              const WidgetStyle& style,
+                              WidgetState state) const override;
+    void drawSegment(UIContext& ui, const Rect& frame, WidgetState state,
+                     bool isButton, bool isOn,
+                     int segmentIndex, int nSegments) const override;
+    void drawSegmentDivider(UIContext& ui, const Point& top, const Point& bottom,
+                            const WidgetStyle& ctrlStyle,
+                            WidgetState ctrlState) const override;
+    const WidgetStyle& segmentTextStyle(WidgetState state, bool isOn) const override;
 
 protected:
     void setVectorParams(const Params& params);
@@ -65,6 +78,10 @@ protected:
     WidgetStyle mButtonOnStyles[4];
     WidgetStyle mCheckboxStyles[4];
     WidgetStyle mCheckboxOnStyles[4];
+    WidgetStyle mSegmentedControlStyles[4];  // style for the background
+    WidgetStyle mSegmentStyles[4];  // style for individual segment (button-style)
+    WidgetStyle mSegmentOffStyles[4];  // style for individual segment (off)
+    WidgetStyle mSegmentOnStyles[4];  // style for individual segment (on)
 };
 
 }  // namespace uitk

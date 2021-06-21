@@ -79,6 +79,11 @@ public:
     /// pointer to `this`.
     Widget* addChild(Widget *w);
 
+    /// Removes the widget and returns ownership to the caller.
+    /// Returns a pointer to `w` (which the caller could use to `delete`,
+    /// for instance). This function is O(n).
+    Widget* removeChild(Widget *w);
+
     const std::vector<Widget*> children() const;
 
     /// Returns the Window that owns this widget, or nullptr
