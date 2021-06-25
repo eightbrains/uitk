@@ -48,6 +48,7 @@ struct Window::Impl
     std::unique_ptr<OSWindow> window;
     std::string title;
     std::unique_ptr<Widget> rootWidget;
+    Widget *grabbedWidget = nullptr;
     bool inResize = false;
     bool inMouse = false;
     bool needsDraw = false;
@@ -126,12 +127,69 @@ Window* Window::addChild(Widget *child)
     return this;
 }
 
+void Window::setMouseGrab(Widget *w)
+{
+    mImpl->grabbedWidget = w;
+}
+
 void Window::onMouse(const MouseEvent& e)
 {
     mImpl->inMouse = true;
 
-    mImpl->rootWidget->setState(Theme::WidgetState::kMouseOver);  // so onDeactivated works
-    mImpl->rootWidget->mouse(e);
+    if (mImpl->grabbedWidget == nullptr) {
+        mImpl->rootWidget->setState(Theme::WidgetState::kMouseOver);  // so onDeactivated works
+        mImpl->rootWidget->mouse(e);
+    } else {
+        auto *grabbed = mImpl->grabbedWidget;
+        auto grabE = e;  // copy
+        grabE.pos = grabbed->convertToLocalFromWindow(e.pos);
+        if (grabbed->bounds().contains(grabE.pos)) {
+            // If we are inside the widget, we should send the event normally.
+            // This handles two cases:
+            //   1) the user dragged outside the widget and is now back in,
+            //      so we need to update the highlighting,
+            //   2) widgets like Button that use subwidgets. In Button's case,
+            //      the text frame is the same size as the button, and the
+            //      grab goes to the deepest. This way the Button will also
+            //      get the event, not just the Label.
+            mImpl->rootWidget->mouse(e);
+        } else {
+            // Send the event directly, unless it is a button up event.
+            // Button up should be ignored outside the widget, because
+            // otherwise every widget will need to remember to check if
+            // the button up is inside the frame before assuming that this
+            // is an actionable end-of-click.
+            if (grabE.type != MouseEvent::Type::kButtonUp) {
+                grabbed->mouse(grabE);
+            } else {
+                // Mouse up should be converted to a move and sent normally
+                // so whatever it is over can handle that.
+                // TODO: need to have e.button.buttons and check == 0
+                auto moveE = e;
+                moveE.type = MouseEvent::Type::kMove;
+                mImpl->rootWidget->mouse(moveE);
+            }
+
+            // Handle the case where the mouse just left the frame
+            auto currentState = grabbed->state();
+            auto newState = Theme::WidgetState::kNormal;
+            if (newState != currentState) {
+                Widget *w = grabbed;
+                // Need to also set states of all the parents
+                while (w) {
+                    w->setState(newState);
+                    w = w->parent();
+                }
+            }
+        }
+    }
+
+    // TODO: need to have e.button.buttons and check == 0, otherwise grab will be
+    // cancelled if one button is released, even though others are pressed
+    //if (e.type == MouseEvent::Type::kButtonUp && e.button.buttons == 0) {
+    if (e.type == MouseEvent::Type::kButtonUp && e.button.button == MouseButton::kLeft) {
+        mImpl->grabbedWidget = nullptr;
+    }
 
     mImpl->inMouse = false;
     if (mImpl->needsDraw) {
@@ -190,7 +248,6 @@ void Window::onActivated(const Point& currentMousePos)
 void Window::onDeactivated()
 {
     mImpl->rootWidget->mouseExited();
-    // TODO: don't draw if nothing has changed (i.e. state())
     postRedraw();
 }
 

@@ -137,6 +137,11 @@ Widget* Widget::setEnabled(bool enabled)
 {
     mImpl->enabled = enabled;
     setState(enabled ? Theme::WidgetState::kNormal : Theme::WidgetState::kDisabled);
+    // Recursively disable, so that children's state is also kDisabled, so that
+    // they draw correctly.
+    for (auto *child : mImpl->children) {
+        child->setEnabled(enabled);
+    }
     return this;
 }
 
@@ -227,6 +232,13 @@ const std::vector<Widget*> Widget::children() const
     return mImpl->children;
 }
 
+Widget* Widget::parent() const
+{
+    // TODO: can we detect if the parent is our internal toplevel root widget
+    // and return null?
+    return mImpl->parent;
+}
+
 Window* Widget::window() const
 {
     const Widget *w = this;
@@ -237,6 +249,17 @@ Window* Widget::window() const
 }
 
 void Widget::setWindow(Window *window) { mImpl->window = window; }
+
+Point Widget::convertToLocalFromWindow(const Point& windowPt)
+{
+    Point localPt = windowPt;
+    const Widget *w = this;
+    while (w->mImpl->parent) {
+        localPt -= w->frame().upperLeft();
+        w = w->mImpl->parent;
+    }
+    return localPt;
+}
 
 void Widget::setNeedsDraw()
 {
@@ -249,6 +272,10 @@ Theme::WidgetState Widget::state() const { return mImpl->state; }
 
 void Widget::setState(Theme::WidgetState state)
 {
+    if (mImpl->state == Theme::WidgetState::kNormal && state == Theme::WidgetState::kMouseDown) {
+        state = state;
+    }
+    
     auto oldState = mImpl->state;
     mImpl->state = state;
 
@@ -301,6 +328,8 @@ Widget::EventResult Widget::mouse(const MouseEvent& e)
                     child->setState(Theme::WidgetState::kMouseOver);
                     break;
                 case MouseEvent::Type::kButtonDown:
+                    window()->setMouseGrab(child);
+                    // fallthrough
                 case MouseEvent::Type::kDrag:
                     child->setState(Theme::WidgetState::kMouseDown);
                     break;

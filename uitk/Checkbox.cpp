@@ -50,7 +50,7 @@ Checkbox::~Checkbox()
 Size Checkbox::preferredSize(const LayoutContext& context) const
 {
     auto font = context.theme.params().labelFont;
-    auto boxSize = context.theme.calcPreferredCheckboxSize(context, font);
+    auto boxSize = context.theme.calcPreferredCheckboxSize(context.dc, font);
     auto labelSize = label()->preferredSize(context);
     return Size(boxSize.width + calcSpacing(context.dc, font) + labelSize.width,
                 boxSize.height);

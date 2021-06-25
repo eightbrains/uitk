@@ -28,6 +28,15 @@
 
 namespace uitk {
 
+Color blend(const Color& top, const Color& bottom)
+{
+    auto a = top.alpha();
+    return Color(a * top.red() + (1.0f - a) * bottom.red(),
+                 a * top.green() + (1.0f - a) * bottom.green(),
+                 a * top.green() + (1.0f - a) * bottom.blue(),
+                 1.0f);
+}
+
 VectorBaseTheme::VectorBaseTheme(const Params& params, const PicaPt& borderWidth,
                                  const PicaPt& borderRadius)
     : mParams(params), mBorderWidth(borderWidth), mBorderRadius(borderRadius)
@@ -164,6 +173,26 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mSegmentOnStyles[DOWN].bgColor = adjustSegmentBG(mSegmentOnStyles[DOWN].bgColor);
     mSegmentOnStyles[DOWN].borderRadius = PicaPt::kZero;
     mSegmentOnStyles[DOWN].borderWidth = PicaPt::kZero;
+
+    // Slider (track only uses NORMAL and DISABLED)
+    copyStyles(mButtonStyles, mSliderTrackStyles);
+    mSliderTrackStyles[NORMAL].fgColor = params.accentColor;
+    mSliderTrackStyles[DISABLED].fgColor = params.accentColor.toGrey();
+    mSliderTrackStyles[OVER] = mSliderTrackStyles[NORMAL];
+    mSliderTrackStyles[DOWN] = mSliderTrackStyles[NORMAL];
+    // Note that text colors can be alpha on macOS, and we need the thumb's background
+    // colors to be solid to hide everything underneath.
+    copyStyles(mButtonStyles, mSliderThumbStyles);
+    mSliderThumbStyles[DISABLED].bgColor = Color(0.5f, 0.5f, 0.5f);
+    if (isDarkMode) {
+        mSliderThumbStyles[NORMAL].bgColor = blend(mParams.textColor, Color::kBlack);
+        mSliderThumbStyles[OVER].bgColor = mSliderThumbStyles[NORMAL].bgColor.lighter(0.05);
+        mSliderThumbStyles[DOWN].bgColor = mSliderThumbStyles[NORMAL].bgColor.lighter(0.15);
+    } else {
+        mSliderThumbStyles[NORMAL].bgColor = blend(mParams.textColor, Color::kWhite);
+        mSliderThumbStyles[OVER].bgColor = mSliderThumbStyles[NORMAL].bgColor.darker(0.05);
+        mSliderThumbStyles[DOWN].bgColor = mSliderThumbStyles[NORMAL].bgColor.darker(0.15);
+    }
 }
 
 const Theme::Params& VectorBaseTheme::params() const { return mParams; }
@@ -221,38 +250,44 @@ void VectorBaseTheme::drawFrame(UIContext& ui, const Rect& frame,
     }
 }
 
-Size VectorBaseTheme::calcPreferredButtonSize(const LayoutContext& ui, const Font& font,
+Size VectorBaseTheme::calcPreferredButtonSize(const DrawContext& dc, const Font& font,
                                               const std::string& text) const
 {
-    auto fm = ui.dc.fontMetrics(font);
-    auto tm = ui.dc.textMetrics(text.c_str(), font, kPaintFill);
+    auto fm = dc.fontMetrics(font);
+    auto tm = dc.textMetrics(text.c_str(), font, kPaintFill);
     auto em = tm.height;
-    auto margin = ui.dc.ceilToNearestPixel(1.5 * fm.descent);
+    auto margin = dc.ceilToNearestPixel(1.5 * fm.descent);
     // Height works best if the descent is part of the bottom margin,
     // because it looks visually empty even if there are a few descenders.
     // Now the ascent can be anything the font designer want it to be,
     // which is not helpful for computing accurate margins. But cap-height
     // is well-defined, so use that instead.
-    return Size(ui.dc.ceilToNearestPixel(2.0f * em + tm.width) + 2.0f * margin,
-                ui.dc.ceilToNearestPixel(fm.capHeight) + 2.0f * margin);
+    return Size(dc.ceilToNearestPixel(2.0f * em + tm.width) + 2.0f * margin,
+                dc.ceilToNearestPixel(fm.capHeight) + 2.0f * margin);
 }
 
-Size VectorBaseTheme::calcPreferredCheckboxSize(const LayoutContext& ui,
+Size VectorBaseTheme::calcPreferredCheckboxSize(const DrawContext& dc,
                                                 const Font& font) const
 {
-    auto size = calcPreferredButtonSize(ui, font, "Ag");
+    auto size = calcPreferredButtonSize(dc, font, "Ag");
     return Size(size.height, size.height);
 }
 
-Size VectorBaseTheme::calcPreferredSegmentSize(const LayoutContext& ui,
+Size VectorBaseTheme::calcPreferredSegmentSize(const DrawContext& dc,
                                                const Font& font,
                                                const std::string& text) const
 {
-    auto pref = calcPreferredButtonSize(ui, font, text);
-    auto tm = ui.dc.textMetrics(text.c_str(), font, kPaintFill);
+    auto pref = calcPreferredButtonSize(dc, font, text);
+    auto tm = dc.textMetrics(text.c_str(), font, kPaintFill);
     auto margin = tm.height;  // 0.5*em on either side
-    return Size(ui.dc.ceilToNearestPixel(tm.width + margin),
+    return Size(dc.ceilToNearestPixel(tm.width + margin),
                 pref.height);  // height is already ceil'd.
+}
+
+Size VectorBaseTheme::calcPreferredSliderThumbSize(const DrawContext& ui) const
+{
+    auto buttonHeight = calcPreferredButtonSize(ui, mParams.labelFont, "Ag").height;
+    return Size(buttonHeight, buttonHeight);
 }
 
 void VectorBaseTheme::drawButton(UIContext& ui, const Rect& frame,
@@ -419,6 +454,45 @@ const Theme::WidgetStyle& VectorBaseTheme::segmentTextStyle(WidgetState state, b
     } else {
         return mSegmentOffStyles[int(state)];
     }
+}
+
+void VectorBaseTheme::drawSliderTrack(UIContext& ui, const Rect& frame, const PicaPt& thumbX,
+                                      const WidgetStyle& style, WidgetState state) const
+{
+    auto frameStyle = mSliderTrackStyles[int(state)].merge(style);  // copy
+
+    // Draw the track
+    auto h = 0.3f * frame.height;
+    if (frameStyle.borderRadius > PicaPt::kZero) {
+        frameStyle.borderRadius = 0.5f * h;
+    }
+    Rect frameRect(frame.x, frame.midY() - 0.5f * h, frame.width, h);
+    drawFrame(ui, frameRect, frameStyle);
+
+    // Draw the highlight
+    auto onePx = ui.dc.onePixel();
+    frameRect.inset(onePx, onePx);
+    frameRect.width = thumbX - frameRect.x;
+    frameStyle.bgColor = frameStyle.fgColor;
+    frameStyle.borderRadius = frameStyle.borderRadius - frameStyle.borderWidth - onePx;
+    frameStyle.borderWidth = PicaPt::kZero;
+    drawFrame(ui, frameRect, frameStyle);
+}
+
+void VectorBaseTheme::drawSliderThumb(UIContext& ui, const Rect& frame,
+                                      const WidgetStyle& style, WidgetState state) const
+{
+    // Q: Why don't we control the frame of the thumb?
+    // A: The widget needs to handle mouse movements, so it needs to control the frame,
+    //    otherwise it cannot guarantee accuracy. This limits the control of the theme has,
+    //    but ultimately the theme and widget must work together. We are the view; all we
+    //    can do is draw what the controller gives us.
+
+    auto thumbStyle = mSliderThumbStyles[int(state)].merge(style);
+    if (thumbStyle.borderRadius > PicaPt::kZero) {
+        thumbStyle.borderRadius = 0.5f * frame.height;
+    }
+    drawFrame(ui, frame, thumbStyle);
 }
 
 }  // namespace uitk

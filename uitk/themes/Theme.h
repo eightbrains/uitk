@@ -110,12 +110,13 @@ public:
     virtual const Params& params() const = 0;
     virtual void setParams(const Params& params) = 0;
 
-    virtual Size calcPreferredButtonSize(const LayoutContext& ui, const Font& font,
+    virtual Size calcPreferredButtonSize(const DrawContext& dc, const Font& font,
                                          const std::string& text) const = 0;
-    virtual Size calcPreferredCheckboxSize(const LayoutContext& ui,
+    virtual Size calcPreferredCheckboxSize(const DrawContext& dc,
                                            const Font& font) const = 0;
-    virtual Size calcPreferredSegmentSize(const LayoutContext& ui, const Font& font,
+    virtual Size calcPreferredSegmentSize(const DrawContext& dc, const Font& font,
                                           const std::string& text) const = 0;
+    virtual Size calcPreferredSliderThumbSize(const DrawContext& dc) const = 0;
 
     virtual void drawWindowBackground(UIContext& ui, const Size& size) const = 0;
     virtual void drawFrame(UIContext& ui, const Rect& frame,
@@ -137,6 +138,10 @@ public:
                                     const WidgetStyle& ctrlStyle,
                                     WidgetState ctrlState) const = 0;
     virtual const WidgetStyle& segmentTextStyle(WidgetState state, bool isOn) const = 0;
+    virtual void drawSliderTrack(UIContext& ui, const Rect& frame, const PicaPt& thumbX,
+                                 const WidgetStyle& style, WidgetState state) const = 0;
+    virtual void drawSliderThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
+                                 WidgetState state) const = 0;
 };
 
 }  // namespace uitk

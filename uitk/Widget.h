@@ -86,8 +86,13 @@ public:
 
     const std::vector<Widget*> children() const;
 
+    /// Returns the parent of this widget, or nullptr
+    Widget* parent() const;
+
     /// Returns the Window that owns this widget, or nullptr
     Window* window() const;
+
+    Point convertToLocalFromWindow(const Point& windowPt);
 
     /// returned by size calculations to indicate that the widget wants
     /// as much space as possible in that dimension.
@@ -120,10 +125,12 @@ public:
     std::string debugDescription(const Point& offset = Point(PicaPt::kZero, PicaPt::kZero),
                                  int indent = 0) const;
 
+public:
+    Theme::WidgetState state() const;
+
 protected:
     void setWindow(Window* window);  // for Window
 
-    Theme::WidgetState state() const;
     void setState(Theme::WidgetState state);
 
     Theme::WidgetStyle& style(Theme::WidgetState state);

@@ -121,7 +121,7 @@ Size SegmentedControl::preferredSize(const LayoutContext& context) const
     Size pref;
     auto font = context.theme.params().labelFont;
     for (auto &item : mImpl->items) {
-        Size segPref = context.theme.calcPreferredSegmentSize(context, font, item.name);
+        Size segPref = context.theme.calcPreferredSegmentSize(context.dc, font, item.name);
         pref.width += segPref.width;
         pref.height = std::max(pref.height, segPref.height);
     }
@@ -137,7 +137,7 @@ void SegmentedControl::layout(const LayoutContext& context)
         widths.reserve(mImpl->items.size());
         auto font = context.theme.params().labelFont;
         for (auto &item : mImpl->items) {
-            Size pref = context.theme.calcPreferredSegmentSize(context, font, item.name);
+            Size pref = context.theme.calcPreferredSegmentSize(context.dc, font, item.name);
             widths.push_back(pref.width);
             total += pref.width;
         }

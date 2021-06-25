@@ -36,13 +36,14 @@ public:
     const Params& params() const override;
     void setParams(const Params& params) override;
 
-    Size calcPreferredButtonSize(const LayoutContext& ui, const Font& font,
+    Size calcPreferredButtonSize(const DrawContext& dc, const Font& font,
                                  const std::string& text) const override;
     // Returns the size for the checkbox, not the checkbox + text
-    Size calcPreferredCheckboxSize(const LayoutContext& ui,
+    Size calcPreferredCheckboxSize(const DrawContext& dc,
                                    const Font& font) const override;
-    Size calcPreferredSegmentSize(const LayoutContext& ui, const Font& font,
+    Size calcPreferredSegmentSize(const DrawContext& dc, const Font& font,
                                   const std::string& text) const override;
+    Size calcPreferredSliderThumbSize(const DrawContext& dc) const override;
 
     void drawWindowBackground(UIContext& ui, const Size& size) const override;
     void drawFrame(UIContext& ui, const Rect& frame,
@@ -65,6 +66,10 @@ public:
                             const WidgetStyle& ctrlStyle,
                             WidgetState ctrlState) const override;
     const WidgetStyle& segmentTextStyle(WidgetState state, bool isOn) const override;
+    void drawSliderTrack(UIContext& ui, const Rect& frame, const PicaPt& thumbX,
+                         const WidgetStyle& style, WidgetState state) const override;
+    void drawSliderThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
+                         WidgetState state) const override;
 
 protected:
     void setVectorParams(const Params& params);
@@ -82,6 +87,8 @@ protected:
     WidgetStyle mSegmentStyles[4];  // style for individual segment (button-style)
     WidgetStyle mSegmentOffStyles[4];  // style for individual segment (off)
     WidgetStyle mSegmentOnStyles[4];  // style for individual segment (on)
+    WidgetStyle mSliderTrackStyles[4];
+    WidgetStyle mSliderThumbStyles[4];
 };
 
 }  // namespace uitk

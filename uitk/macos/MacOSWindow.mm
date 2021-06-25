@@ -62,15 +62,15 @@ int toKeymods(NSEventModifierFlags flags)
 uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 {
     switch (buttonNumber) {
-        case 1:
+        case 0:
             return uitk::MouseButton::kLeft;
-        case 2:
+        case 1:
             return uitk::MouseButton::kRight;
-        case 3:
+        case 2:
             return uitk::MouseButton::kMiddle;
-        case 4:
+        case 3:
             return uitk::MouseButton::kButton4;
-        case 5:
+        case 4:
             return uitk::MouseButton::kButton5;
         default:
             return uitk::MouseButton::kNone;

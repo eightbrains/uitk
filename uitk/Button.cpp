@@ -74,7 +74,7 @@ Label* Button::label() const { return mImpl->label; }
 
 Size Button::preferredSize(const LayoutContext& context) const
 {
-    return context.theme.calcPreferredButtonSize(context, context.theme.params().labelFont,
+    return context.theme.calcPreferredButtonSize(context.dc, context.theme.params().labelFont,
                                                  mImpl->label->text());
 }
 

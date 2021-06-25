@@ -186,7 +186,7 @@ public:
 
     Size preferredSize(const LayoutContext& context) const override
     {
-        auto button = context.theme.calcPreferredButtonSize(context,
+        auto button = context.theme.calcPreferredButtonSize(context.dc,
                                                             context.theme.params().labelFont,
                                                             mDisabled->label()->text());
         return Size(5.0f * button.width, 5.5f * button.height);
@@ -285,6 +285,79 @@ private:
     SegmentedControl *mSelectMany;
 };
 
+class SliderTest : public Widget
+{
+    using Super = Widget;
+public:
+    SliderTest()
+    {
+        mIntLabel = new Label("");
+        addChild(mIntLabel);
+
+        mInt = new Slider();
+        mInt->setLimits(0, 100);
+        mInt->setValue(50);
+        mInt->setOnValueChanged([this](Slider *s) {
+            mIntLabel->setText(std::to_string(s->intValue()));
+        });
+        addChild(mInt);
+
+        mDoubleLabel = new Label("");
+        addChild(mDoubleLabel);
+
+        mDouble = new Slider();
+        mDouble->setLimits(0.0, 1.0, 0.01);
+        mDouble->setValue(0.25);
+        mDouble->setOnValueChanged([this](Slider *s) {
+            mDoubleLabel->setText(std::to_string(s->doubleValue()));
+        });
+        addChild(mDouble);
+
+        mDisabled = new Slider();
+        mDisabled->setLimits(0, 100);
+        mDisabled->setValue(50);
+        mDisabled->setEnabled(false);
+        addChild(mDisabled);
+
+        mIntLabel->setText(std::to_string(mInt->intValue()));
+        mDoubleLabel->setText(std::to_string(mDouble->doubleValue()));
+    }
+
+    Size preferredSize(const LayoutContext& context) const override
+    {
+        auto prefHeight = mInt->preferredSize(context).height;
+        auto spacing = 0.5f * prefHeight;
+        return Size(PicaPt(200), 3.0f * prefHeight + 3.0f * spacing);
+    }
+
+    void layout(const LayoutContext& context) override
+    {
+        auto x = PicaPt::kZero;
+        auto y = PicaPt::kZero;
+        auto sliderHeight = mInt->preferredSize(context).height;
+        auto spacing = 0.25f * sliderHeight;
+        auto labelWidth = 3.0f * sliderHeight;
+        auto sliderWidth = frame().width - spacing - labelWidth;
+
+        mInt->setFrame(Rect(x, y, sliderWidth, sliderHeight));
+        mIntLabel->setFrame(Rect(mInt->frame().maxX() + spacing, y, labelWidth, sliderHeight));
+        y += sliderHeight + spacing;
+        mDouble->setFrame(Rect(x, y, sliderWidth, sliderHeight));
+        mDoubleLabel->setFrame(Rect(mDouble->frame().maxX() + spacing, y, labelWidth, sliderHeight));
+        y += sliderHeight + spacing;
+        mDisabled->setFrame(Rect(x, y, sliderWidth, sliderHeight));
+
+        Super::layout(context);
+    }
+
+private:
+    Slider *mInt;
+    Slider *mDouble;
+    Slider *mDisabled;
+    Label *mIntLabel;
+    Label *mDoubleLabel;
+};
+
 class AllWidgetsTest : public Widget
 {
     using Super = Widget;
@@ -299,6 +372,8 @@ public:
         addChild(mButtons);
         mSegments = new SegmentsTest();
         addChild(mSegments);
+        mSliders = new SliderTest();
+        addChild(mSliders);
     }
 
     void layout(const LayoutContext& context)
@@ -312,6 +387,8 @@ public:
         mButtons->setFrame(Rect(x, mLabels->frame().maxY(), pref.width, pref.height));
         pref = mSegments->preferredSize(context);
         mSegments->setFrame(Rect(x, mButtons->frame().maxY(), pref.width, pref.height));
+        pref = mSliders->preferredSize(context);
+        mSliders->setFrame(Rect(x, mSegments->frame().maxY(), pref.width, pref.height));
 
         Super::layout(context);
     }
@@ -321,6 +398,7 @@ private:
     LabelTest *mLabels;
     ButtonTest *mButtons;
     SegmentsTest *mSegments;
+    SliderTest *mSliders;
 };
 
 #if defined(_WIN32) || defined(_WIN64)
