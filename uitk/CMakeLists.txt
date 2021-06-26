@@ -7,6 +7,7 @@ set(UITK_HEADERS Application.h
                  Label.h
                  OSApplication.h
                  OSWindow.h
+                 ProgressBar.h
                  SegmentedControl.h
                  Slider.h
                  UIContext.h
@@ -20,6 +21,7 @@ set(UITK_SOURCES Application.cpp
                  Button.cpp
                  Checkbox.cpp
                  Label.cpp
+                 ProgressBar.cpp
                  SegmentedControl.cpp
                  Slider.cpp
                  Widget.cpp

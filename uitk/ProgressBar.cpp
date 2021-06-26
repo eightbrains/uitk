@@ -20,24 +20,48 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
-
-#define ND_NAMESPACE uitk
-
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
-
-#include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "Label.h"
 #include "ProgressBar.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
+
 #include "UIContext.h"
-#include "Window.h"
+#include "themes/Theme.h"
 
-#include <nativedraw.h>
+namespace uitk {
 
-#endif // UITK_H
+struct ProgressBar::Impl
+{
+    float value = 0;
+};
+
+ProgressBar::ProgressBar()
+    : mImpl(new Impl())
+{
+}
+
+ProgressBar::~ProgressBar()
+{
+}
+
+float ProgressBar::value() const { return mImpl->value; }
+
+ProgressBar* ProgressBar::setValue(float percent)
+{
+    mImpl->value = std::max(0.0f, std::min(100.0f, percent));
+    setNeedsDraw();
+    return this;
+}
+
+Size ProgressBar::preferredSize(const LayoutContext& context) const
+{
+    return Size(kDimGrow, context.theme.calcPreferredProgressBarSize(context.dc).height);
+}
+
+void ProgressBar::draw(UIContext& context)
+{
+    Super::draw(context);
+
+    context.theme.drawProgressBar(context, bounds(), mImpl->value, style(state()), state());
+}
+
+}  // namespace uitk
+
+

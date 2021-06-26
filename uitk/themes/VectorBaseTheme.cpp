@@ -193,6 +193,9 @@ void VectorBaseTheme::setVectorParams(const Params &params)
         mSliderThumbStyles[OVER].bgColor = mSliderThumbStyles[NORMAL].bgColor.darker(0.05);
         mSliderThumbStyles[DOWN].bgColor = mSliderThumbStyles[NORMAL].bgColor.darker(0.15);
     }
+
+    // ProgressBar
+    copyStyles(mSliderTrackStyles, mProgressBarStyles);
 }
 
 const Theme::Params& VectorBaseTheme::params() const { return mParams; }
@@ -288,6 +291,12 @@ Size VectorBaseTheme::calcPreferredSliderThumbSize(const DrawContext& ui) const
 {
     auto buttonHeight = calcPreferredButtonSize(ui, mParams.labelFont, "Ag").height;
     return Size(buttonHeight, buttonHeight);
+}
+
+Size VectorBaseTheme::calcPreferredProgressBarSize(const DrawContext& dc) const
+{
+    auto buttonHeight = calcPreferredButtonSize(dc, mParams.labelFont, "Ag").height;
+    return Size(PicaPt(144.0f), buttonHeight);
 }
 
 void VectorBaseTheme::drawButton(UIContext& ui, const Rect& frame,
@@ -493,6 +502,13 @@ void VectorBaseTheme::drawSliderThumb(UIContext& ui, const Rect& frame,
         thumbStyle.borderRadius = 0.5f * frame.height;
     }
     drawFrame(ui, frame, thumbStyle);
+}
+
+void VectorBaseTheme::drawProgressBar(UIContext& ui, const Rect& frame, float value,
+                                      const WidgetStyle& style, WidgetState state) const
+{
+    drawSliderTrack(ui, frame, frame.x + 0.01f * value * frame.width,
+                    mProgressBarStyles[int(state)].merge(style), state);
 }
 
 }  // namespace uitk

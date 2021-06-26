@@ -358,6 +358,34 @@ private:
     Label *mDoubleLabel;
 };
 
+class ProgressBarTest : public Widget
+{
+    using Super = Widget;
+public:
+    ProgressBarTest()
+    {
+        mProgress = new ProgressBar();
+        mProgress->setValue(66.6);
+        addChild(mProgress);
+    }
+
+    Size preferredSize(const LayoutContext& context) const override
+    {
+        auto pref = mProgress->preferredSize(context);
+        return Size(PicaPt(200.0f), 2.0f * pref.height);
+    }
+
+    void layout(const LayoutContext& context) override
+    {
+        mProgress->setFrame(Rect(PicaPt::kZero, PicaPt::kZero,
+                                 frame().width, mProgress->preferredSize(context).height));
+        Super::layout(context);
+    }
+
+private:
+    ProgressBar *mProgress;
+};
+
 class AllWidgetsTest : public Widget
 {
     using Super = Widget;
@@ -374,6 +402,8 @@ public:
         addChild(mSegments);
         mSliders = new SliderTest();
         addChild(mSliders);
+        mProgress = new ProgressBarTest();
+        addChild(mProgress);
     }
 
     void layout(const LayoutContext& context)
@@ -389,6 +419,8 @@ public:
         mSegments->setFrame(Rect(x, mButtons->frame().maxY(), pref.width, pref.height));
         pref = mSliders->preferredSize(context);
         mSliders->setFrame(Rect(x, mSegments->frame().maxY(), pref.width, pref.height));
+        pref = mProgress->preferredSize(context);
+        mProgress->setFrame(Rect(x, mSliders->frame().maxY(), pref.width, pref.height));
 
         Super::layout(context);
     }
@@ -399,6 +431,7 @@ private:
     ButtonTest *mButtons;
     SegmentsTest *mSegments;
     SliderTest *mSliders;
+    ProgressBarTest *mProgress;
 };
 
 #if defined(_WIN32) || defined(_WIN64)

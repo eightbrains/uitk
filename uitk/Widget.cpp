@@ -244,6 +244,9 @@ Window* Widget::window() const
     const Widget *w = this;
     while (w->mImpl->parent) {
         w = w->mImpl->parent;
+        if (!w) {
+            return nullptr;
+        }
     }
     return w->mImpl->window;
 }

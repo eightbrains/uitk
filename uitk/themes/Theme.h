@@ -117,6 +117,7 @@ public:
     virtual Size calcPreferredSegmentSize(const DrawContext& dc, const Font& font,
                                           const std::string& text) const = 0;
     virtual Size calcPreferredSliderThumbSize(const DrawContext& dc) const = 0;
+    virtual Size calcPreferredProgressBarSize(const DrawContext& dc) const = 0;
 
     virtual void drawWindowBackground(UIContext& ui, const Size& size) const = 0;
     virtual void drawFrame(UIContext& ui, const Rect& frame,
@@ -142,6 +143,8 @@ public:
                                  const WidgetStyle& style, WidgetState state) const = 0;
     virtual void drawSliderThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
                                  WidgetState state) const = 0;
+    virtual void drawProgressBar(UIContext& ui, const Rect& frame, float value,
+                                 const WidgetStyle& style, WidgetState state) const = 0;
 };
 
 }  // namespace uitk

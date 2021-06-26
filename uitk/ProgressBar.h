@@ -20,24 +20,32 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
+#ifndef UITK_PROGRESS_BAR_H
+#define UITK_PROGRESS_BAR_H
 
-#define ND_NAMESPACE uitk
+#include "Widget.h"
 
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
+namespace uitk {
 
-#include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "Label.h"
-#include "ProgressBar.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
-#include "UIContext.h"
-#include "Window.h"
+class ProgressBar : public Widget {
+    using Super = Widget;
+public:
+    ProgressBar();
+    ~ProgressBar();
 
-#include <nativedraw.h>
+    float value() const;
+    /// Value ranges from 0 - 100.
+    ProgressBar* setValue(float percent);
 
-#endif // UITK_H
+    Size preferredSize(const LayoutContext& context) const override;
+
+    void draw(UIContext& context) override;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
+};
+
+}  // namespace uitk
+#endif // UITK_PROGRESS_BAR_H
+

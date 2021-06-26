@@ -44,6 +44,7 @@ public:
     Size calcPreferredSegmentSize(const DrawContext& dc, const Font& font,
                                   const std::string& text) const override;
     Size calcPreferredSliderThumbSize(const DrawContext& dc) const override;
+    virtual Size calcPreferredProgressBarSize(const DrawContext& dc) const override;
 
     void drawWindowBackground(UIContext& ui, const Size& size) const override;
     void drawFrame(UIContext& ui, const Rect& frame,
@@ -70,6 +71,8 @@ public:
                          const WidgetStyle& style, WidgetState state) const override;
     void drawSliderThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
                          WidgetState state) const override;
+    void drawProgressBar(UIContext& ui, const Rect& frame, float value,
+                         const WidgetStyle& style, WidgetState state) const override;
 
 protected:
     void setVectorParams(const Params& params);
@@ -89,6 +92,7 @@ protected:
     WidgetStyle mSegmentOnStyles[4];  // style for individual segment (on)
     WidgetStyle mSliderTrackStyles[4];
     WidgetStyle mSliderThumbStyles[4];
+    WidgetStyle mProgressBarStyles[4];
 };
 
 }  // namespace uitk
