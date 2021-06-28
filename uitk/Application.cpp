@@ -84,6 +84,11 @@ int Application::run()
     return mImpl->osApp->run();
 }
 
+bool Application::shouldHideScrollbars() const
+{
+    return mImpl->osApp->shouldHideScrollbars();
+}
+
 std::shared_ptr<Theme> Application::theme() const
 {
     if (!mImpl->theme) {

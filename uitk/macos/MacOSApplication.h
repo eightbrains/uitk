@@ -38,6 +38,8 @@ public:
     void setExitWhenLastWindowCloses(bool exits) override;
     int run() override;
 
+    bool shouldHideScrollbars() const override;
+
     Theme::Params themeParams() const override;
 
 private:

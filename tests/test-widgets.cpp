@@ -297,7 +297,7 @@ public:
         mInt = new Slider();
         mInt->setLimits(0, 100);
         mInt->setValue(50);
-        mInt->setOnValueChanged([this](Slider *s) {
+        mInt->setOnValueChanged([this](SliderLogic *s) {
             mIntLabel->setText(std::to_string(s->intValue()));
         });
         addChild(mInt);
@@ -308,7 +308,7 @@ public:
         mDouble = new Slider();
         mDouble->setLimits(0.0, 1.0, 0.01);
         mDouble->setValue(0.25);
-        mDouble->setOnValueChanged([this](Slider *s) {
+        mDouble->setOnValueChanged([this](SliderLogic *s) {
             mDoubleLabel->setText(std::to_string(s->doubleValue()));
         });
         addChild(mDouble);
@@ -386,6 +386,79 @@ private:
     ProgressBar *mProgress;
 };
 
+class ScrollTest : public Widget
+{
+    using Super = Widget;
+public:
+    ScrollTest()
+    {
+        mScroll = new ScrollView();
+        addChild(mScroll);
+
+        mIncLabel = new Label("0");
+        mIncButton = new Button("Increment");
+        mIncButton->setOnClicked([this](Button *b) {
+            int n = std::atoi(mIncLabel->text().c_str());
+            mIncLabel->setText(std::to_string(n + 1));
+        });
+        mScroll->addChild(mIncButton);
+        mScroll->addChild(mIncLabel);
+
+        mSliderLabel = new Label("33");
+        mSlider = new Slider();
+        mSlider->setValue(33);
+        mSlider->setOnValueChanged([this](SliderLogic *s) {
+            mSliderLabel->setText(std::to_string(s->intValue()));
+        });
+        mScroll->addChild(mSlider);
+        mScroll->addChild(mSliderLabel);
+
+        mButton2 = new Button("Magic");
+        mButton2->setToggleable(true);
+        mScroll->addChild(mButton2);
+    }
+
+    Size preferredSize(const LayoutContext& context) const override
+    {
+        return Size(PicaPt(200), PicaPt(150));
+    }
+
+    void layout(const LayoutContext& context) override
+    {
+        mScroll->setFrame(Rect(PicaPt::kZero, PicaPt::kZero,
+                                 frame().width, frame().height - PicaPt(36)));
+
+        auto y = PicaPt::kZero;
+        auto pref = mIncButton->preferredSize(context);
+        auto spacing = 0.5f * pref.height;
+        mIncButton->setFrame(Rect(PicaPt::kZero, y, pref.width, pref.height));
+        pref = mIncLabel->preferredSize(context);
+        mIncLabel->setFrame(Rect(mIncButton->frame().maxX() + spacing, mIncButton->frame().y,
+                                 3.0f * pref.height, pref.height));
+        y += mIncButton->frame().maxY() + spacing;
+        pref = mSlider->preferredSize(context);
+        mSlider->setFrame(Rect(PicaPt::kZero, y, PicaPt(100), pref.height));
+        mSliderLabel->setFrame(Rect(mSlider->frame().maxX() + spacing, y,
+                                    3.0f * pref.height, pref.height));
+
+        pref = mButton2->preferredSize(context);
+        mButton2->setFrame(Rect(PicaPt(190), PicaPt(100), pref.width, pref.height));
+
+        mScroll->setContentSize(Size(mButton2->frame().maxX(), mButton2->frame().maxY()));
+
+        Super::layout(context);
+    }
+
+private:
+    ScrollView *mScroll;
+
+    Button *mIncButton;
+    Label *mIncLabel;
+    Slider *mSlider;
+    Label *mSliderLabel;
+    Button *mButton2;
+};
+
 class AllWidgetsTest : public Widget
 {
     using Super = Widget;
@@ -404,6 +477,8 @@ public:
         addChild(mSliders);
         mProgress = new ProgressBarTest();
         addChild(mProgress);
+        mScroll = new ScrollTest();
+        addChild(mScroll);
     }
 
     void layout(const LayoutContext& context)
@@ -421,6 +496,8 @@ public:
         mSliders->setFrame(Rect(x, mSegments->frame().maxY(), pref.width, pref.height));
         pref = mProgress->preferredSize(context);
         mProgress->setFrame(Rect(x, mSliders->frame().maxY(), pref.width, pref.height));
+        pref = mScroll->preferredSize(context);
+        mScroll->setFrame(Rect(x, mProgress->frame().maxY(), pref.width, pref.height));
 
         Super::layout(context);
     }
@@ -432,6 +509,7 @@ private:
     SegmentsTest *mSegments;
     SliderTest *mSliders;
     ProgressBarTest *mProgress;
+    ScrollTest *mScroll;
 };
 
 #if defined(_WIN32) || defined(_WIN64)

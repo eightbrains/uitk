@@ -44,7 +44,8 @@ public:
     Size calcPreferredSegmentSize(const DrawContext& dc, const Font& font,
                                   const std::string& text) const override;
     Size calcPreferredSliderThumbSize(const DrawContext& dc) const override;
-    virtual Size calcPreferredProgressBarSize(const DrawContext& dc) const override;
+    Size calcPreferredProgressBarSize(const DrawContext& dc) const override;
+    PicaPt calcPreferredScrollbarThickness(const DrawContext& dc) const override;
 
     void drawWindowBackground(UIContext& ui, const Size& size) const override;
     void drawFrame(UIContext& ui, const Rect& frame,
@@ -67,12 +68,20 @@ public:
                             const WidgetStyle& ctrlStyle,
                             WidgetState ctrlState) const override;
     const WidgetStyle& segmentTextStyle(WidgetState state, bool isOn) const override;
-    void drawSliderTrack(UIContext& ui, const Rect& frame, const PicaPt& thumbX,
+    void drawSliderTrack(UIContext& ui, SliderDir dir, const Rect& frame, const Point& thumbMid,
                          const WidgetStyle& style, WidgetState state) const override;
     void drawSliderThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
                          WidgetState state) const override;
+    void drawScrollbarTrack(UIContext& ui, SliderDir dir, const Rect& frame, const Point& thumbMid,
+                            const WidgetStyle& style, WidgetState state) const override;
+    void drawScrollbarThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
+                            WidgetState state) const override;
     void drawProgressBar(UIContext& ui, const Rect& frame, float value,
                          const WidgetStyle& style, WidgetState state) const override;
+    void clipScrollView(UIContext& ui, const Rect& frame,
+                                const WidgetStyle& style, WidgetState state) const override;
+    void drawScrollView(UIContext& ui, const Rect& frame,
+                                const WidgetStyle& style, WidgetState state) const override;
 
 protected:
     void setVectorParams(const Params& params);
@@ -92,9 +101,11 @@ protected:
     WidgetStyle mSegmentOnStyles[4];  // style for individual segment (on)
     WidgetStyle mSliderTrackStyles[4];
     WidgetStyle mSliderThumbStyles[4];
+    WidgetStyle mScrollbarTrackStyles[4];
+    WidgetStyle mScrollbarThumbStyles[4];
     WidgetStyle mProgressBarStyles[4];
+    WidgetStyle mScrollViewStyles[4];
 };
 
 }  // namespace uitk
 #endif // UITK_VECTOR_BASE_THEME_H
-

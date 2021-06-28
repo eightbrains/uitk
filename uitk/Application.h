@@ -58,6 +58,10 @@ public:
     /// Runs the event loop
     int run();
 
+    /// Returns true if the operating system hides scrollbars when not
+    /// scrolling (e.g. macOS), false otherwise.
+    bool shouldHideScrollbars() const;
+
     /// Gets the application's theme.
     std::shared_ptr<Theme> theme() const;
 

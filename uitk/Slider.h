@@ -23,44 +23,21 @@
 #ifndef UITK_SLIDER_H
 #define UITK_SLIDER_H
 
-#include "Widget.h"
+#include "SliderLogic.h"
 
 namespace uitk {
 
-class Slider : public Widget {
-    using Super = Widget;
+class Slider : public SliderLogic
+{
 public:
     Slider();
     ~Slider();
 
-    int intValue() const;
-    Slider* setValue(int val);
+protected:
+    Size preferredThumbSize(const LayoutContext& context) const override;
+    void drawTrack(UIContext& context, const Point& thumbMid) override;
+    void drawThumb(UIContext& context, Widget *thumb) override;
 
-    double doubleValue() const;
-    Slider* setValue(double val);
-
-    /// Sets the upper, lower, and increment values. Increment must be 1 or larger
-    /// for integer sliders.
-    void setLimits(int minVal, int maxVal, int inc = 1);
-
-    /// Sets the upper, lower, and increment values. Increment of 0
-    /// is continuous (no increment).
-    void setLimits(double minVal, double maxVal, double inc = 1.0f);
-
-    /// Called when value changes due to mouse movement; is not called
-    /// as a result of setValue() or setLimits().
-    Slider* setOnValueChanged(std::function<void(Slider*)> onChanged);
-
-    Size preferredSize(const LayoutContext& context) const override;
-    void layout(const LayoutContext& context) override;
-
-    Widget::EventResult mouse(const MouseEvent &e) override;
-
-    void draw(UIContext& context) override;
-
-private:
-    struct Impl;
-    std::unique_ptr<Impl> mImpl;
 };
 
 }  // namespace uitk

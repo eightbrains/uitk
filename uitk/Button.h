@@ -34,7 +34,7 @@ namespace uitk {
 class Button : public Widget {
     using Super = Widget;
 public:
-    Button(const std::string& text);
+    explicit Button(const std::string& text);
     ~Button();
 
     bool toggleable() const;

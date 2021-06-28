@@ -316,43 +316,49 @@ Widget::EventResult Widget::mouse(const MouseEvent& e)
         return EventResult::kIgnored;
     }
 
-    auto &r = frame();
-
     auto result = EventResult::kIgnored;
     for (auto *child : mImpl->children) {
-        if (!child->enabled()) {
-            continue;
+        result = mouseChild(e, child, result);
+    }
+
+    return result;
+}
+
+Widget::EventResult Widget::mouseChild(const MouseEvent& e, Widget *child, EventResult result)
+{
+    if (!child->enabled() || !child->visible()) {
+        return result;
+    }
+
+    if (child->frame().contains(e.pos)) {
+        // Mouse is in child, check if we just entered
+        switch (e.type) {
+            case MouseEvent::Type::kMove:
+            case MouseEvent::Type::kScroll:
+                child->setState(Theme::WidgetState::kMouseOver);
+                break;
+            case MouseEvent::Type::kButtonDown:
+                window()->setMouseGrab(child);
+                // fallthrough
+            case MouseEvent::Type::kDrag:
+                child->setState(Theme::WidgetState::kMouseDown);
+                break;
+            case MouseEvent::Type::kButtonUp:
+                child->setState(Theme::WidgetState::kMouseOver);
+                break;
         }
-        if (child->frame().contains(e.pos)) {
-            // Mouse is in child, check if we just entered
-            switch (e.type) {
-                case MouseEvent::Type::kMove:
-                case MouseEvent::Type::kScroll:
-                    child->setState(Theme::WidgetState::kMouseOver);
-                    break;
-                case MouseEvent::Type::kButtonDown:
-                    window()->setMouseGrab(child);
-                    // fallthrough
-                case MouseEvent::Type::kDrag:
-                    child->setState(Theme::WidgetState::kMouseDown);
-                    break;
-                case MouseEvent::Type::kButtonUp:
-                    child->setState(Theme::WidgetState::kMouseOver);
-                    break;
+        // Send the event to the child if an earlier widget has not already
+        // consumed this event.
+        if (result != EventResult::kConsumed) {
+            auto childE = e;
+            childE.pos -= child->frame().upperLeft();
+            if (child->mouse(childE) == EventResult::kConsumed) {
+                result = EventResult::kConsumed;
             }
-            // Send the event to the child if an earlier widget has not already
-            // consumed this event.
-            if (result != EventResult::kConsumed) {
-                auto childE = e;
-                childE.pos -= child->frame().upperLeft();
-                if (child->mouse(childE) == EventResult::kConsumed) {
-                    result = EventResult::kConsumed;
-                }
-            }
-        } else {
-            // Mouse not in child, check if it exited the widget
-            child->setState(Theme::WidgetState::kNormal);
         }
+    } else {
+        // Mouse not in child, check if it exited the widget
+        child->setState(Theme::WidgetState::kNormal);
     }
 
     return result;
@@ -380,7 +386,7 @@ void Widget::mouseExited()
     }
 }
 
-void Widget::draw(UIContext& ui)
+void Widget::draw(UIContext& context)
 {
     // If we are truly just a Widget (instead of a derived class that is
     // supering), then draw the frame. It would be nice to do this only if
@@ -388,14 +394,21 @@ void Widget::draw(UIContext& ui)
     if (mImpl->drawsFrame) {
         // The frame should always be the normal; Widget does not process
         // events and so should not have mouseover or activated appearances.
-        ui.theme.drawFrame(ui, bounds(), style(Theme::WidgetState::kNormal));
+        context.theme.drawFrame(context, bounds(), style(Theme::WidgetState::kNormal));
     }
 
     for (auto *child : mImpl->children) {
+        drawChild(context, child);
+    }
+}
+
+void Widget::drawChild(UIContext& context, Widget *child)
+{
+    if (child->visible()) {
         auto ul = child->frame().upperLeft();
-        ui.dc.translate(ul.x, ul.y);
-        child->draw(ui);
-        ui.dc.translate(-ul.x, -ul.y);
+        context.dc.translate(ul.x, ul.y);
+        child->draw(context);
+        context.dc.translate(-ul.x, -ul.y);
     }
 }
 

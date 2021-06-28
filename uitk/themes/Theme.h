@@ -23,6 +23,8 @@
 #ifndef UITK_THEME_H
 #define UITK_THEME_H
 
+#include "../Global.h"
+
 #include <nativedraw.h>
 
 namespace uitk {
@@ -118,6 +120,7 @@ public:
                                           const std::string& text) const = 0;
     virtual Size calcPreferredSliderThumbSize(const DrawContext& dc) const = 0;
     virtual Size calcPreferredProgressBarSize(const DrawContext& dc) const = 0;
+    virtual PicaPt calcPreferredScrollbarThickness(const DrawContext& dc) const = 0;
 
     virtual void drawWindowBackground(UIContext& ui, const Size& size) const = 0;
     virtual void drawFrame(UIContext& ui, const Rect& frame,
@@ -139,12 +142,20 @@ public:
                                     const WidgetStyle& ctrlStyle,
                                     WidgetState ctrlState) const = 0;
     virtual const WidgetStyle& segmentTextStyle(WidgetState state, bool isOn) const = 0;
-    virtual void drawSliderTrack(UIContext& ui, const Rect& frame, const PicaPt& thumbX,
+    virtual void drawSliderTrack(UIContext& ui, SliderDir dir, const Rect& frame, const Point& thumbMid,
                                  const WidgetStyle& style, WidgetState state) const = 0;
     virtual void drawSliderThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
                                  WidgetState state) const = 0;
+    virtual void drawScrollbarTrack(UIContext& ui, SliderDir dir, const Rect& frame, const Point& thumbMid,
+                                    const WidgetStyle& style, WidgetState state) const = 0;
+    virtual void drawScrollbarThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
+                                    WidgetState state) const = 0;
     virtual void drawProgressBar(UIContext& ui, const Rect& frame, float value,
                                  const WidgetStyle& style, WidgetState state) const = 0;
+    virtual void clipScrollView(UIContext& ui, const Rect& frame,
+                                const WidgetStyle& style, WidgetState state) const = 0;
+    virtual void drawScrollView(UIContext& ui, const Rect& frame,
+                                const WidgetStyle& style, WidgetState state) const = 0;
 };
 
 }  // namespace uitk

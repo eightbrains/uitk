@@ -5,11 +5,15 @@ set(UITK_HEADERS Application.h
                  Checkbox.h
                  Events.h
                  Label.h
+                 Global.h
                  OSApplication.h
                  OSWindow.h
                  ProgressBar.h
+                 ScrollBar.h
+                 ScrollView.h
                  SegmentedControl.h
                  Slider.h
+                 SliderLogic.h
                  UIContext.h
                  Widget.h
                  Window.h
@@ -22,8 +26,11 @@ set(UITK_SOURCES Application.cpp
                  Checkbox.cpp
                  Label.cpp
                  ProgressBar.cpp
+                 ScrollBar.cpp
+                 ScrollView.cpp
                  SegmentedControl.cpp
                  Slider.cpp
+                 SliderLogic.cpp
                  Widget.cpp
                  Window.cpp
                  themes/EmpireTheme.cpp
