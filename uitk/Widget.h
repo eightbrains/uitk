@@ -33,7 +33,7 @@ namespace uitk {
 struct MouseEvent;
 struct LayoutContext;
 struct UIContext;
-struct Window;
+class Window;
 
 class Widget {
     friend class Window;

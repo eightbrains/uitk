@@ -80,6 +80,8 @@ int Win32Application::run()
     return int(msg.wParam);
 }
 
+bool Win32Application::shouldHideScrollbars() const { return false; }
+
 Theme::Params Win32Application::themeParams() const
 {
     auto toColor = [](DWORD c) {

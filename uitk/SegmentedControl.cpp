@@ -74,6 +74,7 @@ SegmentedControl* SegmentedControl::addItem(const std::string& name)
     auto *label = new Label(name);
     label->setAlignment(Alignment::kCenter);
     addChild(label);  // calls setNeedsDraw(), we don't need to
+    return this;
 }
 
 SegmentedControl::Action SegmentedControl::action() const
@@ -84,6 +85,7 @@ SegmentedControl::Action SegmentedControl::action() const
 SegmentedControl* SegmentedControl::setAction(Action act)
 {
     mImpl->action = act;
+    return this;
 }
 
 bool SegmentedControl::isSegmentOn(int index) const
@@ -115,6 +117,7 @@ SegmentedControl* SegmentedControl::setSegmentOn(int index, bool on)
 SegmentedControl* SegmentedControl::setOnClicked(std::function<void(int)> onClicked)
 {
     mImpl->onClicked = onClicked;
+    return this;
 }
 
 Size SegmentedControl::preferredSize(const LayoutContext& context) const
@@ -166,7 +169,7 @@ void SegmentedControl::layout(const LayoutContext& context)
 Widget::EventResult SegmentedControl::mouse(const MouseEvent& e)
 {
     auto oldState = state();
-    Super::mouse(e);
+    auto result = Super::mouse(e);
     auto newState = state();
 
     if (e.type == MouseEvent::Type::kButtonUp) {
@@ -174,10 +177,10 @@ Widget::EventResult SegmentedControl::mouse(const MouseEvent& e)
             if (children()[i]->frame().contains(e.pos)) {
                 switch (mImpl->action) {
                     case Action::kSelectOne:
-                        setSegmentOn(i, true);
+                        setSegmentOn(int(i), true);
                         break;
                     case Action::kSelectMultiple:
-                        setSegmentOn(i, !mImpl->items[i].isOn);
+                        setSegmentOn(int(i), !mImpl->items[i].isOn);
                         break;
                     case Action::kButton:
                         break;  // do nothing, button action is not set on/off
@@ -185,6 +188,7 @@ Widget::EventResult SegmentedControl::mouse(const MouseEvent& e)
                 if (mImpl->onClicked) {
                     mImpl->onClicked(int(i));
                 }
+                result = EventResult::kConsumed;
                 break;
             }
         }
@@ -214,6 +218,8 @@ Widget::EventResult SegmentedControl::mouse(const MouseEvent& e)
     if (needsDraw) {
         setNeedsDraw();
     }
+
+    return result;
 }
 
 void SegmentedControl::mouseExited()

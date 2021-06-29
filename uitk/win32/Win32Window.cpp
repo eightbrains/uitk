@@ -287,6 +287,14 @@ MouseEvent makeMouseEvent(MouseEvent::Type type, MouseButton b, int nClicks, WPA
     if (type == MouseEvent::Type::kButtonDown) {
         e.button.nClicks = nClicks;
     }
+    if (type == MouseEvent::Type::kScroll) {
+        e.scroll.dx = PicaPt::kZero;
+        // The Microsoft docs say that the wheel amounts are in units of 120 (WHEEL_PARAM).
+        // They specifically say that this allows for finer-grained click amounts.
+        // We want one normal mouse wheel to result in 1.0, which will then be converted
+        // to the number of lines scrolled in Window::onMouse().
+        e.scroll.dy = PicaPt(float(GET_WHEEL_DELTA_WPARAM(wParam)) / float(WHEEL_DELTA));
+    }
     e.keymods = getKeymods(wParam);
     return e;
 }
@@ -384,6 +392,11 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
             w->onMouse(makeMouseEvent(MouseEvent::Type::kButtonUp,
                                       getXButton(wParam), 0, wParam),
                        GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+            return 0;
+        case WM_MOUSEWHEEL:
+            w->onMouse(makeMouseEvent(MouseEvent::Type::kScroll,
+                                      MouseButton::kNone, 0, wParam),
+                                      GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             return 0;
         case WM_DWMCOLORIZATIONCOLORCHANGED:
             Application::instance().onSystemThemeChanged();

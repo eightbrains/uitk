@@ -109,6 +109,8 @@ struct SliderLogic::Impl {
                 return Rect(thumbFrame.x, y - 0.5f * thumbFrame.height, thumbFrame.width, thumbFrame.height);
             }
         }
+        // Can't happen, but MSVC apparently doesn't know this.
+        return Rect(PicaPt::kZero, PicaPt::kZero, PicaPt::kZero, PicaPt::kZero);
     }
 };
 
@@ -132,6 +134,7 @@ int SliderLogic::intValue() const { return int(mImpl->value); }
 
 SliderLogic* SliderLogic::setValue(int val) {
     setValue(double(val));
+    return this;
 }
 
 double SliderLogic::doubleValue() const { return mImpl->value; }
@@ -143,6 +146,7 @@ SliderLogic* SliderLogic::setValue(double val)
     mImpl->value = val;
     mImpl->thumb->setFrame(mImpl->calcThumbFrame(bounds()));
     setNeedsDraw();
+    return this;
 }
 
 void SliderLogic::setLimits(int minVal, int maxVal, int inc /*= 1*/)

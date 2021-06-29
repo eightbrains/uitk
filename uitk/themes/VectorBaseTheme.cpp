@@ -186,12 +186,12 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mSliderThumbStyles[DISABLED].bgColor = Color(0.5f, 0.5f, 0.5f);
     if (isDarkMode) {
         mSliderThumbStyles[NORMAL].bgColor = blend(mParams.textColor, Color::kBlack);
-        mSliderThumbStyles[OVER].bgColor = mSliderThumbStyles[NORMAL].bgColor.lighter(0.05);
-        mSliderThumbStyles[DOWN].bgColor = mSliderThumbStyles[NORMAL].bgColor.lighter(0.15);
+        mSliderThumbStyles[OVER].bgColor = mSliderThumbStyles[NORMAL].bgColor.lighter(0.05f);
+        mSliderThumbStyles[DOWN].bgColor = mSliderThumbStyles[NORMAL].bgColor.lighter(0.15f);
     } else {
         mSliderThumbStyles[NORMAL].bgColor = blend(mParams.textColor, Color::kWhite);
-        mSliderThumbStyles[OVER].bgColor = mSliderThumbStyles[NORMAL].bgColor.darker(0.05);
-        mSliderThumbStyles[DOWN].bgColor = mSliderThumbStyles[NORMAL].bgColor.darker(0.15);
+        mSliderThumbStyles[OVER].bgColor = mSliderThumbStyles[NORMAL].bgColor.darker(0.05f);
+        mSliderThumbStyles[DOWN].bgColor = mSliderThumbStyles[NORMAL].bgColor.darker(0.15f);
     }
 
     // Scrollbar

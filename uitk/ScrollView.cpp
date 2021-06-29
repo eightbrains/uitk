@@ -60,12 +60,12 @@ ScrollView::ScrollView()
     mImpl->horizScroll = new ScrollBar(Dir::kHoriz);
     mImpl->horizScroll->setVisible(false);
     mImpl->horizScroll->setOnValueChanged([this](SliderLogic *scroll) {
-        setContentOffset(Point(PicaPt::fromPixels(-scroll->doubleValue(), kScrollbarDPI), bounds().y));
+        setContentOffset(Point(PicaPt::fromPixels(float(-scroll->doubleValue()), kScrollbarDPI), bounds().y));
     });
     mImpl->vertScroll = new ScrollBar(Dir::kVert);
     mImpl->vertScroll->setVisible(false);
     mImpl->vertScroll->setOnValueChanged([this](SliderLogic *scroll) {
-        setContentOffset(Point(bounds().x, PicaPt::fromPixels(-scroll->doubleValue(), kScrollbarDPI)));
+        setContentOffset(Point(bounds().x, PicaPt::fromPixels(float(-scroll->doubleValue()), kScrollbarDPI)));
     });
     Super::addChild(mImpl->horizScroll);
     Super::addChild(mImpl->vertScroll);

@@ -53,6 +53,7 @@ bool Button::toggleable() const { return mImpl->isToggleable; }
 
 Button* Button::setToggleable(bool toggleable) {
     mImpl->isToggleable = toggleable;
+    return this;
 }
 
 bool Button::isOn() const { return mImpl->isOn; }
@@ -62,6 +63,7 @@ Button* Button::setOn(bool isOn) {
         mImpl->isOn = isOn;
         setNeedsDraw();
     }
+    return this;
 }
 
 Button* Button::setOnClicked(std::function<void(Button*)> onClicked)

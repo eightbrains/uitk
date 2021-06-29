@@ -80,9 +80,9 @@ Size ScrollBar::preferredThumbSize(const LayoutContext& context) const
     double maxValue = doubleMaxLimit();
     auto thickness = context.theme.calcPreferredScrollbarThickness(context.dc);
     if (direction() == SliderDir::kHoriz) {
-        return Size(mImpl->thumbSizeFraction * frame().width, thickness);
+        return Size(float(mImpl->thumbSizeFraction) * frame().width, thickness);
     } else {
-        return Size(thickness, mImpl->thumbSizeFraction * frame().height);
+        return Size(thickness, float(mImpl->thumbSizeFraction) * frame().height);
     }
 }
 
