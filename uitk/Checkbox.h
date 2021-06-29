@@ -30,7 +30,7 @@ namespace uitk {
 class Checkbox : public Button {
     using Super = Button;
 public:
-    Checkbox(const std::string& text);
+    explicit Checkbox(const std::string& text);
     ~Checkbox();
 
     Size preferredSize(const LayoutContext& context) const override;

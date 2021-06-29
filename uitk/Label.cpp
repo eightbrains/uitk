@@ -72,6 +72,7 @@ Label* Label::setTextColor(const Color& c)
 {
     mImpl->textColor = c;
     setNeedsDraw();
+    return this;
 }
 
 void Label::setWidgetState(Theme::WidgetState state)

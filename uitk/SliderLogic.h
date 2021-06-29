@@ -20,41 +20,60 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_LABEL_H
-#define UITK_LABEL_H
+#ifndef UITK_SLIDER_LOGIC_H
+#define UITK_SLIDER_LOGIC_H
 
 #include "Global.h"
 #include "Widget.h"
 
-#include <string>
+#include <functional>
 
 namespace uitk {
 
-class Label : public Widget {
+class SliderLogic : public Widget {
     using Super = Widget;
 public:
-    explicit Label(const std::string& text);
-    ~Label();
+    explicit SliderLogic(SliderDir dir);
+    ~SliderLogic();
 
-    const std::string& text() const;
-    Label* setText(const std::string& text);
+    SliderDir direction() const;
 
-    int alignment() const;
-    Label* setAlignment(int align);
+    int intValue() const;
+    SliderLogic* setValue(int val);
 
-    const Color& textColor() const;
-    /// Sets the text color. If the color is Color(0, 0, 0, 0), the color
-    /// will be automatically chosen. (Use show(false) if you wish to hide
-    /// the label.)
-    Label* setTextColor(const Color& c);
+    double doubleValue() const;
+    SliderLogic* setValue(double val);
+
+    /// Sets the upper, lower, and increment values. Increment must be 1 or larger
+    /// for integer sliders.
+    void setLimits(int minVal, int maxVal, int inc = 1);
+
+    /// Sets the upper, lower, and increment values. Increment of 0
+    /// is continuous (no increment).
+    void setLimits(double minVal, double maxVal, double inc = 1.0f);
+
+    int intMinLimit() const;
+    int intMaxLimit() const;
+    double doubleMinLimit() const;
+    double doubleMaxLimit() const;
+
+    /// Called when value changes due to mouse movement; is not called
+    /// as a result of setValue() or setLimits().
+    SliderLogic* setOnValueChanged(std::function<void(SliderLogic*)> onChanged);
 
     Size preferredSize(const LayoutContext& context) const override;
+    void layout(const LayoutContext& context) override;
+
+    Widget::EventResult mouse(const MouseEvent &e) override;
+
     void draw(UIContext& context) override;
 
-    /// Widgets that use a label as a child can set the label state
-    /// as the parent's state changes so that the colors are correct.
-    /// This should not be called if using a Label as a UI element directly.
-    void setWidgetState(Theme::WidgetState state);
+protected:
+    virtual Size preferredThumbSize(const LayoutContext& context) const = 0;
+    virtual void drawTrack(UIContext& context, const Point& thumbMid) = 0;
+    // Coordinate system is in Slider's coordinate system, not the thumbs'
+    // (so thumb->frame() is the correct rectangle to draw into).
+    virtual void drawThumb(UIContext& context, Widget *thumb) = 0;
 
 private:
     struct Impl;
@@ -62,4 +81,6 @@ private:
 };
 
 }  // namespace uitk
-#endif // UITK_LABEL_H
+#endif // UITK_SLIDER_LOGIC_H
+
+

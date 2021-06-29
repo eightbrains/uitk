@@ -33,6 +33,7 @@
 #include "Checkbox.h"
 #include "Label.h"
 #include "ProgressBar.h"
+#include "ScrollView.h"
 #include "SegmentedControl.h"
 #include "Slider.h"
 #include "UIContext.h"

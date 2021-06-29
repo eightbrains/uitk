@@ -20,57 +20,26 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_EVENTS_H
-#define UITK_EVENTS_H
-
-#define ND_NAMESPACE uitk
-#include <nativedraw.h>
+#ifndef UITK_GLOBAL_H
+#define UITK_GLOBAL_H
 
 namespace uitk {
 
-struct KeyModifier {
-    enum Values {
-        kNone = 0,
-        kShift = (1 << 0),
-        kCtrl = (1 << 1),  // this is the Command key on macOS
-        kAlt = (1 << 2),   // this is the Option key on macOS
-        kMeta = (1 << 3),  // this is the Control key on macOS
-        kCapsLock = (1 << 4),
-        kNumLock = (1 << 5)
-    };
+struct Alignment {
+    static const int kLeft = (1 << 0);
+    static const int kHCenter = (1 << 1);
+    static const int kRight = (1 << 2);
+    static const int kTop = (1 << 4);
+    static const int kVCenter = (1 << 5);
+    static const int kBottom = (1 << 6);
+    static const int kCenter = kHCenter | kVCenter;
+    static const int kHorizMask = 0b00001111;
+    static const int kVertMask =  0b11110000;
 };
 
-enum class MouseButton {
-    kNone = 0, kLeft, kRight, kMiddle, kButton4, kButton5
-};
+enum class Dir { kHoriz, kVert };
 
-struct MouseEvent
-{
-    enum class Type { kMove, kButtonDown, kDrag, kButtonUp, kScroll };
-
-    Type type;
-    Point pos;
-    int keymods;
-    union {
-        struct {
-            MouseButton button;
-            int nClicks;
-        } button;
-        struct {
-            int buttons;
-        } drag;
-        struct {
-            PicaPt dx;
-            PicaPt dy;
-            bool shouldHideScrollbars;
-        } scroll;
-    };
-
-    // scroll has non-trivial member, so need a constructor.
-    // But PicaPt has no invariants, so we do not need to initialize
-    // anything.
-    MouseEvent() {}
-};
+enum class SliderDir { kHoriz, kVertZeroAtTop, kVertZeroAtBottom };
 
 }  // namespace uitk
-#endif // UITK_EVENTS_H
+#endif // UITK_GLOBAL_H

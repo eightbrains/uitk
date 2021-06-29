@@ -33,7 +33,7 @@ namespace uitk {
 struct MouseEvent;
 struct LayoutContext;
 struct UIContext;
-struct Window;
+class Window;
 
 class Widget {
     friend class Window;
@@ -127,13 +127,15 @@ public:
 
 public:
     Theme::WidgetState state() const;
+    Theme::WidgetStyle& style(Theme::WidgetState state);
 
 protected:
     void setWindow(Window* window);  // for Window
 
     void setState(Theme::WidgetState state);
 
-    Theme::WidgetStyle& style(Theme::WidgetState state);
+    EventResult mouseChild(const MouseEvent& e, Widget *child, EventResult result); // e is child's parent's event
+    void drawChild(UIContext& context, Widget *child);
 
 private:
     struct Impl;

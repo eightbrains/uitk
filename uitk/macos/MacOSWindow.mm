@@ -144,6 +144,8 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 
 - (void)mouseMoved:(NSEvent *)e
 {
+    // (Docs say not to call super for this method)
+
     NSPoint pt = [self convertPoint:e.locationInWindow fromView:nil];
 
     uitk::MouseEvent me;
@@ -157,16 +159,22 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 
 - (void)mouseDown:(NSEvent *)e
 {
+    // (Docs say not to call super for this method)
+
     [self otherMouseDown:e];
 }
 
 - (void)rightMouseDown:(NSEvent *)e
 {
+    // (Docs say we should to call super for -rightMouseDown:)
+    [super rightMouseDown:e];
     [self otherMouseDown:e];
 }
 
 - (void)otherMouseDown:(NSEvent *)e
 {
+    // (Docs say not to call super for this method)
+
     NSPoint pt = [self convertPoint:e.locationInWindow fromView:nil];
 
     uitk::MouseEvent me;
@@ -181,6 +189,8 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 
 - (void)mouseDragged:(NSEvent *)e
 {
+    // (Docs say not to call super for this method)
+
     NSPoint pt = [self convertPoint:e.locationInWindow fromView:nil];
 
     uitk::MouseEvent me;
@@ -210,16 +220,22 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 
 - (void)mouseUp:(NSEvent *)e
 {
+    // (Docs say not to call super for this method)
+
     [self otherMouseUp:e];
 }
 
 - (void)rightMouseUp:(NSEvent *)e
 {
+    // (Docs say not to call super for this method)
+
     [self otherMouseUp:e];
 }
 
 - (void)otherMouseUp:(NSEvent *)e
 {
+    // (Docs say not to call super for this method)
+
     NSPoint pt = [self convertPoint:e.locationInWindow fromView:nil];
 
     uitk::MouseEvent me;
@@ -228,6 +244,23 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
                          uitk::PicaPt::fromPixels(self.frame.size.height - pt.y, kDPI));
     me.keymods = toKeymods(e.modifierFlags);
     me.button.button = toUITKMouseButton(e.buttonNumber);
+
+    self.callbacks->onMouse(me);
+}
+
+- (void)scrollWheel:(NSEvent *)e
+{
+    // (Docs say not to call super for this method)
+
+    NSPoint pt = [self convertPoint:e.locationInWindow fromView:nil];
+
+    uitk::MouseEvent me;
+    me.type = uitk::MouseEvent::Type::kScroll;
+    me.pos = uitk::Point(uitk::PicaPt::fromPixels(pt.x, kDPI),
+                         uitk::PicaPt::fromPixels(self.frame.size.height - pt.y, kDPI));
+    me.keymods = toKeymods(e.modifierFlags);
+    me.scroll.dx = uitk::PicaPt::fromPixels(e.deltaX, kDPI);
+    me.scroll.dy = uitk::PicaPt::fromPixels(e.deltaY, kDPI);
 
     self.callbacks->onMouse(me);
 }

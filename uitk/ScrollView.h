@@ -20,57 +20,36 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_EVENTS_H
-#define UITK_EVENTS_H
+#ifndef UITK_SCROLLVIEW_H
+#define UITK_SCROLLVIEW_H
 
-#define ND_NAMESPACE uitk
-#include <nativedraw.h>
+#include "Widget.h"
 
 namespace uitk {
 
-struct KeyModifier {
-    enum Values {
-        kNone = 0,
-        kShift = (1 << 0),
-        kCtrl = (1 << 1),  // this is the Command key on macOS
-        kAlt = (1 << 2),   // this is the Option key on macOS
-        kMeta = (1 << 3),  // this is the Control key on macOS
-        kCapsLock = (1 << 4),
-        kNumLock = (1 << 5)
-    };
-};
+class ScrollView : public Widget {
+    using Super = Widget;
+public:
+    ScrollView();
+    ~ScrollView();
 
-enum class MouseButton {
-    kNone = 0, kLeft, kRight, kMiddle, kButton4, kButton5
-};
+    const Rect& bounds() const override;
+    ScrollView* setBounds(const Rect& bounds);
 
-struct MouseEvent
-{
-    enum class Type { kMove, kButtonDown, kDrag, kButtonUp, kScroll };
+    ScrollView* setContentSize(const Size& size);
+    ScrollView* setContentOffset(const Point& offset);
 
-    Type type;
-    Point pos;
-    int keymods;
-    union {
-        struct {
-            MouseButton button;
-            int nClicks;
-        } button;
-        struct {
-            int buttons;
-        } drag;
-        struct {
-            PicaPt dx;
-            PicaPt dy;
-            bool shouldHideScrollbars;
-        } scroll;
-    };
+    Size preferredSize(const LayoutContext& context) const override;
+    void layout(const LayoutContext& context) override;
 
-    // scroll has non-trivial member, so need a constructor.
-    // But PicaPt has no invariants, so we do not need to initialize
-    // anything.
-    MouseEvent() {}
+    EventResult mouse(const MouseEvent& e) override;
+
+    void draw(UIContext& context) override;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
 };
 
 }  // namespace uitk
-#endif // UITK_EVENTS_H
+#endif // UITK_SCROLLVIEW_H

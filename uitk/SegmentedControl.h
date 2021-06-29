@@ -25,6 +25,7 @@
 
 #include "Widget.h"
 
+#include <functional>
 #include <unordered_set>
 
 namespace uitk {
@@ -53,7 +54,8 @@ public:
 
     // Sets a function that will be called when a segment is clicked.
     // The single argument is the segment currently clicked; if the action is
-    // kSelectMultiple, use isSegmentOn() to determine the states of other segments.
+    // kSelectMultiple, use isSegmentOn() to determine the states of other
+    // segments.
     SegmentedControl* setOnClicked(std::function<void(int)> onClicked);
 
     Size preferredSize(const LayoutContext& context) const override;

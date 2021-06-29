@@ -68,6 +68,11 @@ MacOSApplication::~MacOSApplication()
     mImpl->delegate = nil;  // ARC releases
 }
 
+bool MacOSApplication::shouldHideScrollbars() const
+{
+    return true;
+}
+
 Theme::Params MacOSApplication::themeParams() const
 {
     NSColorSpace *space = NSColorSpace.genericRGBColorSpace;

@@ -174,7 +174,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mSegmentOnStyles[DOWN].borderRadius = PicaPt::kZero;
     mSegmentOnStyles[DOWN].borderWidth = PicaPt::kZero;
 
-    // Slider (track only uses NORMAL and DISABLED)
+    // Slider
     copyStyles(mButtonStyles, mSliderTrackStyles);
     mSliderTrackStyles[NORMAL].fgColor = params.accentColor;
     mSliderTrackStyles[DISABLED].fgColor = params.accentColor.toGrey();
@@ -186,16 +186,56 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mSliderThumbStyles[DISABLED].bgColor = Color(0.5f, 0.5f, 0.5f);
     if (isDarkMode) {
         mSliderThumbStyles[NORMAL].bgColor = blend(mParams.textColor, Color::kBlack);
-        mSliderThumbStyles[OVER].bgColor = mSliderThumbStyles[NORMAL].bgColor.lighter(0.05);
-        mSliderThumbStyles[DOWN].bgColor = mSliderThumbStyles[NORMAL].bgColor.lighter(0.15);
+        mSliderThumbStyles[OVER].bgColor = mSliderThumbStyles[NORMAL].bgColor.lighter(0.05f);
+        mSliderThumbStyles[DOWN].bgColor = mSliderThumbStyles[NORMAL].bgColor.lighter(0.15f);
     } else {
         mSliderThumbStyles[NORMAL].bgColor = blend(mParams.textColor, Color::kWhite);
-        mSliderThumbStyles[OVER].bgColor = mSliderThumbStyles[NORMAL].bgColor.darker(0.05);
-        mSliderThumbStyles[DOWN].bgColor = mSliderThumbStyles[NORMAL].bgColor.darker(0.15);
+        mSliderThumbStyles[OVER].bgColor = mSliderThumbStyles[NORMAL].bgColor.darker(0.05f);
+        mSliderThumbStyles[DOWN].bgColor = mSliderThumbStyles[NORMAL].bgColor.darker(0.15f);
+    }
+
+    // Scrollbar
+    mScrollbarTrackStyles[NORMAL].bgColor = Color::kTransparent;
+    mScrollbarTrackStyles[NORMAL].fgColor = params.textColor;
+    mScrollbarTrackStyles[NORMAL].borderColor = Color::kTransparent;
+    mScrollbarTrackStyles[NORMAL].borderWidth = PicaPt::kZero;
+    mScrollbarTrackStyles[NORMAL].borderRadius = mBorderRadius;
+    mScrollbarTrackStyles[DISABLED] = mScrollbarTrackStyles[NORMAL];
+    mScrollbarTrackStyles[OVER] = mScrollbarTrackStyles[NORMAL];
+    mScrollbarTrackStyles[DOWN] = mScrollbarTrackStyles[NORMAL];
+
+    if (isDarkMode) {
+        mScrollbarThumbStyles[NORMAL].bgColor = Color(1.0f, 1.0f, 1.0f, 0.5f);
+    } else {
+        mScrollbarThumbStyles[NORMAL].bgColor = Color(0.0f, 0.0f, 0.0f, 0.5f);
+    }
+    mScrollbarThumbStyles[NORMAL].fgColor = params.textColor;
+    mScrollbarThumbStyles[NORMAL].borderColor = Color::kTransparent;
+    mScrollbarThumbStyles[NORMAL].borderWidth = PicaPt::kZero;
+    mScrollbarThumbStyles[NORMAL].borderRadius = mBorderRadius;
+    mScrollbarThumbStyles[DISABLED] = mScrollbarThumbStyles[NORMAL];
+    mScrollbarThumbStyles[OVER] = mScrollbarThumbStyles[NORMAL];
+    mScrollbarThumbStyles[DOWN] = mScrollbarThumbStyles[NORMAL];
+    if (isDarkMode) {
+        mScrollbarThumbStyles[OVER].bgColor = mScrollbarThumbStyles[NORMAL].bgColor.lighter(0.1f);
+        mScrollbarThumbStyles[DOWN].bgColor = mScrollbarThumbStyles[NORMAL].bgColor.lighter(0.3f);
+    } else {
+        mScrollbarThumbStyles[OVER].bgColor = mScrollbarThumbStyles[NORMAL].bgColor.darker(0.1f);
+        mScrollbarThumbStyles[DOWN].bgColor = mScrollbarThumbStyles[NORMAL].bgColor.darker(0.3f);
     }
 
     // ProgressBar
     copyStyles(mSliderTrackStyles, mProgressBarStyles);
+
+    // ScrollView
+    mScrollViewStyles[NORMAL].bgColor = Color::kTransparent;
+    mScrollViewStyles[NORMAL].fgColor = params.textColor;
+    mScrollViewStyles[NORMAL].borderColor = params.nonEditableBackgroundColor;
+    mScrollViewStyles[NORMAL].borderWidth = mBorderWidth;
+    mScrollViewStyles[NORMAL].borderRadius = PicaPt::kZero;
+    mScrollViewStyles[DISABLED] = mScrollViewStyles[NORMAL];
+    mScrollViewStyles[OVER] = mScrollViewStyles[NORMAL];
+    mScrollViewStyles[DOWN] = mScrollViewStyles[NORMAL];
 }
 
 const Theme::Params& VectorBaseTheme::params() const { return mParams; }
@@ -297,6 +337,12 @@ Size VectorBaseTheme::calcPreferredProgressBarSize(const DrawContext& dc) const
 {
     auto buttonHeight = calcPreferredButtonSize(dc, mParams.labelFont, "Ag").height;
     return Size(PicaPt(144.0f), buttonHeight);
+}
+
+PicaPt VectorBaseTheme::calcPreferredScrollbarThickness(const DrawContext& dc) const
+{
+    auto fm = dc.fontMetrics(mParams.labelFont);
+    return 0.5f * fm.capHeight + fm.descent;
 }
 
 void VectorBaseTheme::drawButton(UIContext& ui, const Rect& frame,
@@ -465,7 +511,7 @@ const Theme::WidgetStyle& VectorBaseTheme::segmentTextStyle(WidgetState state, b
     }
 }
 
-void VectorBaseTheme::drawSliderTrack(UIContext& ui, const Rect& frame, const PicaPt& thumbX,
+void VectorBaseTheme::drawSliderTrack(UIContext& ui, SliderDir dir, const Rect& frame, const Point& thumbMid,
                                       const WidgetStyle& style, WidgetState state) const
 {
     auto frameStyle = mSliderTrackStyles[int(state)].merge(style);  // copy
@@ -481,7 +527,18 @@ void VectorBaseTheme::drawSliderTrack(UIContext& ui, const Rect& frame, const Pi
     // Draw the highlight
     auto onePx = ui.dc.onePixel();
     frameRect.inset(onePx, onePx);
-    frameRect.width = thumbX - frameRect.x;
+    switch (dir) {
+        case SliderDir::kHoriz:
+            frameRect.width = thumbMid.x - frameRect.x;
+            break;
+        case SliderDir::kVertZeroAtTop:
+            frameRect.height = thumbMid.y - frameRect.y;
+            break;
+        case SliderDir::kVertZeroAtBottom:
+            frameRect.height = frameRect.maxX() - thumbMid.y;
+            frameRect.y = thumbMid.y;
+            break;
+    }
     frameStyle.bgColor = frameStyle.fgColor;
     frameStyle.borderRadius = frameStyle.borderRadius - frameStyle.borderWidth - onePx;
     frameStyle.borderWidth = PicaPt::kZero;
@@ -504,11 +561,55 @@ void VectorBaseTheme::drawSliderThumb(UIContext& ui, const Rect& frame,
     drawFrame(ui, frame, thumbStyle);
 }
 
+void VectorBaseTheme::drawScrollbarTrack(UIContext& ui, SliderDir dir, const Rect& frame,
+                                         const Point& thumbMid, const WidgetStyle& style,
+                                         WidgetState state) const
+{
+    auto frameStyle = mScrollbarTrackStyles[int(state)].merge(style);  // copy
+
+    // Draw the track
+    auto h = 0.3f * frame.height;
+    if (frameStyle.borderRadius > PicaPt::kZero) {
+        frameStyle.borderRadius = 0.5f * h;
+    }
+    drawFrame(ui, frame, frameStyle);
+}
+
+void VectorBaseTheme::drawScrollbarThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
+                                         WidgetState state) const
+{
+    auto thumbStyle = mScrollbarThumbStyles[int(state)].merge(style);
+    if (thumbStyle.borderRadius > PicaPt::kZero) {
+        thumbStyle.borderRadius = 0.5f * std::min(frame.width, frame.height);
+    }
+    drawFrame(ui, frame, thumbStyle);
+}
+
 void VectorBaseTheme::drawProgressBar(UIContext& ui, const Rect& frame, float value,
                                       const WidgetStyle& style, WidgetState state) const
 {
-    drawSliderTrack(ui, frame, frame.x + 0.01f * value * frame.width,
+    drawSliderTrack(ui, SliderDir::kHoriz, frame,
+                    Point(frame.x + 0.01f * value * frame.width, PicaPt::kZero),
                     mProgressBarStyles[int(state)].merge(style), state);
+}
+
+void VectorBaseTheme::clipScrollView(UIContext& ui, const Rect& frame,
+                                     const WidgetStyle& style, WidgetState state) const
+{
+    auto s = mScrollViewStyles[int(state)].merge(style);
+    if (s.borderRadius <= PicaPt::kZero) {
+        ui.dc.clipToRect(frame);
+    } else {
+        auto path = ui.dc.createBezierPath();
+        path->addRoundedRect(frame, s.borderRadius);
+        ui.dc.clipToPath(path);
+    }
+}
+
+void VectorBaseTheme::drawScrollView(UIContext& ui, const Rect& frame,
+                                     const WidgetStyle& style, WidgetState state) const
+{
+    drawFrame(ui, frame, mScrollViewStyles[int(state)].merge(style));
 }
 
 }  // namespace uitk

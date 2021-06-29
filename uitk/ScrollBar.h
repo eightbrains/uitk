@@ -20,57 +20,39 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_EVENTS_H
-#define UITK_EVENTS_H
+#ifndef UITK_SCROLLBAR_H
+#define UITK_SCROLLBAR_H
 
-#define ND_NAMESPACE uitk
-#include <nativedraw.h>
+#include "SliderLogic.h"
 
 namespace uitk {
 
-struct KeyModifier {
-    enum Values {
-        kNone = 0,
-        kShift = (1 << 0),
-        kCtrl = (1 << 1),  // this is the Command key on macOS
-        kAlt = (1 << 2),   // this is the Option key on macOS
-        kMeta = (1 << 3),  // this is the Control key on macOS
-        kCapsLock = (1 << 4),
-        kNumLock = (1 << 5)
-    };
-};
+class ScrollBar : public SliderLogic {
+    using Super = SliderLogic;
+public:
+    explicit ScrollBar(Dir dir);
+    ~ScrollBar();
 
-enum class MouseButton {
-    kNone = 0, kLeft, kRight, kMiddle, kButton4, kButton5
-};
+    /// Sets the scrollbar's minimum and maximum values, as well as its
+    /// viewing size. The viewing size is the size of the viewing area in the
+    /// scrollbar's dimension, basical the size of the window onto the content.
+    /// This determines the width of the scroll thumb (if the theme supports it).
+    ScrollBar* setRange(double minValue, double maxValue,
+                        double viewingSize, double contentSize);
 
-struct MouseEvent
-{
-    enum class Type { kMove, kButtonDown, kDrag, kButtonUp, kScroll };
+    Widget* setFrame(const Rect& frame) override;
 
-    Type type;
-    Point pos;
-    int keymods;
-    union {
-        struct {
-            MouseButton button;
-            int nClicks;
-        } button;
-        struct {
-            int buttons;
-        } drag;
-        struct {
-            PicaPt dx;
-            PicaPt dy;
-            bool shouldHideScrollbars;
-        } scroll;
-    };
+    Size preferredSize(const LayoutContext& context) const override;
 
-    // scroll has non-trivial member, so need a constructor.
-    // But PicaPt has no invariants, so we do not need to initialize
-    // anything.
-    MouseEvent() {}
+protected:
+    Size preferredThumbSize(const LayoutContext& context) const override;
+    void drawTrack(UIContext& context, const Point& thumbMid) override;
+    void drawThumb(UIContext& context, Widget *thumb) override;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
 };
 
 }  // namespace uitk
-#endif // UITK_EVENTS_H
+#endif // UITK_SCROLLBAR_H
