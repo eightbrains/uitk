@@ -51,6 +51,7 @@ struct Window::Impl
     Widget *grabbedWidget = nullptr;
     bool inResize = false;
     bool inMouse = false;
+    bool inDraw = false;
     bool needsDraw = false;
 };
 
@@ -109,7 +110,12 @@ Window* Window::setTitle(const std::string& title)
 
 void Window::setNeedsDraw()
 {
-    if (mImpl->inMouse || mImpl->inResize) {
+    // You'd think that we would never call setNeedsDraw() while drawing.
+    // If we do, though, do not create an actual expose event (especially if
+    // it sends an actual message, like on X11), or we may draw continuously.
+    // Note that Button sets the color of the text, and that calls
+    // setNeedsDraw().
+    if (mImpl->inMouse || mImpl->inResize || mImpl->inDraw) {
         mImpl->needsDraw = true;
     } else {
         postRedraw();
@@ -132,9 +138,20 @@ void Window::setMouseGrab(Widget *w)
     mImpl->grabbedWidget = w;
 }
 
-void Window::onMouse(const MouseEvent& e)
+void Window::onMouse(const MouseEvent& eOrig)
 {
     mImpl->inMouse = true;
+
+    MouseEvent e = eOrig;
+#if !defined(__APPLE__)
+    // X11 and Win32 treat scroll as lines, not pixels like macOS.
+    // The event loop in X11 does not have access to the theme, so we need
+    // to convert from lines to pixels here.
+    if (e.type == MouseEvent::Type::kScroll) {
+        e.scroll.dx *= 3.0f * mImpl->theme->params().labelFont.pointSize();
+        e.scroll.dy *= 3.0f * mImpl->theme->params().labelFont.pointSize();
+    }
+#endif // !__APPLE__
 
     if (mImpl->grabbedWidget == nullptr) {
         mImpl->rootWidget->setState(Theme::WidgetState::kMouseOver);  // so onDeactivated works
@@ -223,10 +240,12 @@ void Window::onDraw(DrawContext& dc)
     UIContext context { *mImpl->theme, dc };
     auto size = Size(PicaPt::fromPixels(float(dc.width()), dc.dpi()),
                      PicaPt::fromPixels(float(dc.height()), dc.dpi()));
+    mImpl->inDraw = true;
     dc.beginDraw();
     mImpl->theme->drawWindowBackground(context, size);
     mImpl->rootWidget->draw(context);
     dc.endDraw();
+    mImpl->inDraw = false;
 
     mImpl->needsDraw = false;  // should be false anyway, just in case
 }

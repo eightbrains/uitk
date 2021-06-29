@@ -126,6 +126,8 @@ void X11Application::setExitWhenLastWindowCloses(bool exits)
     // be no way to open a new window after the last one closes.
 }
 
+bool X11Application::shouldHideScrollbars() const { return false; }
+
 int X11Application::run()
 {
     Atom kWMDeleteMsg = XInternAtom(mImpl->display, "WM_DELETE_WINDOW", False);
@@ -214,13 +216,39 @@ int X11Application::run()
                         me.button.button = MouseButton::kMiddle;
                         break;
                     case Button4:
-                        me.button.button = MouseButton::kButton4;
+                        me.type = MouseEvent::Type::kScroll;
+                        me.scroll.dx = PicaPt::kZero;
+                        me.scroll.dy = PicaPt(1.0f);
                         break;
                     case Button5:
+                        me.type = MouseEvent::Type::kScroll;
+                        me.scroll.dx = PicaPt::kZero;
+                        me.scroll.dy = PicaPt(-1.0f);
+                        break;
+                    case Button5 + 1:
+                        me.type = MouseEvent::Type::kScroll;
+                        me.scroll.dx = PicaPt(1.0f);
+                        me.scroll.dy = PicaPt::kZero;
+                        break;
+                    case Button5 + 2:
+                        me.type = MouseEvent::Type::kScroll;
+                        me.scroll.dx = PicaPt(-1.0f);
+                        me.scroll.dy = PicaPt::kZero;
+                        break;
+                    case Button5 + 3:
+                        me.button.button = MouseButton::kButton4;
+                        break;
+                    case Button5 + 4:
                         me.button.button = MouseButton::kButton5;
                         break;
                 }
-                w->onMouse(me, event.xbutton.x, event.xbutton.y);
+                
+                bool ignore = (event.type == ButtonRelease &&
+                               event.xbutton.button >= Button4 &&
+                               event.xbutton.button <= Button5 + 2);
+                if (!ignore) {
+                    w->onMouse(me, event.xbutton.x, event.xbutton.y);
+                }
                 break;
             }
             case KeyPress:

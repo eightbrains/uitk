@@ -97,7 +97,7 @@ bool SegmentedControl::isSegmentOn(int index) const
 SegmentedControl* SegmentedControl::setSegmentOn(int index, bool on)
 {
     if (mImpl->action == Action::kButton) {
-        return;
+        return this;
     }
 
     if (index >= 0 || size_t(index) < mImpl->items.size()) {
@@ -109,6 +109,7 @@ SegmentedControl* SegmentedControl::setSegmentOn(int index, bool on)
         mImpl->items[index].isOn = on;
         setNeedsDraw();
     }
+    return this;
 }
 
 SegmentedControl* SegmentedControl::setOnClicked(std::function<void(int)> onClicked)
