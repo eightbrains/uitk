@@ -76,7 +76,11 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mButtonStyles[DISABLED].bgColor = params.disabledBackgroundColor;
     mButtonStyles[DISABLED].fgColor = params.disabledTextColor;
     mButtonStyles[OVER] = mButtonStyles[NORMAL];
-    mButtonStyles[OVER].bgColor = mButtonStyles[NORMAL].bgColor.lighter();
+    if (isDarkMode) {
+        mButtonStyles[OVER].bgColor = mButtonStyles[NORMAL].bgColor.lighter();
+    } else {
+        mButtonStyles[OVER].bgColor = mButtonStyles[NORMAL].bgColor.darker(0.025f);
+    }
     mButtonStyles[DOWN] = mButtonStyles[NORMAL];
     mButtonStyles[DOWN].bgColor = params.accentColor;
     mButtonStyles[DOWN].fgColor = params.accentedBackgroundTextColor;
@@ -185,13 +189,13 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     copyStyles(mButtonStyles, mSliderThumbStyles);
     mSliderThumbStyles[DISABLED].bgColor = Color(0.5f, 0.5f, 0.5f);
     if (isDarkMode) {
-        mSliderThumbStyles[NORMAL].bgColor = blend(mParams.textColor, Color::kBlack);
-        mSliderThumbStyles[OVER].bgColor = mSliderThumbStyles[NORMAL].bgColor.lighter(0.05f);
-        mSliderThumbStyles[DOWN].bgColor = mSliderThumbStyles[NORMAL].bgColor.lighter(0.15f);
+        mSliderThumbStyles[NORMAL].bgColor = Color(0.85f, 0.85f, 0.85f);
+        mSliderThumbStyles[OVER].bgColor = Color(0.9f, 0.9f, 0.9f);
+        mSliderThumbStyles[DOWN].bgColor = Color(1.0f, 1.0f, 1.0f);
     } else {
-        mSliderThumbStyles[NORMAL].bgColor = blend(mParams.textColor, Color::kWhite);
-        mSliderThumbStyles[OVER].bgColor = mSliderThumbStyles[NORMAL].bgColor.darker(0.05f);
-        mSliderThumbStyles[DOWN].bgColor = mSliderThumbStyles[NORMAL].bgColor.darker(0.15f);
+        mSliderThumbStyles[NORMAL].bgColor = Color(1.0f, 1.0f, 1.0f);
+        mSliderThumbStyles[OVER].bgColor = Color(0.975f, 0.975f, 0.975f);
+        mSliderThumbStyles[DOWN].bgColor = Color(0.95f, 0.95f, 0.95f);
     }
 
     // Scrollbar
@@ -230,7 +234,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     // ScrollView
     mScrollViewStyles[NORMAL].bgColor = Color::kTransparent;
     mScrollViewStyles[NORMAL].fgColor = params.textColor;
-    mScrollViewStyles[NORMAL].borderColor = params.nonEditableBackgroundColor;
+    mScrollViewStyles[NORMAL].borderColor = params.borderColor;
     mScrollViewStyles[NORMAL].borderWidth = mBorderWidth;
     mScrollViewStyles[NORMAL].borderRadius = PicaPt::kZero;
     mScrollViewStyles[DISABLED] = mScrollViewStyles[NORMAL];
