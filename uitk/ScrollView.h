@@ -33,6 +33,8 @@ public:
     ScrollView();
     ~ScrollView();
 
+    ScrollView* setFrame(const Rect& frame) override;
+
     const Rect& bounds() const override;
     ScrollView* setBounds(const Rect& bounds);
 

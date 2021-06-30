@@ -22,6 +22,7 @@
 
 #include "VectorBaseTheme.h"
 
+#include "../Application.h"
 #include "../UIContext.h"
 
 #include <nativedraw.h>
@@ -201,9 +202,14 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     // Scrollbar
     mScrollbarTrackStyles[NORMAL].bgColor = Color::kTransparent;
     mScrollbarTrackStyles[NORMAL].fgColor = params.textColor;
-    mScrollbarTrackStyles[NORMAL].borderColor = Color::kTransparent;
-    mScrollbarTrackStyles[NORMAL].borderWidth = PicaPt::kZero;
-    mScrollbarTrackStyles[NORMAL].borderRadius = mBorderRadius;
+    if (Application::instance().shouldHideScrollbars()) {
+        mScrollbarTrackStyles[NORMAL].borderColor = Color::kTransparent;
+        mScrollbarTrackStyles[NORMAL].borderWidth = PicaPt::kZero;
+    } else {
+        mScrollbarTrackStyles[NORMAL].borderColor = params.borderColor;
+        mScrollbarTrackStyles[NORMAL].borderWidth = mBorderWidth;
+    }
+    mScrollbarTrackStyles[NORMAL].borderRadius = PicaPt::kZero;
     mScrollbarTrackStyles[DISABLED] = mScrollbarTrackStyles[NORMAL];
     mScrollbarTrackStyles[OVER] = mScrollbarTrackStyles[NORMAL];
     mScrollbarTrackStyles[DOWN] = mScrollbarTrackStyles[NORMAL];
@@ -601,11 +607,16 @@ void VectorBaseTheme::clipScrollView(UIContext& ui, const Rect& frame,
                                      const WidgetStyle& style, WidgetState state) const
 {
     auto s = mScrollViewStyles[int(state)].merge(style);
+    auto borderWidth = s.borderWidth;
+    if (s.borderColor.alpha() < 0.0001f) {
+        borderWidth = PicaPt::kZero;
+    }
+    Rect clipRect = frame.insetted(borderWidth, borderWidth);
     if (s.borderRadius <= PicaPt::kZero) {
-        ui.dc.clipToRect(frame);
+        ui.dc.clipToRect(clipRect);
     } else {
         auto path = ui.dc.createBezierPath();
-        path->addRoundedRect(frame, s.borderRadius);
+        path->addRoundedRect(clipRect, s.borderRadius - 1.414f * borderWidth);
         ui.dc.clipToPath(path);
     }
 }

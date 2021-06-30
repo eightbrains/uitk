@@ -402,8 +402,6 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
             Application::instance().onSystemThemeChanged();
             return 0;
         default:
-            std::string s = "[debug] message: " + std::to_string(message) + "\n";
-            OutputDebugString(s.c_str());
             return DefWindowProc(hwnd, message, wParam, lParam);
     }
 }

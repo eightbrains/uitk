@@ -256,7 +256,7 @@ public:
     {
         auto pref1 = mTooSmall->preferredSize(context);
         auto pref2 = mTooLarge->preferredSize(context);
-        return Size(pref1.width + pref1.height + 1.3 * pref2.width, 3.0f * pref1.height);
+        return Size(pref1.width + pref1.height + 1.3f * pref2.width, 3.0f * pref1.height);
     }
 
     void layout(const LayoutContext& context) override
@@ -365,7 +365,7 @@ public:
     ProgressBarTest()
     {
         mProgress = new ProgressBar();
-        mProgress->setValue(66.6);
+        mProgress->setValue(66.6f);
         addChild(mProgress);
     }
 

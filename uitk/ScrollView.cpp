@@ -49,9 +49,50 @@ PicaPt calcMinOffsetY(const Rect& frame, const Rect& bounds)
 struct ScrollView::Impl
 {
     Rect bounds;
+    Rect contentRect;
     ScrollBar *horizScroll;  // this is a child; base class owns
     ScrollBar *vertScroll;  // this is a child; base class owns
     Tristate drawsFrame = Tristate::kUndefined;
+
+    void updateContentRect(const Rect& frame)
+    {
+        this->contentRect = Rect(PicaPt::kZero, PicaPt::kZero, frame.width, frame.height);
+
+        // If the scrollbars only show while scrolling on the trackpad, they should
+        // appear above the content, but if they are always there, the content rect
+        // must be smaller.
+        if (!Application::instance().shouldHideScrollbars()) {
+            Size dsize(PicaPt::kZero, PicaPt::kZero);
+            if (this->vertScroll->visible()) {
+                dsize.width = this->vertScroll->frame().width;
+            }
+            if (this->horizScroll->visible()) {
+                dsize.height = this->vertScroll->frame().width;
+            }
+            this->contentRect.width -= dsize.width;
+            this->contentRect.height -= dsize.height;
+        }
+    }
+
+    void updateScrollFrames(const Rect& frame)
+    {
+        if (this->vertScroll->visible() && this->horizScroll->visible()) {
+            auto f = this->vertScroll->frame();
+            f.height = frame.height - this->horizScroll->frame().height;
+            this->vertScroll->setFrame(f);
+            f = this->horizScroll->frame();
+            f.width = frame.width - this->vertScroll->frame().width;
+            this->horizScroll->setFrame(f);
+        } else if (this->vertScroll->visible()) {
+            auto f = this->vertScroll->frame();
+            f.height = frame.height;
+            this->vertScroll->setFrame(f);
+        } else {
+            auto f = this->horizScroll->frame();
+            f.width = frame.width;
+            this->horizScroll->setFrame(f);
+        }
+    }
 };
 
 ScrollView::ScrollView()
@@ -73,6 +114,14 @@ ScrollView::ScrollView()
 
 ScrollView::~ScrollView()
 {
+}
+
+ScrollView* ScrollView::setFrame(const Rect& frame)
+{
+    Super::setFrame(frame);
+    mImpl->updateContentRect(frame);
+    mImpl->updateScrollFrames(frame);
+    return this;
 }
 
 const Rect& ScrollView::bounds() const
@@ -111,6 +160,9 @@ ScrollView* ScrollView::setBounds(const Rect& bounds)
         mImpl->vertScroll->setVisible(false);
     }
 
+    mImpl->updateContentRect(frame());
+    mImpl->updateScrollFrames(frame());
+
     setNeedsDraw();
     return this;
 }
@@ -133,11 +185,17 @@ Size ScrollView::preferredSize(const LayoutContext& context) const
 void ScrollView::layout(const LayoutContext& context)
 {
     auto pref = mImpl->vertScroll->preferredSize(context);
-    mImpl->vertScroll->setFrame(Rect(frame().width - pref.width, PicaPt::kZero,
-                                     pref.width, frame().height));
+    Rect vertFrame(frame().width - pref.width, PicaPt::kZero,
+                   pref.width, frame().height);
     pref = mImpl->horizScroll->preferredSize(context);
-    mImpl->horizScroll->setFrame(Rect(PicaPt::kZero, frame().height - pref.height,
-                                      frame().width, pref.height));
+    Rect horizFrame(PicaPt::kZero, frame().height - pref.height,
+                    frame().width, pref.height);
+    mImpl->vertScroll->setFrame(vertFrame);
+    mImpl->horizScroll->setFrame(horizFrame);
+
+    mImpl->updateContentRect(frame());
+    mImpl->updateScrollFrames(frame());
+
     Super::layout(context);
 }
 
@@ -191,11 +249,6 @@ Widget::EventResult ScrollView::mouse(const MouseEvent& e)
 
 void ScrollView::draw(UIContext& context)
 {
-    Rect boundingRect(PicaPt::kZero, PicaPt::kZero, frame().width, frame().height);
-
-    context.dc.save();
-    context.theme.clipScrollView(context, boundingRect, style(state()), state());
-
     if (mImpl->drawsFrame == Tristate::kUndefined) {
         if (typeid(*this) == typeid(ScrollView)) {  // see Widget.cpp, Impl::updateDrawsFrame()
             mImpl->drawsFrame = Tristate::kTrue;
@@ -204,8 +257,12 @@ void ScrollView::draw(UIContext& context)
         }
     }
     if (mImpl->drawsFrame == Tristate::kTrue) {
-        context.theme.drawScrollView(context, boundingRect, style(state()), state());
+        Rect frameRect(PicaPt::kZero, PicaPt::kZero, frame().width, frame().height);
+        context.theme.drawScrollView(context, frameRect, style(state()), state());
     }
+
+    context.dc.save();
+    context.theme.clipScrollView(context, mImpl->contentRect, style(state()), state());
 
     // It would be nicer to be able to Super::draw() here (and have the scrollbars on top),
     // but that would require that we have content widget that everything is added to.
@@ -222,12 +279,12 @@ void ScrollView::draw(UIContext& context)
         }
     }
     context.dc.translate(-mImpl->bounds.x, -mImpl->bounds.y);
+    context.dc.restore();
 
     // Draw the scrollbars last so they are on top.
     drawChild(context, mImpl->horizScroll);
     drawChild(context, mImpl->vertScroll);
 
-    context.dc.restore();
 }
 
 }  // namespace uitk
