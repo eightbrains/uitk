@@ -51,12 +51,12 @@ Theme::Params EmpireTheme::lightModeParams(const Color& accent)
 {
     Theme::Params params;
     params.windowBackgroundColor = Color(1.0f, 1.0f, 1.0f);
-    params.nonEditableBackgroundColor = Color(0.95f, 0.95f, 0.95f);
+    params.nonEditableBackgroundColor = Color(0.975f, 0.975f, 0.975f);
     params.editableBackgroundColor = Color(1.0f, 1.0f, 1.0f);
     params.disabledBackgroundColor = Color(0.85f, 0.85f, 0.85f);
     params.borderColor = Color(0.85f, 0.85f, 0.85f);
     params.textColor = Color(0.1f, 0.1f, 0.1f);
-    params.accentedBackgroundTextColor = params.textColor;
+    params.accentedBackgroundTextColor = Color(1.0f, 1.0f, 1.0f);
     params.disabledTextColor = Color(0.4f, 0.4f, 0.4f);
     params.accentColor = accent;
     params.selectionColor = accent.lighter();
