@@ -36,7 +36,6 @@ Theme::Params EmpireTheme::EmpireTheme::darkModeParams(const Color& accent)
     params.nonEditableBackgroundColor = Color(0.4f, 0.4f, 0.4f);
     params.editableBackgroundColor = Color(0.1f, 0.1f, 0.1f);
     params.disabledBackgroundColor = Color(0.3f, 0.3f, 0.3f);
-    params.borderColor = Color(0.2f, 0.2f, 0.2f);
     params.textColor = Color(0.875f, 0.875f, 0.875f);
     params.accentedBackgroundTextColor = params.textColor;
     params.disabledTextColor = Color(0.6f, 0.6f, 0.6f);
@@ -54,7 +53,6 @@ Theme::Params EmpireTheme::lightModeParams(const Color& accent)
     params.nonEditableBackgroundColor = Color(0.975f, 0.975f, 0.975f);
     params.editableBackgroundColor = Color(1.0f, 1.0f, 1.0f);
     params.disabledBackgroundColor = Color(0.85f, 0.85f, 0.85f);
-    params.borderColor = Color(0.85f, 0.85f, 0.85f);
     params.textColor = Color(0.1f, 0.1f, 0.1f);
     params.accentedBackgroundTextColor = Color(1.0f, 1.0f, 1.0f);
     params.disabledTextColor = Color(0.4f, 0.4f, 0.4f);

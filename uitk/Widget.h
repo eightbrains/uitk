@@ -84,6 +84,8 @@ public:
     /// for instance). This function is O(n).
     Widget* removeChild(Widget *w);
 
+    void removeAllChildren();
+
     const std::vector<Widget*> children() const;
 
     /// Returns the parent of this widget, or nullptr

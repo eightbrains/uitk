@@ -96,7 +96,6 @@ public:
         Color nonEditableBackgroundColor;
         Color editableBackgroundColor;
         Color disabledBackgroundColor;
-        Color borderColor;
         Color textColor;
         Color disabledTextColor;
         Color accentedBackgroundTextColor;  // for when accentColor is bg of text
@@ -124,6 +123,8 @@ public:
 
     virtual void drawWindowBackground(UIContext& ui, const Size& size) const = 0;
     virtual void drawFrame(UIContext& ui, const Rect& frame,
+                           const WidgetStyle& style) const = 0;
+    virtual void clipFrame(UIContext& ui, const Rect& frame,
                            const WidgetStyle& style) const = 0;
     virtual void drawButton(UIContext& ui, const Rect& frame,
                             const WidgetStyle& style, WidgetState state,
@@ -156,6 +157,12 @@ public:
                                 const WidgetStyle& style, WidgetState state) const = 0;
     virtual void drawScrollView(UIContext& ui, const Rect& frame,
                                 const WidgetStyle& style, WidgetState state) const = 0;
+    virtual void drawListView(UIContext& ui, const Rect& frame,
+                              const WidgetStyle& style, WidgetState state) const = 0;
+    virtual void clipListView(UIContext& ui, const Rect& frame,
+                              const WidgetStyle& style, WidgetState state) const = 0;
+    virtual void drawListViewSelectedRow(UIContext& ui, const Rect& frame,
+                                         const WidgetStyle& style, WidgetState state) const = 0;
 };
 
 }  // namespace uitk

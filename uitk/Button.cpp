@@ -92,18 +92,28 @@ Widget::EventResult Button::mouse(const MouseEvent &e)
 {
     auto result = Super::mouse(e);
 
-    if (e.type == MouseEvent::Type::kButtonUp) {
-        result = EventResult::kConsumed;
+    switch (e.type) {
+        case MouseEvent::Type::kButtonDown:
+            // We don't do anything for button down, but it *does* change state,
+            // so consume it, since we want to be the grab widget.
+            result = EventResult::kConsumed;
+            break;
+        case MouseEvent::Type::kButtonUp: {
+            result = EventResult::kConsumed;
 
-        if (mImpl->isToggleable) {
-            mImpl->isOn = !mImpl->isOn;
-        } else {
-            mImpl->isOn = false;
-        }
+            if (mImpl->isToggleable) {
+                mImpl->isOn = !mImpl->isOn;
+            } else {
+                mImpl->isOn = false;
+            }
 
-        if (mImpl->onClicked) {
-            mImpl->onClicked(this);
+            if (mImpl->onClicked) {
+                mImpl->onClicked(this);
+            }
+            break;
         }
+        default:
+            break;
     }
 
     return result;

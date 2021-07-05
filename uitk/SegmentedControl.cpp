@@ -172,7 +172,11 @@ Widget::EventResult SegmentedControl::mouse(const MouseEvent& e)
     auto result = Super::mouse(e);
     auto newState = state();
 
-    if (e.type == MouseEvent::Type::kButtonUp) {
+    if (e.type == MouseEvent::Type::kButtonDown) {
+        // Like Button, we don't do anything for mouse down, but it *does*
+        // change state, and we do want to be the grab widget.
+        result = EventResult::kConsumed;
+    } else if (e.type == MouseEvent::Type::kButtonUp) {
         for (size_t i = 0;  i < mImpl->items.size();  ++i) {
             if (children()[i]->frame().contains(e.pos)) {
                 switch (mImpl->action) {

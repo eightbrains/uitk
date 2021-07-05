@@ -85,6 +85,7 @@ public:
     /// Useful for when a widget needs to capture mouse drag events outside
     /// its frame.
     void setMouseGrab(Widget *w);
+    Widget* mouseGrabWidget() const;
 
     void onResize(const DrawContext& dc) override;
     void onLayout(const DrawContext& dc) override;

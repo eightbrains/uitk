@@ -52,6 +52,8 @@ struct ScrollView::Impl
     Rect contentRect;
     ScrollBar *horizScroll;  // this is a child; base class owns
     ScrollBar *vertScroll;  // this is a child; base class owns
+    bool usesHorizScrollbar = false;
+    bool usesVertScrollbar = false;
     Tristate drawsFrame = Tristate::kUndefined;
 
     void updateContentRect(const Rect& frame)
@@ -143,8 +145,10 @@ ScrollView* ScrollView::setBounds(const Rect& bounds)
                                      f.width.toPixels(kScrollbarDPI),
                                      bounds.width.toPixels(kScrollbarDPI));
         mImpl->horizScroll->setValue(-mImpl->bounds.x.toPixels(kScrollbarDPI));
+        mImpl->usesHorizScrollbar = true;
     } else {
         mImpl->horizScroll->setVisible(false);
+        mImpl->usesHorizScrollbar = false;
     }
 
     if (bounds.height > f.height) {
@@ -156,8 +160,10 @@ ScrollView* ScrollView::setBounds(const Rect& bounds)
                                     f.height.toPixels(kScrollbarDPI),
                                     bounds.height.toPixels(kScrollbarDPI));
         mImpl->vertScroll->setValue(-mImpl->bounds.y.toPixels(kScrollbarDPI));
+        mImpl->usesVertScrollbar = true;
     } else {
         mImpl->vertScroll->setVisible(false);
+        mImpl->usesVertScrollbar = false;
     }
 
     mImpl->updateContentRect(frame());
@@ -232,8 +238,8 @@ Widget::EventResult ScrollView::mouse(const MouseEvent& e)
         auto offsetY = std::min(PicaPt::kZero, std::max(e.scroll.dy + mImpl->bounds.y, minOffsetY));
         setContentOffset(Point(offsetX, offsetY));
         if (Application::instance().shouldHideScrollbars()) {
-            mImpl->horizScroll->setVisible(true);
-            mImpl->vertScroll->setVisible(true);
+            mImpl->horizScroll->setVisible(mImpl->usesHorizScrollbar);
+            mImpl->vertScroll->setVisible(mImpl->usesVertScrollbar);
         }
         setNeedsDraw();
         result = EventResult::kConsumed;
@@ -265,16 +271,18 @@ void ScrollView::draw(UIContext& context)
     context.theme.clipScrollView(context, mImpl->contentRect, style(state()), state());
 
     // It would be nicer to be able to Super::draw() here (and have the scrollbars on top),
-    // but that would require that we have content widget that everything is added to.
+    // but that would require that we have a content widget that everything is added to.
     // Since we want scrollview->addChild() to do what you'd expect (add to the scrollable
     // part), and we cannot make addChild() virtual (because you cannot call virtual functions
     // in the constructor, but the constructor is the place where you want to create and
     // add your children), we need to draw them ourselves.
 
     // Draw the children of the (non-existent) content widget.
+    Rect contentRect(-mImpl->bounds.x, -mImpl->bounds.y, frame().width, frame().height);
     context.dc.translate(mImpl->bounds.x, mImpl->bounds.y);
     for (auto *child : children()) {
-        if (child != mImpl->horizScroll && child != mImpl->vertScroll) {
+        if (child != mImpl->horizScroll && child != mImpl->vertScroll
+            && contentRect.intersects(child->frame())) {
             drawChild(context, child);
         }
     }
@@ -284,7 +292,6 @@ void ScrollView::draw(UIContext& context)
     // Draw the scrollbars last so they are on top.
     drawChild(context, mImpl->horizScroll);
     drawChild(context, mImpl->vertScroll);
-
 }
 
 }  // namespace uitk

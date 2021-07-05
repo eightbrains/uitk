@@ -467,6 +467,56 @@ private:
     Button *mButton2;
 };
 
+class ListViewTest : public Widget
+{
+    using Super = Widget;
+public:
+    ListViewTest()
+    {
+        mMode = new SegmentedControl({ "D", "0", "1", "2+" });
+        mMode->setAction(SegmentedControl::Action::kSelectOne);
+        mMode->setSegmentOn(2, true);
+        mMode->setOnClicked([this](int idx) {
+            mLV->setEnabled(idx != 0);
+            switch (idx) {
+                case 1:  mLV->setSelectionModel(ListView::SelectionMode::kNoItems); break;
+                case 2:  mLV->setSelectionModel(ListView::SelectionMode::kSingleItem); break;
+                case 3:  mLV->setSelectionModel(ListView::SelectionMode::kMultipleItems); break;
+                default: break;
+            }
+        });
+        addChild(mMode);
+
+        mLV = new ListView();
+        mLV->setSelectionModel(ListView::SelectionMode::kSingleItem);
+        for (int i = 0; i < 1000; ++i) {
+            mLV->addStringCell("Item " + std::to_string(i + 1));
+        }
+        addChild(mLV);
+    }
+
+    Size preferredSize(const LayoutContext& context) const override
+    {
+        return Size(PicaPt(100), PicaPt(300));
+    }
+
+    void layout(const LayoutContext& context) override
+    {
+        auto pref = mMode->preferredSize(context);
+        auto x = PicaPt::kZero;
+        auto y = PicaPt::kZero;
+        mMode->setFrame(Rect(x, y, pref.width, pref.height));
+        y += pref.height + PicaPt(8);
+        mLV->setFrame(Rect(x, y, bounds().width, bounds().height - y));
+
+        Super::layout(context);
+    }
+
+private:
+    SegmentedControl *mMode;
+    ListView *mLV;
+};
+
 class AllWidgetsTest : public Widget
 {
     using Super = Widget;
@@ -487,6 +537,8 @@ public:
         addChild(mProgress);
         mScroll = new ScrollTest();
         addChild(mScroll);
+        mListView = new ListViewTest();
+        addChild(mListView);
     }
 
     void layout(const LayoutContext& context)
@@ -507,6 +559,10 @@ public:
         pref = mScroll->preferredSize(context);
         mScroll->setFrame(Rect(x, mProgress->frame().maxY(), pref.width, pref.height));
 
+        x += PicaPt(400);
+        pref = mListView->preferredSize(context);
+        mListView->setFrame(Rect(x, PicaPt::kZero, pref.width, pref.height));
+
         Super::layout(context);
     }
 
@@ -518,6 +574,7 @@ private:
     SliderTest *mSliders;
     ProgressBarTest *mProgress;
     ScrollTest *mScroll;
+    ListViewTest *mListView;
 };
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -534,7 +591,7 @@ int main(int argc, char *argv[])
     Window w("UITK test widgets", 1024, 768);
 
     w.addChild((new AllWidgetsTest())
-               ->setFrame(Rect(PicaPt(0), PicaPt(0), PicaPt(300), PicaPt(768))));
+               ->setFrame(Rect(PicaPt(0), PicaPt(0), PicaPt(1024), PicaPt(768))));
 //    w.addChild((new Label("Egypt"))
 //               ->setFrame(Rect(PicaPt(0), PicaPt(0), PicaPt(300), PicaPt(600))));
     w.show(true);

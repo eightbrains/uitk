@@ -89,7 +89,6 @@ Theme::Params MacOSApplication::themeParams() const
     params.accentColor = toUITKColor(NSColor.controlAccentColor);
     params.windowBackgroundColor = Color(0.0f, 0.0f, 0.0f, 0.0f); // draw nothing
     params.nonEditableBackgroundColor = toUITKColor(NSColor.controlColor);
-    params.borderColor = params.nonEditableBackgroundColor.darker(0.2f);
     params.textColor = toUITKColor(NSColor.controlTextColor);
     params.disabledTextColor = toUITKColor(NSColor.disabledControlTextColor);
     params.disabledBackgroundColor = Color(params.nonEditableBackgroundColor.red(),

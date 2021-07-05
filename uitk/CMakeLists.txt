@@ -5,6 +5,7 @@ set(UITK_HEADERS Application.h
                  Checkbox.h
                  Events.h
                  Label.h
+                 ListView.h
                  Global.h
                  OSApplication.h
                  OSWindow.h
@@ -25,6 +26,7 @@ set(UITK_SOURCES Application.cpp
                  Button.cpp
                  Checkbox.cpp
                  Label.cpp
+                 ListView.cpp
                  ProgressBar.cpp
                  ScrollBar.cpp
                  ScrollView.cpp

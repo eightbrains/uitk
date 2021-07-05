@@ -66,11 +66,13 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     // Check text color to determine dark mode; params.windowBackgroundColor
     // may be transparent.
     bool isDarkMode = (params.textColor.toGrey().red() > 0.5f);
+    Color borderColor = (isDarkMode ? Color(1.0f, 1.0f, 1.0f, 0.2f)
+                                    : Color(0.0f, 0.0f, 0.0f, 0.2f));
 
     // Normal button
     mButtonStyles[NORMAL].bgColor = params.nonEditableBackgroundColor;
     mButtonStyles[NORMAL].fgColor = params.textColor;
-    mButtonStyles[NORMAL].borderColor = params.borderColor;
+    mButtonStyles[NORMAL].borderColor = params.nonEditableBackgroundColor.darker(0.2f);
     mButtonStyles[NORMAL].borderWidth = mBorderWidth;
     mButtonStyles[NORMAL].borderRadius = mBorderRadius;
     mButtonStyles[DISABLED] = mButtonStyles[NORMAL];
@@ -206,7 +208,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
         mScrollbarTrackStyles[NORMAL].borderColor = Color::kTransparent;
         mScrollbarTrackStyles[NORMAL].borderWidth = PicaPt::kZero;
     } else {
-        mScrollbarTrackStyles[NORMAL].borderColor = params.borderColor;
+        mScrollbarTrackStyles[NORMAL].borderColor = borderColor;
         mScrollbarTrackStyles[NORMAL].borderWidth = mBorderWidth;
     }
     mScrollbarTrackStyles[NORMAL].borderRadius = PicaPt::kZero;
@@ -240,12 +242,17 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     // ScrollView
     mScrollViewStyles[NORMAL].bgColor = Color::kTransparent;
     mScrollViewStyles[NORMAL].fgColor = params.textColor;
-    mScrollViewStyles[NORMAL].borderColor = params.borderColor;
+    mScrollViewStyles[NORMAL].borderColor = borderColor;
     mScrollViewStyles[NORMAL].borderWidth = mBorderWidth;
     mScrollViewStyles[NORMAL].borderRadius = PicaPt::kZero;
     mScrollViewStyles[DISABLED] = mScrollViewStyles[NORMAL];
     mScrollViewStyles[OVER] = mScrollViewStyles[NORMAL];
     mScrollViewStyles[DOWN] = mScrollViewStyles[NORMAL];
+
+    // ListView
+    copyStyles(mScrollViewStyles, mListViewStyles);
+    mListViewStyles[NORMAL].fgColor = params.accentColor;
+    mListViewStyles[DISABLED].fgColor = Color(0.5f, 0.5f, 0.5f);
 }
 
 const Theme::Params& VectorBaseTheme::params() const { return mParams; }
@@ -302,6 +309,24 @@ void VectorBaseTheme::drawFrame(UIContext& ui, const Rect& frame,
         ui.dc.drawRect(r, mode);
     }
 }
+
+void VectorBaseTheme::clipFrame(UIContext& ui, const Rect& frame,
+                                const WidgetStyle& style) const
+{
+    auto borderWidth = style.borderWidth;
+    if (style.borderColor.alpha() < 0.0001f) {
+        borderWidth = PicaPt::kZero;
+    }
+    Rect clipRect = frame.insetted(borderWidth, borderWidth);
+    if (style.borderRadius <= PicaPt::kZero) {
+        ui.dc.clipToRect(clipRect);
+    } else {
+        auto path = ui.dc.createBezierPath();
+        path->addRoundedRect(clipRect, style.borderRadius - 1.414f * borderWidth);
+        ui.dc.clipToPath(path);
+    }
+}
+
 
 Size VectorBaseTheme::calcPreferredButtonSize(const DrawContext& dc, const Font& font,
                                               const std::string& text) const
@@ -606,25 +631,37 @@ void VectorBaseTheme::drawProgressBar(UIContext& ui, const Rect& frame, float va
 void VectorBaseTheme::clipScrollView(UIContext& ui, const Rect& frame,
                                      const WidgetStyle& style, WidgetState state) const
 {
-    auto s = mScrollViewStyles[int(state)].merge(style);
-    auto borderWidth = s.borderWidth;
-    if (s.borderColor.alpha() < 0.0001f) {
-        borderWidth = PicaPt::kZero;
-    }
-    Rect clipRect = frame.insetted(borderWidth, borderWidth);
-    if (s.borderRadius <= PicaPt::kZero) {
-        ui.dc.clipToRect(clipRect);
-    } else {
-        auto path = ui.dc.createBezierPath();
-        path->addRoundedRect(clipRect, s.borderRadius - 1.414f * borderWidth);
-        ui.dc.clipToPath(path);
-    }
+    clipFrame(ui, frame, mScrollViewStyles[int(state)].merge(style));
 }
 
 void VectorBaseTheme::drawScrollView(UIContext& ui, const Rect& frame,
                                      const WidgetStyle& style, WidgetState state) const
 {
     drawFrame(ui, frame, mScrollViewStyles[int(state)].merge(style));
+}
+
+void VectorBaseTheme::drawListView(UIContext& ui, const Rect& frame,
+                                   const WidgetStyle& style, WidgetState state) const
+{
+    drawFrame(ui, frame, mListViewStyles[int(state)].merge(style));
+}
+
+void VectorBaseTheme::clipListView(UIContext& ui, const Rect& frame,
+                                   const WidgetStyle& style, WidgetState state) const
+{
+    clipFrame(ui, frame, mListViewStyles[int(state)].merge(style));
+}
+
+void VectorBaseTheme::drawListViewSelectedRow(UIContext& ui, const Rect& frame,
+                                              const WidgetStyle& style, WidgetState state) const
+{
+    WidgetStyle s = mListViewStyles[int(WidgetState::kNormal)].merge(style);
+    if (state == WidgetState::kDisabled) {
+        s = mListViewStyles[int(WidgetState::kDisabled)].merge(style);
+    }
+
+    ui.dc.setFillColor(s.fgColor);
+    ui.dc.drawRect(frame, kPaintFill);
 }
 
 }  // namespace uitk

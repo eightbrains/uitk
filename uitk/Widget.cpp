@@ -67,9 +67,7 @@ Widget::Widget()
 
 Widget::~Widget()
 {
-    for (auto *child : mImpl->children) {
-        delete child;
-    }
+    removeAllChildren();
 }
 
 std::string Widget::debugDescription(const Point& offset /*= Point(PicaPt::kZero, PicaPt::kZero)*/,
@@ -227,6 +225,13 @@ Widget* Widget::removeChild(Widget *w)
     return nullptr;
 }
 
+void Widget::removeAllChildren()
+{
+    for (auto *child : mImpl->children) {
+        delete child;
+    }
+}
+
 const std::vector<Widget*> Widget::children() const
 {
     return mImpl->children;
@@ -338,8 +343,6 @@ Widget::EventResult Widget::mouseChild(const MouseEvent& e, Widget *child, Event
                 child->setState(Theme::WidgetState::kMouseOver);
                 break;
             case MouseEvent::Type::kButtonDown:
-                window()->setMouseGrab(child);
-                // fallthrough
             case MouseEvent::Type::kDrag:
                 child->setState(Theme::WidgetState::kMouseDown);
                 break;
@@ -354,6 +357,17 @@ Widget::EventResult Widget::mouseChild(const MouseEvent& e, Widget *child, Event
             childE.pos -= child->frame().upperLeft();
             if (child->mouse(childE) == EventResult::kConsumed) {
                 result = EventResult::kConsumed;
+                // When to grab the mouse is a bit tricky. We want grabbing to be fairly
+                // automatic, so that each control does not need to do it, but we also
+                // do not want purely visual widgets like Label to grab it. Compromise and
+                // require mouse down to be consumed. This still forces a number of controls
+                // (like Button) to make changes, since button down doesn't really do anything,
+                // but it seems a good compromise. (Note: if we refactor so that there is a
+                // Control base class, maybe we can move this below the if and only grab
+                // if it is a control.)
+                if (e.type == MouseEvent::Type::kButtonDown && !window()->mouseGrabWidget()) {
+                    window()->setMouseGrab(child);
+                }
             }
         }
     } else {

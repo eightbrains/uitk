@@ -50,6 +50,8 @@ public:
     void drawWindowBackground(UIContext& ui, const Size& size) const override;
     void drawFrame(UIContext& ui, const Rect& frame,
                    const WidgetStyle& style) const override;
+    void clipFrame(UIContext& ui, const Rect& frame,
+                   const WidgetStyle& style) const override;
     void drawButton(UIContext& ui, const Rect& frame,
                     const WidgetStyle& style, WidgetState state,
                     bool isOn) const override;
@@ -79,9 +81,15 @@ public:
     void drawProgressBar(UIContext& ui, const Rect& frame, float value,
                          const WidgetStyle& style, WidgetState state) const override;
     void clipScrollView(UIContext& ui, const Rect& frame,
-                                const WidgetStyle& style, WidgetState state) const override;
+                        const WidgetStyle& style, WidgetState state) const override;
     void drawScrollView(UIContext& ui, const Rect& frame,
-                                const WidgetStyle& style, WidgetState state) const override;
+                        const WidgetStyle& style, WidgetState state) const override;
+    void drawListView(UIContext& ui, const Rect& frame,
+                      const WidgetStyle& style, WidgetState state) const override;
+    void clipListView(UIContext& ui, const Rect& frame,
+                      const WidgetStyle& style, WidgetState state) const override;
+    void drawListViewSelectedRow(UIContext& ui, const Rect& frame,
+                                 const WidgetStyle& style, WidgetState state) const;
 
 protected:
     void setVectorParams(const Params& params);
@@ -105,6 +113,7 @@ protected:
     WidgetStyle mScrollbarThumbStyles[4];
     WidgetStyle mProgressBarStyles[4];
     WidgetStyle mScrollViewStyles[4];
+    WidgetStyle mListViewStyles[4];
 };
 
 }  // namespace uitk

@@ -75,14 +75,17 @@ Size ScrollBar::preferredSize(const LayoutContext& context) const
 
 Size ScrollBar::preferredThumbSize(const LayoutContext& context) const
 {
+    auto fm = context.theme.params().labelFont.metrics(context.dc);
+    auto minLength = context.dc.roundToNearestPixel(fm.ascent + fm.descent);
+
     mImpl->thumbNeedsResize = true;
     double minValue = doubleMinLimit();
     double maxValue = doubleMaxLimit();
     auto thickness = context.theme.calcPreferredScrollbarThickness(context.dc);
     if (direction() == SliderDir::kHoriz) {
-        return Size(float(mImpl->thumbSizeFraction) * frame().width, thickness);
+        return Size(std::max(minLength, float(mImpl->thumbSizeFraction) * frame().width), thickness);
     } else {
-        return Size(thickness, float(mImpl->thumbSizeFraction) * frame().height);
+        return Size(thickness, std::max(minLength, float(mImpl->thumbSizeFraction) * frame().height));
     }
 }
 

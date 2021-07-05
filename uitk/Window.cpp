@@ -138,6 +138,11 @@ void Window::setMouseGrab(Widget *w)
     mImpl->grabbedWidget = w;
 }
 
+Widget* Window::mouseGrabWidget() const
+{
+    return mImpl->grabbedWidget;
+}
+
 void Window::onMouse(const MouseEvent& eOrig)
 {
     mImpl->inMouse = true;
@@ -153,6 +158,9 @@ void Window::onMouse(const MouseEvent& eOrig)
     }
 #endif // !__APPLE__
 
+    if (e.type == MouseEvent::Type::kButtonUp) {  // debugging; remove
+        e.type = e.type;
+    }
     if (mImpl->grabbedWidget == nullptr) {
         mImpl->rootWidget->setState(Theme::WidgetState::kMouseOver);  // so onDeactivated works
         mImpl->rootWidget->mouse(e);
