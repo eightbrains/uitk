@@ -113,7 +113,11 @@ void Label::draw(UIContext& ui)
         // The descent below acts as the lower margin.
         pt.y = r.midY() - 0.5f * metrics.capHeight - (metrics.ascent - metrics.capHeight);
     } else {
-        pt.y = r.minY() + margin;
+        // The ascent value is kind of arbitrary, and many fonts seem to use it
+        // to put the leading in, so it is taller than necessary (either that or there
+        // are some really tall glyphs somewhere in those Unicode characters). The cap-height
+        // is the visual ascent.
+        pt.y = r.minY() + margin - (metrics.ascent - metrics.capHeight);
     }
     if (mImpl->alignment & Alignment::kRight) {
         auto width = ui.dc.textMetrics(mImpl->text.c_str(), font, kPaintFill).width;

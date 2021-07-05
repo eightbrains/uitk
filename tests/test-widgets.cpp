@@ -67,6 +67,11 @@ class LabelTest : public Widget
 public:
     LabelTest()
     {
+        mDefaultLabel = new Label("Shy Gypsy 投桃报李");
+        mDefaultLabel->setBorderColor(Color(0.5f, 0.5f, 0.5f));
+        mDefaultLabel->setBorderWidth(PicaPt(1.0f));
+        addChild(mDefaultLabel);
+
         mLabel = new Label("Agillion AVAST fill triffling");
         mLabel->setBorderColor(Color(0.5f, 0.5f, 0.5f));
         mLabel->setBorderWidth(PicaPt(1));
@@ -119,6 +124,8 @@ public:
         }
 
         PicaPt y(8);
+        mDefaultLabel->setPosition(Point(PicaPt(8), y));
+        y += mDefaultLabel->frame().height + PicaPt(8);
         mHoriz->setPosition(Point(PicaPt(8), y));
         mVert->setPosition(Point(mHoriz->frame().maxX() + PicaPt(8), y));
 
@@ -142,6 +149,7 @@ public:
     }
 
 private:
+    Label *mDefaultLabel;
     Label *mLabel;
     SegmentedControl *mHoriz;
     SegmentedControl *mVert;
