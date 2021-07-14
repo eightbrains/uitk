@@ -36,6 +36,7 @@ public:
     const Params& params() const override;
     void setParams(const Params& params) override;
 
+    Size calcPreferredTextMargins(const DrawContext& dc, const Font& font) const override;
     Size calcPreferredButtonSize(const DrawContext& dc, const Font& font,
                                  const std::string& text) const override;
     // Returns the size for the checkbox, not the checkbox + text
@@ -43,9 +44,14 @@ public:
                                    const Font& font) const override;
     Size calcPreferredSegmentSize(const DrawContext& dc, const Font& font,
                                   const std::string& text) const override;
+    Size calcPreferredComboBoxSize(const DrawContext& dc,
+                                   const PicaPt& preferredMenuWidth) const override;
     Size calcPreferredSliderThumbSize(const DrawContext& dc) const override;
     Size calcPreferredProgressBarSize(const DrawContext& dc) const override;
     PicaPt calcPreferredScrollbarThickness(const DrawContext& dc) const override;
+    Size calcPreferredMenuItemSize(const DrawContext& dc, const std::string& text) const override;
+
+    void drawCheckmark(UIContext& ui, const Rect& r, const WidgetStyle& style) const override;
 
     void drawWindowBackground(UIContext& ui, const Size& size) const override;
     void drawFrame(UIContext& ui, const Rect& frame,
@@ -70,6 +76,8 @@ public:
                             const WidgetStyle& ctrlStyle,
                             WidgetState ctrlState) const override;
     const WidgetStyle& segmentTextStyle(WidgetState state, bool isOn) const override;
+    void drawComboBoxAndClip(UIContext& ui, const Rect& frame,
+                             const WidgetStyle& style, WidgetState state) const override;
     void drawSliderTrack(UIContext& ui, SliderDir dir, const Rect& frame, const Point& thumbMid,
                          const WidgetStyle& style, WidgetState state) const override;
     void drawSliderThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
@@ -89,7 +97,13 @@ public:
     void clipListView(UIContext& ui, const Rect& frame,
                       const WidgetStyle& style, WidgetState state) const override;
     void drawListViewSelectedRow(UIContext& ui, const Rect& frame,
-                                 const WidgetStyle& style, WidgetState state) const;
+                                 const WidgetStyle& style, WidgetState state) const override;
+    void drawMenuBackground(UIContext& ui, const Rect& frame) override;
+    void calcMenuItemFrames(const DrawContext& dc, const Rect& frame,
+                            Rect *checkRect, Rect *textRect) const override;
+    void drawMenuItem(UIContext& ui, const Rect& frame, const std::string& text,
+                      const bool isChecked, const WidgetStyle& style, WidgetState state) const override;
+    void drawMenuSeparatorItem(UIContext& ui, const Rect& frame) const override;
 
 protected:
     void setVectorParams(const Params& params);
@@ -107,6 +121,8 @@ protected:
     WidgetStyle mSegmentStyles[4];  // style for individual segment (button-style)
     WidgetStyle mSegmentOffStyles[4];  // style for individual segment (off)
     WidgetStyle mSegmentOnStyles[4];  // style for individual segment (on)
+    WidgetStyle mComboBoxStyles[4];
+    WidgetStyle mComboBoxIconAreaStyles[4];
     WidgetStyle mSliderTrackStyles[4];
     WidgetStyle mSliderThumbStyles[4];
     WidgetStyle mScrollbarTrackStyles[4];
@@ -114,6 +130,7 @@ protected:
     WidgetStyle mProgressBarStyles[4];
     WidgetStyle mScrollViewStyles[4];
     WidgetStyle mListViewStyles[4];
+    WidgetStyle mMenuItemStyles[4];
 };
 
 }  // namespace uitk

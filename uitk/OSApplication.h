@@ -35,6 +35,7 @@ public:
     virtual void setExitWhenLastWindowCloses(bool exits) = 0;
     virtual int run() = 0;
 
+    virtual bool isOriginInUpperLeft() const = 0;
     virtual bool shouldHideScrollbars() const = 0;
 
     virtual Theme::Params themeParams() const = 0;

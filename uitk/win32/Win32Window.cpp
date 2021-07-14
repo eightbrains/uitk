@@ -139,9 +139,13 @@ bool Win32Window::isShowing() const
     return IsWindowVisible(mImpl->hwnd);
 }
 
-void Win32Window::show(bool show)
+void Win32Window::show(bool show,
+                       std::function<void(const DrawContext&)> onWillShow)
 {
     if (show) {
+        if (!isShowing() && onWillShow) {
+            onWillShow(*mImpl->dc);
+        }
         ShowWindow(mImpl->hwnd, SW_SHOWNORMAL);  // show and activate
     } else {
         ShowWindow(mImpl->hwnd, SW_HIDE);
@@ -309,7 +313,13 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
             SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)create->lpCreateParams);
             return 0;  // 0 to continue creation, -1 to cancel
         }
+        case WM_CLOSE:
+            if (w->onWindowShouldClose()) {
+                DestroyWindow(hwnd);
+            }
+            return 0;
         case WM_DESTROY: {
+            w->onWindowWillClose();
             auto& win32app = static_cast<Win32Application&>(Application::instance().osApplication());
             win32app.unregisterWindow(hwnd);
             return 0;

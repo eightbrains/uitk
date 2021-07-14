@@ -40,7 +40,11 @@ public:
     SelectionMode selectionMode() const;
     ListView* setSelectionModel(SelectionMode mode);
 
+    /// Deletes all the cells
     void clearCells();
+    /// Removes all the cells and returns ownership of all cells to the caller.
+    /// This is useful if you need to reuse the cells.
+    void removeAllCells();
     /// Adds cell and takes owernship of the pointer. Note that the background
     /// color of the cell should be transparent or the selection will not be
     /// visible.
@@ -64,6 +68,13 @@ public:
     void clearSelection();
     void setSelectedIndex(int index);
     void setSelectedIndices(const std::unordered_set<int> indices);
+
+    Size contentPadding() const;
+    /// Sets the padding between the edge of the ListView widget and the
+    /// content.
+    ListView* setContentPadding(const PicaPt& xPadding, const PicaPt& yPadding);
+
+    Size preferredContentSize(const LayoutContext& context) const;
 
     Size preferredSize(const LayoutContext& context) const override;
     void layout(const LayoutContext& context) override;

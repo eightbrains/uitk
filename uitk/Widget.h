@@ -84,7 +84,13 @@ public:
     /// for instance). This function is O(n).
     Widget* removeChild(Widget *w);
 
+    /// Removes all child widgets and returns ownership to the caller.
+    /// This more efficient than calling removeChild(), but does require
+    /// the call to have stored pointers to all the children.
     void removeAllChildren();
+
+    /// Removes all the children and deletes them.
+    void clearAllChildren();
 
     const std::vector<Widget*> children() const;
 
@@ -94,7 +100,8 @@ public:
     /// Returns the Window that owns this widget, or nullptr
     Window* window() const;
 
-    Point convertToLocalFromWindow(const Point& windowPt);
+    Point convertToLocalFromWindow(const Point& windowPt) const;
+    Point convertToWindowFromLocal(const Point& localPt) const;
 
     /// returned by size calculations to indicate that the widget wants
     /// as much space as possible in that dimension.

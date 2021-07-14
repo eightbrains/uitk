@@ -40,7 +40,8 @@ public:
     ~Win32Window();
 
     bool isShowing() const override;
-    void show(bool show) override;
+    void show(bool show,
+              std::function<void(const DrawContext&)> onWillShow) override;
 
     void close() override;
 

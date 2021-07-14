@@ -36,7 +36,9 @@ namespace {
 // macOS (and iOS) uses a 72 dpi assumption, and units to the API are
 // given in 72 dpi pixels. Underneath the hood, the pixels might be
 // smaller, so the fonts are scaled, the images are scaled, etc.
-const float kDPI = 72.0f;
+static const float kDPI = 72.0f;
+
+static const float kPopopBorderWidth = 1;
 
 int toKeymods(NSEventModifierFlags flags)
 {
@@ -86,8 +88,10 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 @interface ContentView ()
 {
     bool mAppearanceChanged;
+    std::vector<std::function<void()>> mDeferredCalls;
 }
 @property uitk::IWindowCallbacks *callbacks;  // ObjC does not accept reference
+@property bool inEvent;
 @end
 
 @implementation ContentView
@@ -95,8 +99,19 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     if (self = [super init]) {
         mAppearanceChanged = false;
         self.callbacks = cb;
+        self.inEvent = false;
     }
     return self;
+}
+
+- (void)addDeferredCall:(std::function<void()>)f
+{
+    mDeferredCalls.push_back(f);
+}
+
+- (float)dpi
+{
+    return kDPI;
 }
 
 // Note:  on macOS, draw contexts are transitory
@@ -154,7 +169,7 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
                          uitk::PicaPt::fromPixels(self.frame.size.height - pt.y, kDPI));
     me.keymods = toKeymods(e.modifierFlags);
 
-    self.callbacks->onMouse(me);
+    [self doOnMouse:me];
 }
 
 - (void)mouseDown:(NSEvent *)e
@@ -184,7 +199,7 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     me.keymods = toKeymods(e.modifierFlags);
     me.button.button = toUITKMouseButton(e.buttonNumber);
 
-    self.callbacks->onMouse(me);
+    [self doOnMouse:me];
 }
 
 - (void)mouseDragged:(NSEvent *)e
@@ -215,7 +230,7 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
         me.drag.buttons |= int(uitk::MouseButton::kButton5);
     }
 
-    self.callbacks->onMouse(me);
+    [self doOnMouse:me];
 }
 
 - (void)mouseUp:(NSEvent *)e
@@ -245,7 +260,7 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     me.keymods = toKeymods(e.modifierFlags);
     me.button.button = toUITKMouseButton(e.buttonNumber);
 
-    self.callbacks->onMouse(me);
+    [self doOnMouse:me];
 }
 
 - (void)scrollWheel:(NSEvent *)e
@@ -262,7 +277,21 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     me.scroll.dx = uitk::PicaPt::fromPixels(e.deltaX, kDPI);
     me.scroll.dy = uitk::PicaPt::fromPixels(e.deltaY, kDPI);
 
+    [self doOnMouse:me];
+}
+
+- (void)doOnMouse:(uitk::MouseEvent&)me
+{
+    self.inEvent = true;
     self.callbacks->onMouse(me);
+    self.inEvent = false;
+
+    if (!mDeferredCalls.empty()) {
+        for (auto &call : mDeferredCalls) {
+            call();
+        }
+        mDeferredCalls.clear();
+    }
 }
 
 - (void)viewDidChangeEffectiveAppearance
@@ -311,12 +340,23 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 {
     self.callbacks->onDeactivated();
 }
+
+- (BOOL)windowShouldClose:(NSWindow *)sender
+{
+    return self.callbacks->onWindowShouldClose();
+}
+
+- (void)windowWillClose:(NSNotification *)notification
+{
+    self.callbacks->onWindowWillClose();
+}
 @end
 //-----------------------------------------------------------------------------
 namespace uitk {
 
 struct MacOSWindow::Impl {
     IWindowCallbacks& callbacks;
+    bool userCanClose = true;
     NSWindow* window;
     UITKWindowDelegate* winDelegate;  // NSWindow doesn't retain the delegate
     ContentView* contentView;
@@ -336,6 +376,10 @@ MacOSWindow::MacOSWindow(IWindowCallbacks& callbacks,
 {
     int nsflags = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
                   NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable;
+    if (flags & Window::Flags::kPopup) {
+        nsflags = NSWindowStyleMaskBorderless;
+        mImpl->userCanClose = false;
+    }
     mImpl->window = [[NSWindow alloc]
                      initWithContentRect:NSMakeRect(x, y, width, height)
                      styleMask:nsflags backing:NSBackingStoreBuffered defer:NO];
@@ -343,19 +387,36 @@ MacOSWindow::MacOSWindow(IWindowCallbacks& callbacks,
                           initWithWindow:mImpl->window andCallbacks:&callbacks];
     mImpl->window.delegate = mImpl->winDelegate;
     mImpl->window.acceptsMouseMovedEvents = YES;
+    mImpl->window.releasedWhenClosed = NO;
     mImpl->contentView = [[ContentView alloc] initWithCallbacks:&callbacks];
     mImpl->window.contentView = mImpl->contentView;
     // Set view as first responder, otherwise we won't get mouse events
     [mImpl->window makeFirstResponder:mImpl->contentView];
+
+    if (flags & Window::Flags::kPopup) {
+        mImpl->contentView.wantsLayer = YES;
+        mImpl->contentView.layer.cornerRadius = 5;
+        mImpl->contentView.layer.masksToBounds = YES;
+        mImpl->contentView.layer.backgroundColor = mImpl->window.backgroundColor.CGColor;
+        mImpl->contentView.layer.borderWidth = CGFloat(kPopopBorderWidth);
+        mImpl->contentView.layer.borderColor = NSColor.separatorColor.CGColor;
+        mImpl->window.backgroundColor = NSColor.clearColor;
+    }
 
     setTitle(title);
 }
 
 MacOSWindow::~MacOSWindow()
 {
+    // There may still be events queued, and apparently macOS does not fully
+    // delete the object until they are all done. However, we cannot be calling
+    // any callbacks, because officially this object is deleted.
+    mImpl->contentView.callbacks = nullptr;
+    mImpl->window.delegate = nil;  // avoid calling will close multiple times
     [mImpl->window close];  // if obj is nil, ObjC message does nothing
-    mImpl->winDelegate = nil;
     mImpl->window = nil;
+    mImpl->winDelegate = nil;
+    mImpl->contentView = nil;
 }
 
 void* MacOSWindow::nativeHandle() { return (__bridge void*)mImpl->window; }
@@ -366,15 +427,35 @@ bool MacOSWindow::isShowing() const
     return (mImpl->window.visible == YES ? true : false);
 }
 
-void MacOSWindow::show(bool show)
+void MacOSWindow::show(bool show, std::function<void(const DrawContext&)> onWillShow)
 {
+    if (show && mImpl->window.visible == NO && onWillShow) {
+        // This DrawContext will not actually be drawable, since it is only drawable
+        // within -draw, but it will be used in a LayoutContext. Since onWillShow
+        // takes a const DrawContext, nothing can actually be drawn.
+        onWillShow(*[mImpl->contentView createContext]);
+    }
     [mImpl->window setIsVisible:(show ? YES : NO)];
     [mImpl->window makeKeyAndOrderFront:nil];
 }
 
 void MacOSWindow::close()
 {
-    [mImpl->window performClose:nil];
+    if (mImpl->contentView.inEvent) {
+        [mImpl->contentView addDeferredCall: [this]() { this->close(); }];
+        return;
+    }
+
+    if (mImpl->userCanClose) {
+        // Simulate clicking the close button, so that onWindowShouldClose can
+        // be called (if one exists).
+        [mImpl->window performClose:nil];
+    } else {
+        // If the close button does not exist, -performClose: beeps and does not
+        // do anything, which is undesirable (especially since there is no other
+        // way to close the window than close()!).
+        [mImpl->window close];
+    }
 }
 
 void MacOSWindow::setTitle(const std::string& title)
@@ -390,6 +471,23 @@ Rect MacOSWindow::contentRect() const
                 PicaPt::fromPixels(mImpl->contentView.frame.size.height, kDPI));
 }
 
+float MacOSWindow::dpi() const
+{
+    return mImpl->contentView.dpi;
+}
+
+OSWindow::OSRect MacOSWindow::osFrame() const
+{
+    NSRect f = mImpl->window.frame;
+    return OSRect{float(f.origin.x), float(f.origin.y),
+                  float(f.size.width), float(f.size.height)};
+}
+
+void MacOSWindow::setOSFrame(float x, float y, float width, float height)
+{
+    [mImpl->window setFrame:NSMakeRect(x, y, width, height) display:YES];
+}
+
 void MacOSWindow::postRedraw() const
 {
     mImpl->contentView.needsDisplay = YES;
@@ -398,6 +496,16 @@ void MacOSWindow::postRedraw() const
 void MacOSWindow::raiseToTop() const
 {
     [mImpl->window makeKeyAndOrderFront:nil];
+}
+
+PicaPt MacOSWindow::borderWidth() const
+{
+    if (mImpl->window.styleMask == 0) {  // NSWindowStyleMaskBorderless == 0
+        return PicaPt::fromPixels(kPopopBorderWidth, dpi());
+    } else {
+        auto r = [mImpl->window frameRectForContentRect:NSMakeRect(0, 0, 100, 100)];
+        return PicaPt::fromPixels(r.origin.x, dpi());
+    }
 }
 
 }  // namespace uitk

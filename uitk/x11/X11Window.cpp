@@ -58,6 +58,13 @@ struct X11Window::Impl {
         this->dc = DrawContext::fromX11(this->display, &this->xwindow,
                                         this->width, this->height, this->dpi);
     }
+
+    void destroyWindow()
+    {
+        this->dc = nullptr;
+        XDestroyWindow(this->display, this->xwindow);
+        this->xwindow = 0;
+    }
 };
 
 X11Window::X11Window(IWindowCallbacks& callbacks,
@@ -106,15 +113,21 @@ X11Window::X11Window(IWindowCallbacks& callbacks,
 X11Window::~X11Window()
 {
     if (mImpl->xwindow) {
-        close();
+        // Cannot call close() here, because it will call onWindowShouldClose(),
+        // and that is no longer an option.
+        mImpl->destroyWindow();
     }
 }
 
 bool X11Window::isShowing() const { return mImpl->showing; }
 
-void X11Window::show(bool show)
+void X11Window::show(bool show,
+                     std::function<void(const DrawContext&)> onWillShow)
 {
     if (show) {
+        if (!mImpl->showing && onWillShow) {
+            onWillShow(*mImpl->dc);
+        }
         XMapRaised(mImpl->display, mImpl->xwindow);
         // Mapping determines which screen we are on
         mImpl->updateDrawContext();
@@ -127,9 +140,9 @@ void X11Window::show(bool show)
 void X11Window::close()
 {
     if (mImpl->xwindow) {
-        mImpl->dc = nullptr;
-        XDestroyWindow(mImpl->display, mImpl->xwindow);
-        mImpl->xwindow = 0;
+        if (mImpl->onWindowShouldClose()) {
+            mImpl->destroyWindow();
+        }
     }
 }
 

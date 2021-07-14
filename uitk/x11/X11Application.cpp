@@ -126,6 +126,8 @@ void X11Application::setExitWhenLastWindowCloses(bool exits)
     // be no way to open a new window after the last one closes.
 }
 
+bool X11Application::isOriginInUpperLeft() const { return true; }
+
 bool X11Application::shouldHideScrollbars() const { return false; }
 
 int X11Application::run()
@@ -261,6 +263,7 @@ int X11Application::run()
                 }
                 break;
             case DestroyNotify:  // get with StructureNotifyMask
+                w->onWindowWillClose();
                 mImpl->xwin2window.erase(wit);
                 if (mImpl->xwin2window.empty()) {
                     done = true;

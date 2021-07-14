@@ -67,7 +67,7 @@ Widget::Widget()
 
 Widget::~Widget()
 {
-    removeAllChildren();
+    clearAllChildren();
 }
 
 std::string Widget::debugDescription(const Point& offset /*= Point(PicaPt::kZero, PicaPt::kZero)*/,
@@ -227,6 +227,11 @@ Widget* Widget::removeChild(Widget *w)
 
 void Widget::removeAllChildren()
 {
+    mImpl->children.clear();
+}
+
+void Widget::clearAllChildren()
+{
     for (auto *child : mImpl->children) {
         delete child;
     }
@@ -258,7 +263,7 @@ Window* Widget::window() const
 
 void Widget::setWindow(Window *window) { mImpl->window = window; }
 
-Point Widget::convertToLocalFromWindow(const Point& windowPt)
+Point Widget::convertToLocalFromWindow(const Point& windowPt) const
 {
     Point localPt = windowPt;
     const Widget *w = this;
@@ -267,6 +272,17 @@ Point Widget::convertToLocalFromWindow(const Point& windowPt)
         w = w->mImpl->parent;
     }
     return localPt;
+}
+
+Point Widget::convertToWindowFromLocal(const Point& localPt) const
+{
+    Point windowPt = localPt;
+    const Widget *w = this;
+    while (w->mImpl->parent) {
+        windowPt += w->frame().upperLeft();
+        w = w->mImpl->parent;
+    }
+    return windowPt;
 }
 
 void Widget::setNeedsDraw()

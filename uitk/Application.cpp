@@ -84,6 +84,11 @@ int Application::run()
     return mImpl->osApp->run();
 }
 
+bool Application::isOriginInUpperLeft() const
+{
+    return mImpl->osApp->isOriginInUpperLeft();
+}
+
 bool Application::shouldHideScrollbars() const
 {
     return mImpl->osApp->shouldHideScrollbars();

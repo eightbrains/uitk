@@ -38,6 +38,7 @@ public:
     void setExitWhenLastWindowCloses(bool exits) override;
     int run() override;
 
+    bool isOriginInUpperLeft() const override;
     bool shouldHideScrollbars() const override;
 
     Theme::Params themeParams() const override;

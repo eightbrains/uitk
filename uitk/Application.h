@@ -58,6 +58,11 @@ public:
     /// Runs the event loop
     int run();
 
+    /// Returns true if the operating system's coordinate system has the
+    /// origin in the upper left (Linux, Windows), otherwise false (macOS,
+    /// which has the origin in the lower left).
+    bool isOriginInUpperLeft() const;
+
     /// Returns true if the operating system hides scrollbars when not
     /// scrolling (e.g. macOS), false otherwise.
     bool shouldHideScrollbars() const;

@@ -40,7 +40,7 @@ public:
     virtual ~MacOSWindow();
 
     bool isShowing() const override;
-    void show(bool show) override;
+    void show(bool show, std::function<void(const DrawContext&)> onWillShow) override;
 
     void close() override;
 
@@ -48,9 +48,15 @@ public:
 
     Rect contentRect() const override;
 
+    float dpi() const override;
+    OSRect osFrame() const override;
+    void setOSFrame(float x, float y, float width, float height) override;
+
     void postRedraw() const override;
 
     void raiseToTop() const override;
+
+    PicaPt borderWidth() const override;
 
     void* nativeHandle() override;
     IWindowCallbacks& callbacks() override;

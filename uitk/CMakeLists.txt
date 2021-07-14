@@ -3,12 +3,14 @@ set(ND_NAMESPACE "uitk")
 set(UITK_HEADERS Application.h
                  Button.h
                  Checkbox.h
+                 ComboBox.h
                  Events.h
                  Label.h
                  ListView.h
                  Global.h
                  OSApplication.h
                  OSWindow.h
+                 PopupMenu.h
                  ProgressBar.h
                  ScrollBar.h
                  ScrollView.h
@@ -25,8 +27,10 @@ set(UITK_HEADERS Application.h
 set(UITK_SOURCES Application.cpp
                  Button.cpp
                  Checkbox.cpp
+                 ComboBox.cpp
                  Label.cpp
                  ListView.cpp
+                 PopupMenu.cpp
                  ProgressBar.cpp
                  ScrollBar.cpp
                  ScrollView.cpp
