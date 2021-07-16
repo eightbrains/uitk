@@ -360,6 +360,7 @@ struct MacOSWindow::Impl {
     NSWindow* window;
     UITKWindowDelegate* winDelegate;  // NSWindow doesn't retain the delegate
     ContentView* contentView;
+    Window::Flags::Value flags;
 };
 
 MacOSWindow::MacOSWindow(IWindowCallbacks& callbacks,
@@ -374,6 +375,8 @@ MacOSWindow::MacOSWindow(IWindowCallbacks& callbacks,
                          Window::Flags::Value flags)
     : mImpl(new Impl{callbacks})
 {
+    mImpl->flags = flags;
+
     int nsflags = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
                   NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable;
     if (flags & Window::Flags::kPopup) {
@@ -436,7 +439,14 @@ void MacOSWindow::show(bool show, std::function<void(const DrawContext&)> onWill
         onWillShow(*[mImpl->contentView createContext]);
     }
     [mImpl->window setIsVisible:(show ? YES : NO)];
-    [mImpl->window makeKeyAndOrderFront:nil];
+    if (mImpl->flags & Window::Flags::kPopup) {
+        // If we use -makeKeyAndOrderFront:, it works except when click-dragging, in
+        // which case the popup pops-behind (presumably because it cannot be made key),
+        // which is bad.
+        [mImpl->window orderFront:nil];
+    } else {
+        [mImpl->window makeKeyAndOrderFront:nil];
+    }
 }
 
 void MacOSWindow::close()
@@ -469,6 +479,18 @@ Rect MacOSWindow::contentRect() const
                 PicaPt::kZero,
                 PicaPt::fromPixels(mImpl->contentView.frame.size.width, kDPI),
                 PicaPt::fromPixels(mImpl->contentView.frame.size.height, kDPI));
+}
+
+OSWindow::OSRect MacOSWindow::osContentRect() const
+{
+    // Since the lower left is at the bottom left of the window, oscontentrect.origin is
+    // the same as the osframe.origin. The height, of osframe is higher, though, because
+    // it includes the titlebar.
+    OSRect f = osFrame();
+    return OSRect{f.x,
+                  f.y,
+                  float(mImpl->contentView.frame.size.width),
+                  float(mImpl->contentView.frame.size.height)};
 }
 
 float MacOSWindow::dpi() const

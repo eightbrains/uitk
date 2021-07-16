@@ -107,6 +107,11 @@ void MacOSApplication::setExitWhenLastWindowCloses(bool exits)
     mImpl->delegate.exitsWhenLastWindowCloses = exits;
 }
 
+void MacOSApplication::scheduleLater(Window* w, std::function<void()> f)
+{
+    dispatch_async(dispatch_get_main_queue(), ^{ f(); });
+}
+
 int MacOSApplication::run()
 {
     @autoreleasepool {

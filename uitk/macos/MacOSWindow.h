@@ -47,6 +47,7 @@ public:
     void setTitle(const std::string& title) override;
 
     Rect contentRect() const override;
+    OSRect osContentRect() const override;
 
     float dpi() const override;
     OSRect osFrame() const override;

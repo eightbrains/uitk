@@ -304,7 +304,7 @@ void PopupMenu::show(Window *w, const Point& upperLeftWindowCoord, int id /*= kI
     // presumably menus are going to be reasonably sized.
 
     auto osUL = w->convertWindowToOSPoint(upperLeftWindowCoord);
-    mImpl->menuWindow = new Window("", osUL.x, osUL.y, 100, 100, Window::Flags::kPopup);
+    mImpl->menuWindow = new Window("", osUL.x, osUL.y, 0, 0, Window::Flags::kPopup);
 #if __APPLE__
     // This is a hack
     auto popupBorder = mImpl->menuWindow->borderWidth();
