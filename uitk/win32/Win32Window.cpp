@@ -51,6 +51,7 @@ struct Win32Window::Impl {
 
     IWindowCallbacks& callbacks;
     HWND hwnd = 0;
+    Window::Flags::Value flags;
     std::string title;
     std::shared_ptr<DrawContext> dc;
     bool needsLayout = true;
@@ -88,6 +89,8 @@ Win32Window::Win32Window(IWindowCallbacks& callbacks,
                          Window::Flags::Value flags)
     : mImpl(new Impl{callbacks})
 {
+    mImpl->flags = flags;
+
     if (!Impl::wndclass) {
         Impl::wndclass = "UITK_window";
         WNDCLASSEX wcex = { sizeof(WNDCLASSEX) };
@@ -103,15 +106,22 @@ Win32Window::Win32Window(IWindowCallbacks& callbacks,
         RegisterClassEx(&wcex);
     }
 
-    if (x == kDefaultPos) {
-        x = CW_USEDEFAULT;
-    }
-    if (y == kDefaultPos) {
-        y = CW_USEDEFAULT;
+    DWORD style = 0;
+    if (flags & Window::Flags::kPopup) {
+        style = WS_POPUPWINDOW;
+    } else {
+        style = WS_OVERLAPPEDWINDOW;
+        // CW_USEDEFAULT is only valide with WS_OVERLAPPEDWINDOW
+        if (x == kDefaultPos) {
+            x = CW_USEDEFAULT;
+        }
+        if (y == kDefaultPos) {
+            y = CW_USEDEFAULT;
+        }
     }
     mImpl->hwnd = CreateWindow(Impl::wndclass,
                                "",
-                               WS_OVERLAPPEDWINDOW,
+                               style,
                                x, y,
                                width, height,
                                NULL,  // parent
@@ -122,9 +132,6 @@ Win32Window::Win32Window(IWindowCallbacks& callbacks,
     win32app.registerWindow(mImpl->hwnd, this);
     mImpl->updateDrawContext();
     setTitle(title);
-    if (!(flags & 1)) {
-        show(true);
-    }
 }
 
 Win32Window::~Win32Window()
@@ -136,6 +143,7 @@ Win32Window::~Win32Window()
 
 bool Win32Window::isShowing() const
 {
+    bool dbg = IsWindowVisible(mImpl->hwnd); // debugging; remove
     return IsWindowVisible(mImpl->hwnd);
 }
 
@@ -146,7 +154,11 @@ void Win32Window::show(bool show,
         if (!isShowing() && onWillShow) {
             onWillShow(*mImpl->dc);
         }
-        ShowWindow(mImpl->hwnd, SW_SHOWNORMAL);  // show and activate
+        if (mImpl->flags & Window::Flags::kPopup) {
+            ShowWindow(mImpl->hwnd, SW_SHOWNA);  // show, but do not activate
+        } else {
+            ShowWindow(mImpl->hwnd, SW_SHOWNORMAL);  // show and activate
+        }
     } else {
         ShowWindow(mImpl->hwnd, SW_HIDE);
     }
@@ -156,8 +168,9 @@ void Win32Window::close()
 {
     if (mImpl->hwnd) {
         mImpl->dc = nullptr;  // release
-        DestroyWindow(mImpl->hwnd);
+        auto hwnd = mImpl->hwnd;
         mImpl->hwnd = 0;
+        DestroyWindow(hwnd);
     }
 }
 
@@ -180,9 +193,41 @@ Rect Win32Window::contentRect() const
 {
     RECT rectPx;
     GetClientRect(mImpl->hwnd, &rectPx);
-    return Rect(PicaPt::kZero, PicaPt::kZero,
+    return Rect(PicaPt::fromPixels(float(rectPx.left), mImpl->dc->dpi()),
+                PicaPt::fromPixels(float(rectPx.top), mImpl->dc->dpi()),
                 PicaPt::fromPixels(float(rectPx.right - rectPx.left), mImpl->dc->dpi()),
                 PicaPt::fromPixels(float(rectPx.bottom - rectPx.top), mImpl->dc->dpi()));
+}
+
+float Win32Window::dpi() const { return mImpl->dc->dpi(); }
+
+OSWindow::OSRect Win32Window::osContentRect() const
+{
+    RECT clientRect;
+    GetClientRect(mImpl->hwnd, &clientRect);
+    POINT ulOS = { clientRect.left, clientRect.top };
+    ClientToScreen(mImpl->hwnd, &ulOS);
+    RECT windowOS;
+    GetWindowRect(mImpl->hwnd, &windowOS);
+    return OSRect{float(ulOS.x), float(ulOS.y),
+                  float(windowOS.right - windowOS.left), float(windowOS.bottom - windowOS.top)};
+}
+
+OSWindow::OSRect Win32Window::osFrame() const
+{
+    RECT r;
+    GetWindowRect(mImpl->hwnd, &r);
+    return OSRect{float(r.left), float(r.top),
+                  float(r.right - r.left), float(r.bottom - r.top)};
+}
+
+void Win32Window::setOSFrame(float x, float y, float width, float height)
+{
+    MoveWindow(mImpl->hwnd, int(x), int(y), int(width), int(height), FALSE /* don't repaint */);
+    // MoveWindow() does not send WM_SIZING, it sends WM_SIZE. If we put onResize() there,
+    // we seem to get an infinite draw loop. My understanding was that InvalidateRect()
+    // (in postRedraw()) coalesces draw requests, but maybe not?
+    onResize();
 }
 
 void Win32Window::postRedraw() const
@@ -193,6 +238,11 @@ void Win32Window::postRedraw() const
 void Win32Window::raiseToTop() const
 {
     ShowWindow(mImpl->hwnd, SW_SHOWNORMAL);
+}
+
+PicaPt Win32Window::borderWidth() const
+{
+    return PicaPt::fromPixels(GetSystemMetrics(SM_CXSIZEFRAME), dpi());
 }
 
 void* Win32Window::nativeHandle() { return mImpl->hwnd; }
@@ -243,10 +293,23 @@ void Win32Window::onMouse(MouseEvent& e, int x, int y)
 
 void Win32Window::onActivated(const Point& currentMousePos)
 {
+    mImpl->callbacks.onActivated(currentMousePos);
 }
 
 void Win32Window::onDeactivated()
 {
+    mImpl->callbacks.onDeactivated();
+}
+
+bool Win32Window::onWindowShouldClose()
+{
+    return mImpl->callbacks.onWindowShouldClose();
+}
+
+void Win32Window::onWindowWillClose()
+{
+    mImpl->hwnd = 0;  // otherwise delete calls close, which tries to destroy the window again
+    return mImpl->callbacks.onWindowWillClose();
 }
 
 int getKeymods(WPARAM wParam)
@@ -324,6 +387,10 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
             win32app.unregisterWindow(hwnd);
             return 0;
         }
+        //case WM_NCDESTROY:
+        //    // WM_DESTROY is sent to the window, then the child windows are destroyed,
+        //    // and finally WM_NCDESTROY is sent to the window
+        //    return 0;
         case WM_PAINT:
             w->onDraw();
             return 0;

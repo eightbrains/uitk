@@ -159,33 +159,39 @@ void PopupMenu::clear()
 PopupMenu* PopupMenu::addItem(const std::string& text, int id, std::function<void()> onItem)
 {
     addItem(new StringMenuItem(text), id, onItem);
+    return this;
 }
 
 PopupMenu* PopupMenu::addSeparator(int id /*= -1*/)
 {
     addItem(new SeparatorMenuItem(), id, nullptr);
+    return this;
 }
 
 PopupMenu* PopupMenu::addItem(MenuItem *item, int id, std::function<void()> onItem)
 {
     mImpl->id2item[id] = Impl::ItemData{item, onItem};
     mImpl->items.push_back(item);
+    return this;
 }
 
 PopupMenu* PopupMenu::insertItem(int index, const std::string& text, int id, std::function<void()> onItem)
 {
     insertItem(index, new StringMenuItem(text), id, onItem);
+    return this;
 }
 
 PopupMenu* PopupMenu::insertSeparator(int index, int id /*= -1*/)
 {
     insertItem(index, new SeparatorMenuItem(), id, nullptr);
+    return this;
 }
 
 PopupMenu* PopupMenu::insertItem(int index, MenuItem *item, int id, std::function<void()> onItem)
 {
     mImpl->id2item[id] = Impl::ItemData{item, onItem};
     mImpl->items.insert(mImpl->items.begin() + index, item);
+    return this;
 }
 
 void PopupMenu::removeItem(int id)
@@ -298,9 +304,12 @@ void PopupMenu::show(Window *w, const Point& upperLeftWindowCoord, int id /*= kI
     // presumably menus are going to be reasonably sized.
 
     auto osUL = w->convertWindowToOSPoint(upperLeftWindowCoord);
-    mImpl->menuWindow = new Window("", osUL.x, osUL.y, 0, 0, Window::Flags::kPopup);
+    mImpl->menuWindow = new Window("", osUL.x, osUL.y, 100, 100, Window::Flags::kPopup);
+#if __APPLE__
+    // This is a hack
     auto popupBorder = mImpl->menuWindow->borderWidth();
     mImpl->menuWindow->move(PicaPt::kZero, -popupBorder);
+#endif // __APPLE__
     mImpl->menuWindow->setOnWindowDidDeactivate([this](Window &w) {
         cancel();
     });
@@ -342,8 +351,8 @@ void PopupMenu::show(Window *w, const Point& upperLeftWindowCoord, int id /*= kI
             }
         }
 
-        mImpl->menuWindow->close();
         mImpl->parent->setPopupMenu(nullptr);
+        mImpl->menuWindow->close();
     });
 
     mImpl->menuWindow->setOnWindowWillClose([this, list](Window &w) {
@@ -358,7 +367,7 @@ void PopupMenu::show(Window *w, const Point& upperLeftWindowCoord, int id /*= kI
             item->mouseExited();
         }
         
-        delete mImpl->menuWindow;
+        mImpl->menuWindow->deleteLater();
         mImpl->menuWindow = nullptr;
     });
 

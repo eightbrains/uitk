@@ -67,6 +67,9 @@ public:
     EventResult mouse(const MouseEvent& e) override;
     void draw(UIContext& context) override;
 
+protected:
+    bool shouldAutoGrab() const override;
+
 private:
     struct Impl;
     std::unique_ptr<Impl> mImpl;

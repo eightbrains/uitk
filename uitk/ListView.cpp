@@ -111,6 +111,7 @@ ListView::~ListView()
 ListView* ListView::setOnSelectionChanged(std::function<void(ListView*)> onChanged)
 {
     mImpl->onChanged = onChanged;
+    return this;
 }
 
 ListView::SelectionMode ListView::selectionMode() const
@@ -126,6 +127,7 @@ ListView* ListView::setSelectionModel(SelectionMode mode)
     } else if (mode == SelectionMode::kSingleItem && mImpl->selectedIndices.size() > 1) {
         setSelectedIndex(*mImpl->selectedIndices.begin());
     }
+    return this;
 }
 
 void ListView::clearCells()
@@ -168,6 +170,7 @@ std::vector<int> ListView::selectedIndices() const
     std::vector<int> selection;
     selection.reserve(mImpl->selectedIndices.size());
     selection.insert(selection.end(), mImpl->selectedIndices.begin(), mImpl->selectedIndices.end());
+    return selection;
 }
 
 void ListView::clearSelection()
@@ -197,6 +200,7 @@ Size ListView::contentPadding() const
 ListView* ListView::setContentPadding(const PicaPt& xPadding, const PicaPt& yPadding)
 {
     mImpl->contentPadding = Size(xPadding, yPadding);
+    return this;
 }
 
 Size ListView::preferredContentSize(const LayoutContext& context) const

@@ -25,6 +25,7 @@
 
 #include <nativedraw.h>
 
+#include <functional>
 #include <string>
 
 namespace uitk {
@@ -77,7 +78,11 @@ public:
 
     virtual void setTitle(const std::string& title) = 0;
 
+    // This is the drawable rectangle. It may or may not have upper left at (0, 0)
     virtual Rect contentRect() const = 0;
+
+    // This is the contentRect in OS coordinates, same as osFrame().
+    virtual OSRect osContentRect() const = 0;
 
     virtual float dpi() const = 0;
     virtual OSRect osFrame() const = 0;

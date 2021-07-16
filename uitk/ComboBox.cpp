@@ -124,7 +124,7 @@ ComboBox* ComboBox::setSelectedIndex(int index)
 
     if (index >= 0 || index < int(mImpl->items.size())) {
         if (mImpl->menu->isSeparator(mImpl->items[index].id)) {
-            return;
+            return this;
         }
     }
 
@@ -138,6 +138,8 @@ ComboBox* ComboBox::setSelectedIndex(int index)
     if (index >= 0 || index < int(mImpl->items.size())) {
         mImpl->menu->setItemChecked(mImpl->items[index].id, true);
     }
+
+    return this;
 }
 
 ComboBox* ComboBox::setSelectedValue(int value)
@@ -163,7 +165,12 @@ ComboBox* ComboBox::setSelectedText(const std::string& text)
 ComboBox* ComboBox::setOnSelectionChanged(std::function<void(ComboBox*)> onChanged)
 {
     mImpl->onSelectionChanged = onChanged;
+    return this;
 }
+
+// We don't want grabbing because we are going to open a popup window.
+// But it is not right to return kIgnored for the mouse click, either.
+bool ComboBox::shouldAutoGrab() const { return false; }
 
 Size ComboBox::preferredSize(const LayoutContext& context) const
 {

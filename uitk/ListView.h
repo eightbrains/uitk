@@ -25,6 +25,7 @@
 
 #include "ScrollView.h"
 
+#include <functional>
 #include <string>
 #include <unordered_set>
 

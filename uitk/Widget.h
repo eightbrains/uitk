@@ -139,6 +139,10 @@ public:
     Theme::WidgetStyle& style(Theme::WidgetState state);
 
 protected:
+    // Return true if parent's mouse() should grab the widget if mouse down is consumed.
+    // Default implementation returns true.
+    virtual bool shouldAutoGrab() const;
+
     void setWindow(Window* window);  // for Window
 
     void setState(Theme::WidgetState state);

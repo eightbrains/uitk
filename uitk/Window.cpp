@@ -102,6 +102,13 @@ Window::~Window()
     mImpl->rootWidget.reset();
 }
 
+void Window::deleteLater()
+{
+    Application::instance().scheduleLater(this, [w = this]() {
+        delete w;
+    });
+}
+
 void* Window::nativeHandle() { return mImpl->window->nativeHandle(); }
 
 bool Window::isShowing() const { return mImpl->window->isShowing(); }
@@ -168,15 +175,15 @@ void Window::setOSFrame(float x, float y, float width, float height)
 
 OSWindow::OSPoint Window::convertWindowToOSPoint(const Point& windowPt) const
 {
-    auto osf = osFrame();
     auto contentRect = mImpl->window->contentRect();
+    auto osContentRect = mImpl->window->osContentRect();
     auto dpi = mImpl->window->dpi();
     if (Application::instance().isOriginInUpperLeft()) {
-        return { osf.x + (contentRect.x + windowPt.x).toPixels(dpi),
-                 osf.y + (contentRect.y + windowPt.y).toPixels(dpi) };
+        return { osContentRect.x + (contentRect.x + windowPt.x).toPixels(dpi),
+                 osContentRect.y + (contentRect.y + windowPt.y).toPixels(dpi) };
     } else {
-        return { osf.x + (contentRect.x + windowPt.x).toPixels(dpi),
-                 osf.y + (contentRect.maxY() - windowPt.y).toPixels(dpi) };
+        return { osContentRect.x + (contentRect.x + windowPt.x).toPixels(dpi),
+                 osContentRect.y + (contentRect.maxY() - windowPt.y).toPixels(dpi) };
     }
 }
 

@@ -25,7 +25,11 @@
 
 #include "themes/Theme.h"
 
+#include <functional>
+
 namespace uitk {
+
+class Window;
 
 class OSApplication
 {
@@ -34,6 +38,8 @@ public:
 
     virtual void setExitWhenLastWindowCloses(bool exits) = 0;
     virtual int run() = 0;
+
+    virtual void scheduleLater(Window* w, std::function<void()> f) = 0;
 
     virtual bool isOriginInUpperLeft() const = 0;
     virtual bool shouldHideScrollbars() const = 0;

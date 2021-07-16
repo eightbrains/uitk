@@ -319,6 +319,8 @@ Theme::WidgetStyle& Widget::style(Theme::WidgetState state)
     return mImpl->styles[int(state)];
 }
 
+bool Widget::shouldAutoGrab() const { return true;  }
+
 Size Widget::preferredSize(const LayoutContext& context) const
 {
     return Size(kDimGrow, kDimGrow);
@@ -381,7 +383,8 @@ Widget::EventResult Widget::mouseChild(const MouseEvent& e, Widget *child, Event
                 // but it seems a good compromise. (Note: if we refactor so that there is a
                 // Control base class, maybe we can move this below the if and only grab
                 // if it is a control.)
-                if (e.type == MouseEvent::Type::kButtonDown && !window()->mouseGrabWidget()) {
+                if (e.type == MouseEvent::Type::kButtonDown && !window()->mouseGrabWidget()
+                    && child->shouldAutoGrab()) {
                     window()->setMouseGrab(child);
                 }
             }

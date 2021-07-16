@@ -70,6 +70,11 @@ public:
 
     void close();
 
+    /// Schedules the window for deletion at a point in the event loop where
+    /// it is safe. This function is safe to call in the setOnWindowWillClose
+    /// callback. (Delete is not safe, as it may delete lambda that is executing.)
+    void deleteLater();
+
     std::string title() const;
     Window* setTitle(const std::string& title);
 

@@ -48,10 +48,17 @@ public:
     void setTitle(const std::string& title) override;
 
     Rect contentRect() const override;
+    OSRect osContentRect() const override;
+
+    float dpi() const override;
+    OSRect osFrame() const override;
+    void setOSFrame(float x, float y, float width, float height) override;
 
     void postRedraw() const override;
 
     void raiseToTop() const override;
+
+    PicaPt borderWidth() const override;
 
     void* nativeHandle() override;
     IWindowCallbacks& callbacks() override;
@@ -64,6 +71,8 @@ public:
     void onMouse(MouseEvent& e, int x, int y);
     void onActivated(const Point& currentMousePos);
     void onDeactivated();
+    bool onWindowShouldClose();
+    void onWindowWillClose();
 
 private:
     struct Impl;
