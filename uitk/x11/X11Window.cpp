@@ -28,16 +28,20 @@
 
 #include <string.h>  // for memset()
 #include <X11/Xlib.h>
+#include <X11/Xatom.h>
 
 namespace uitk {
 
+static X11Window* gActiveWindow = nullptr;
+    
 struct X11Window::Impl {
     IWindowCallbacks& callbacks;
     Display *display;
     ::Window xwindow = 0;
     int width;
     int height;
-    float dpi;
+    int flags = 0;
+    float dpi = 96.0f;
     std::shared_ptr<DrawContext> dc;
     std::string title;
     bool showing = false;
@@ -79,6 +83,12 @@ X11Window::X11Window(IWindowCallbacks& callbacks,
                      Window::Flags::Value flags)
     : mImpl(new Impl{callbacks})
 {
+    mImpl->flags = flags;
+
+    // X does not seem to support windows with 0 width or height
+    width = std::max(1, width);
+    height = std::max(1, height);
+    
     X11Application& x11app = static_cast<X11Application&>(Application::instance().osApplication());
     Display *display = static_cast<Display*>(x11app.display());
     mImpl->display = display;
@@ -86,14 +96,21 @@ X11Window::X11Window(IWindowCallbacks& callbacks,
                                          x, y, width, height, 1, 0, 0);
     x11app.registerWindow(mImpl->xwindow, this);
 
-    // Tell the window manager we want to be notified when a window is closed,
-    // otherwise X will just kill our connection.
-    Atom wmDeleteMsg = XInternAtom(display, "WM_DELETE_WINDOW", False);
-    XSetWMProtocols(display, mImpl->xwindow, &wmDeleteMsg, 1);
+    if (flags & Window::Flags::kPopup) {
+        Atom type = XInternAtom(mImpl->display, "_NET_WM_WINDOW_TYPE", False);
+        long value = XInternAtom(mImpl->display, "_NET_WM_WINDOW_TYPE_POPUP_MENU", False);
+        XChangeProperty(mImpl->display, mImpl->xwindow, type, XA_ATOM, 32,
+                        PropModeReplace, (unsigned char *)&value, 1);
+    } else {
+        // Tell the window manager we want to be notified when a window is
+        // closed, otherwise X will just kill our connection.
+        Atom wmDeleteMsg = XInternAtom(display, "WM_DELETE_WINDOW", False);
+        XSetWMProtocols(display, mImpl->xwindow, &wmDeleteMsg, 1);
         
-    setTitle(title);
+        setTitle(title);
+    }
 
-    // Now that we are ready to display the window, turn on receiving events
+    // Now that window can be properly displayed, turn on receiving events
     // See https://tronche.com/gui/x/xlib/events/processing-overview.html
     // for information on the masks and the events generated.
     XSelectInput(mImpl->display, mImpl->xwindow,
@@ -107,7 +124,7 @@ X11Window::X11Window(IWindowCallbacks& callbacks,
                  EnterWindowMask | LeaveWindowMask |
                  FocusChangeMask);
 
-    show(true);  // also creates draw context
+    mImpl->updateDrawContext();
 }
 
 X11Window::~X11Window()
@@ -128,7 +145,25 @@ void X11Window::show(bool show,
         if (!mImpl->showing && onWillShow) {
             onWillShow(*mImpl->dc);
         }
+        // If this is a popup window it requires being set as transient,
+        // which on X11 (and not Win32 or macOS) requires the window is is
+        // transient for.
+        if (mImpl->flags & Window::Flags::kPopup) {
+            if (gActiveWindow) {
+                XSetTransientForHint(mImpl->display, mImpl->xwindow,
+                                     (::Window)gActiveWindow->nativeHandle());
+            }
+            // Set override-direct, which allows the transient window to grab
+            // them mouse, also is required to have no titlebar (despite being
+            // transient and having _NET_WM_WINDOW_TYPE as popup menu).
+            XSetWindowAttributes wa;
+            wa.override_redirect = True;
+            XChangeWindowAttributes(mImpl->display, mImpl->xwindow,
+                                    CWOverrideRedirect, &wa);
+        }
+
         XMapRaised(mImpl->display, mImpl->xwindow);
+        gActiveWindow = this;
         // Mapping determines which screen we are on
         mImpl->updateDrawContext();
     } else {
@@ -140,7 +175,7 @@ void X11Window::show(bool show,
 void X11Window::close()
 {
     if (mImpl->xwindow) {
-        if (mImpl->onWindowShouldClose()) {
+        if (onWindowShouldClose()) {
             mImpl->destroyWindow();
         }
     }
@@ -166,6 +201,70 @@ Rect X11Window::contentRect() const
                 PicaPt::fromPixels(mImpl->height, mImpl->dpi));
 }
 
+OSWindow::OSRect X11Window::osContentRect() const
+{
+    return osFrame();
+}
+
+float X11Window::dpi() const { return mImpl->dpi; }
+
+OSWindow::OSRect X11Window::osFrame() const
+{
+    // Note that XGetWindowAttributes has x, y, but they refer to the distance
+    // from the outer upper-left of the window to the inside upper left.
+    ::Window rootWindow;
+    int x, y;
+    unsigned int width, height, borderWidth, depth;
+    XGetGeometry(mImpl->display, mImpl->xwindow, &rootWindow,
+                 &x, &y, &width, &height, &borderWidth, &depth);
+    int rootX, rootY;
+    ::Window childRet;
+    XTranslateCoordinates(mImpl->display, mImpl->xwindow, rootWindow,
+                          x, y, &rootX, &rootY, &childRet);
+
+    // XGetGeometry gives the coordinates in terms of the parent, which is
+    // not necessarily the root window, if the window manager reparents the
+    // window. But if we translate (0, 0), the result is totally wrong. So
+    // Subtract off x, y here.
+    return OSRect{ float(rootX - x), float(rootY - y),
+                   float(width), float(height) };
+}
+
+void X11Window::setOSFrame(float x, float y, float width, float height)
+{
+    // Note that XMoveResizeWindow moves the window to the position specified,
+    // and the window manager adjusts the titlebar accordingly. This is not
+    // the same as what XGetGeometry gives us, though.
+    
+    // We just want the root window, but we need to use the current (x, y)
+    // to translate the coordinates, because the window has not moved yet,
+    // and XTranslateCoordinates seems to fail if the coordinates are outside
+    // the window. We can then add in the new (x, y).
+    ::Window rootWindow;
+    int _x, _y;
+    unsigned int _width, _height, borderWidth, depth;
+    XGetGeometry(mImpl->display, mImpl->xwindow, &rootWindow,
+                 &_x, &_y, &_width, &_height, &borderWidth, &depth);
+    int osX, osY;
+    ::Window childRet;
+    XTranslateCoordinates(mImpl->display, rootWindow, mImpl->xwindow,
+                          _x, _y, &osX, &osY, &childRet);
+    osX += x;
+    osY += y;
+
+    XMoveResizeWindow(mImpl->display, mImpl->xwindow,
+                      int(std::round(osX)), int(std::round(osY)),
+                      (unsigned int)std::round(width),
+                      (unsigned int)std::round(height));
+}
+
+PicaPt X11Window::borderWidth() const
+{
+    XWindowAttributes wa;
+    XGetWindowAttributes(mImpl->display, mImpl->xwindow, &wa);
+    return PicaPt::fromPixels(wa.border_width, dpi());
+}
+
 void X11Window::postRedraw() const
 {
     // X does not coalesce exposure events, so avoid sending another event if
@@ -184,6 +283,7 @@ void X11Window::postRedraw() const
 void X11Window::raiseToTop() const
 {
     XRaiseWindow(mImpl->display, mImpl->xwindow);
+    gActiveWindow = (X11Window*)this;
 }
 
 void* X11Window::nativeHandle() { return (void*)mImpl->xwindow; }
@@ -220,6 +320,20 @@ void X11Window::onDraw()
 
 void X11Window::onMouse(MouseEvent& e, int x, int y)
 {
+    // Marking a popup window as transient (so it acts like a popup window)
+    // requires the window it's transienting on. Since the other two platforms
+    // do not require this, and it's not clear how to make a clean API that
+    // requires the window only for popup windows, we just keep track of the
+    // active window and use that in show(). There is not a good way to check
+    // what the window stacking order is (and if there were, what do you do
+    // for multiple montiors?), but it seems like a mouse click is a reasonable
+    // proxy. This will certainly work for popup menus (you have to click to
+    // trigger the menu), although it would fail for dialog boxes that appear
+    // not as a result of user interaction (such as an error for a long-running
+    // operation) if there are multiple windows and the dialog is for the
+    // non-active window and nothing has been clicked in the active window.
+    gActiveWindow = this;
+
     e.pos = Point(PicaPt::fromPixels(float(x), mImpl->dpi),
                   PicaPt::fromPixels(float(y), mImpl->dpi));
     mImpl->callbacks.onMouse(e);
@@ -227,10 +341,22 @@ void X11Window::onMouse(MouseEvent& e, int x, int y)
 
 void X11Window::onActivated(const Point& currentMousePos)
 {
+    mImpl->callbacks.onActivated(currentMousePos);
 }
 
 void X11Window::onDeactivated()
 {
+    mImpl->callbacks.onDeactivated();
+}
+
+bool X11Window::onWindowShouldClose()
+{
+    return mImpl->callbacks.onWindowShouldClose();
+}
+
+void X11Window::onWindowWillClose()
+{
+    mImpl->callbacks.onWindowWillClose();
 }
 
 }  // namespace uitk

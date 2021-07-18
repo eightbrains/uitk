@@ -339,7 +339,15 @@ void PopupMenu::show(Window *w, const Point& upperLeftWindowCoord, int id /*= kI
     });
 
     list->setOnSelectionChanged([this](ListView *lv) {
-        int idx = lv->selectedIndex();
+        int idx = lv->selectedIndex();  // lv will be going away
+        // We do not want to call callback yet, as various operating systems
+        // have different timing about when a redraw initiated by
+        // setNeedsRedraw that the callback is sure to call. If the draw happens
+        // immediately, then the window will not be closed, which may cause
+        // problems (e.g. ComboBox on X11).
+        mImpl->parent->setPopupMenu(nullptr);
+        mImpl->menuWindow->close();
+
         if (idx >= 0 && idx < int(mImpl->items.size())) {
             for (auto &kv : mImpl->id2item) {
                 if (kv.second.item == mImpl->items[idx]) {
@@ -350,9 +358,6 @@ void PopupMenu::show(Window *w, const Point& upperLeftWindowCoord, int id /*= kI
                 }
             }
         }
-
-        mImpl->parent->setPopupMenu(nullptr);
-        mImpl->menuWindow->close();
     });
 
     mImpl->menuWindow->setOnWindowWillClose([this, list](Window &w) {

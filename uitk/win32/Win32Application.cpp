@@ -44,7 +44,8 @@ struct Win32Application::Impl {
     bool needsToUnitializeCOM;
 
     std::mutex postedFunctionsLock;
-    // This is a linked list because adding and removing does not invalidate iterators
+    // This is a linked list because adding and removing does not invalidate
+    // iterators.
     std::list<std::function<void()>> postedFunctions;
 };
 
@@ -70,7 +71,7 @@ Win32Application::~Win32Application()
 
 void Win32Application::setExitWhenLastWindowCloses(bool exits)
 {
-    // Do nothing, this is pretty much always true on Linux, as there would
+    // Do nothing, this is pretty much always true on Windows, as there would
     // be no way to open a new window after the last one closes.
 }
 

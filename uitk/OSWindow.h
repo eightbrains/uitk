@@ -88,11 +88,11 @@ public:
     virtual OSRect osFrame() const = 0;
     virtual void setOSFrame(float x, float y, float width, float height) = 0;
 
+    virtual PicaPt borderWidth() const = 0;
+
     virtual void postRedraw() const = 0;
 
     virtual void raiseToTop() const = 0;
-
-    virtual PicaPt borderWidth() const = 0;
 
     virtual void* nativeHandle() = 0;
     virtual IWindowCallbacks& callbacks() = 0;

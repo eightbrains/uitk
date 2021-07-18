@@ -56,11 +56,12 @@ public:
     };
 
     /// Creates a window with default (x, y) position.
-    /// width, height are in operating-system coordinates.
+    /// width, height are in operating-system coordinates. The window is not
+    /// shown.
     Window(const std::string& title, int width, int height,
            Flags::Value flags = Flags::kNormal);
     /// Creates a window. x, y, width, height are in operating-system
-    /// coordinates.
+    /// coordinates. The window is not shown.
     Window(const std::string& title, int x, int y, int width, int height,
            Flags::Value flags = Flags::kNormal);
     virtual ~Window();
