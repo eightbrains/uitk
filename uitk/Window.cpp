@@ -43,6 +43,8 @@
 
 namespace uitk {
 
+enum class PopupState { kNone, kShowing, kCancelling };
+
 struct Window::Impl
 {
     std::shared_ptr<Theme> theme;
@@ -51,6 +53,7 @@ struct Window::Impl
     std::unique_ptr<Widget> rootWidget;
     Widget *grabbedWidget = nullptr;
     PopupMenu *activePopup = nullptr;
+    PopupState popupState = PopupState::kNone;
     std::function<void(Window& w, const LayoutContext& context)> onWillShow;
     std::function<void(Window& w)> onDidDeactivate;
     std::function<bool(Window& w)> onShouldClose;
@@ -63,8 +66,11 @@ struct Window::Impl
     void cancelPopup()
     {
         if (this->activePopup) {
+            this->popupState = PopupState::kCancelling;
             this->activePopup->cancel();
+            // These are redundant, since cancel() should call setPopupMenu(nullptr)
             this->activePopup = nullptr;
+            this->popupState = PopupState::kNone;
         }
     }
 };
@@ -244,10 +250,37 @@ Widget* Window::mouseGrabWidget() const
 
 PicaPt Window::borderWidth() const { return mImpl->window->borderWidth(); }
 
-void Window::setPopupMenu(PopupMenu *menu) { mImpl->activePopup = menu; }
+void Window::setPopupMenu(PopupMenu *menu)
+{
+    if (mImpl->activePopup != nullptr && menu == mImpl->activePopup
+        && mImpl->popupState == PopupState::kShowing) {
+        // Removing popup: need to call activate, in case mouse is over a widget
+        // Q: How do we know this window is actually active?
+        // A: Because if it weren't, onDeactivate would be called, cancelling the popup
+        onActivated(mImpl->window->currentMouseLocation());
+    }
+
+    mImpl->activePopup = menu;
+
+    if (menu) {
+        mImpl->popupState = PopupState::kShowing;
+        if (auto *w = menu->window()) {
+            w->onActivated(w->mImpl->window->currentMouseLocation());
+        }
+    } else {
+        mImpl->popupState = PopupState::kNone;
+    }
+}
 
 void Window::onMouse(const MouseEvent& eOrig)
 {
+    if (mImpl->activePopup) {
+        if (eOrig.type == MouseEvent::Type::kButtonDown) {
+            mImpl->cancelPopup();
+        }
+        return;
+    }
+
     mImpl->inMouse = true;
 
     MouseEvent e = eOrig;
@@ -260,10 +293,6 @@ void Window::onMouse(const MouseEvent& eOrig)
         e.scroll.dy *= 3.0f * mImpl->theme->params().labelFont.pointSize();
     }
 #endif // !__APPLE__
-
-    if (mImpl->activePopup && eOrig.type == MouseEvent::Type::kButtonDown) {
-        mImpl->cancelPopup();
-    }
 
     if (mImpl->grabbedWidget == nullptr) {
         mImpl->rootWidget->setState(Theme::WidgetState::kMouseOver);  // so onDeactivated works

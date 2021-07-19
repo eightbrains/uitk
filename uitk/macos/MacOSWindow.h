@@ -53,11 +53,13 @@ public:
     OSRect osFrame() const override;
     void setOSFrame(float x, float y, float width, float height) override;
 
+    PicaPt borderWidth() const override;
+
     void postRedraw() const override;
 
     void raiseToTop() const override;
 
-    PicaPt borderWidth() const override;
+    Point currentMouseLocation() const override;
 
     void* nativeHandle() override;
     IWindowCallbacks& callbacks() override;

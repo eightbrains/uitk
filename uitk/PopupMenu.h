@@ -83,6 +83,10 @@ public:
     void show(Window *w, const Point& upperLeft, int id = kInvalidId);
     void cancel();
 
+    /// Returns the popup's window. Note that the window may not exist unless
+    /// the window is showing.
+    Window* window();
+
     /// Draws the item with ID with the upper left at (0, 0).
     /// This is mostly internal, used by ComboBox.
     void drawItem(UIContext& context, const Rect& frame, int id, Theme::WidgetState itemState);

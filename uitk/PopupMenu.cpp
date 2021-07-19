@@ -288,6 +288,8 @@ void PopupMenu::drawItem(UIContext& context, const Rect& frame, int id, Theme::W
     }
 }
 
+Window* PopupMenu::window() { return mImpl->menuWindow; }
+
 bool PopupMenu::isShowing() const
 {
     return (mImpl->menuWindow != nullptr);
@@ -379,8 +381,8 @@ void PopupMenu::show(Window *w, const Point& upperLeftWindowCoord, int id /*= kI
     mImpl->menuWindow->setMouseGrab(list);
 
     mImpl->parent = w;
-    w->setPopupMenu(this);
     mImpl->menuWindow->show(true);
+    w->setPopupMenu(this);
 }
 
 void PopupMenu::cancel()

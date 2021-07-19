@@ -443,7 +443,9 @@ void MacOSWindow::show(bool show, std::function<void(const DrawContext&)> onWill
         // If we use -makeKeyAndOrderFront:, it works except when click-dragging, in
         // which case the popup pops-behind (presumably because it cannot be made key),
         // which is bad.
-        [mImpl->window orderFront:nil];
+        // Note that -orderFront: sometimes doesn't put it in front, but
+        // -orderFrontRegardless seems to.
+        [mImpl->window orderFrontRegardless];
     } else {
         [mImpl->window makeKeyAndOrderFront:nil];
     }
@@ -510,6 +512,16 @@ void MacOSWindow::setOSFrame(float x, float y, float width, float height)
     [mImpl->window setFrame:NSMakeRect(x, y, width, height) display:YES];
 }
 
+PicaPt MacOSWindow::borderWidth() const
+{
+    if (mImpl->window.styleMask == 0) {  // NSWindowStyleMaskBorderless == 0
+        return PicaPt::fromPixels(kPopopBorderWidth, dpi());
+    } else {
+        auto r = [mImpl->window frameRectForContentRect:NSMakeRect(0, 0, 100, 100)];
+        return PicaPt::fromPixels(r.origin.x, dpi());
+    }
+}
+
 void MacOSWindow::postRedraw() const
 {
     mImpl->contentView.needsDisplay = YES;
@@ -520,14 +532,12 @@ void MacOSWindow::raiseToTop() const
     [mImpl->window makeKeyAndOrderFront:nil];
 }
 
-PicaPt MacOSWindow::borderWidth() const
+Point MacOSWindow::currentMouseLocation() const
 {
-    if (mImpl->window.styleMask == 0) {  // NSWindowStyleMaskBorderless == 0
-        return PicaPt::fromPixels(kPopopBorderWidth, dpi());
-    } else {
-        auto r = [mImpl->window frameRectForContentRect:NSMakeRect(0, 0, 100, 100)];
-        return PicaPt::fromPixels(r.origin.x, dpi());
-    }
+    NSPoint p = [mImpl->window mouseLocationOutsideOfEventStream];
+    NSRect contentRect = [mImpl->window contentRectForFrameRect:mImpl->window.frame];
+    return Point(PicaPt::fromPixels(p.x, dpi()),
+                 PicaPt::fromPixels(contentRect.size.height - p.y, dpi()));
 }
 
 }  // namespace uitk

@@ -94,6 +94,11 @@ public:
 
     virtual void raiseToTop() const = 0;
 
+    // The current mouse location, in window coordinates. Note that the current
+    // mouse location may not actually be in this window;  the window might not
+    // even be active.
+    virtual Point currentMouseLocation() const = 0;
+
     virtual void* nativeHandle() = 0;
     virtual IWindowCallbacks& callbacks() = 0;
 };
