@@ -60,6 +60,8 @@ public:
 
     PicaPt borderWidth() const override;
 
+    Point currentMouseLocation() const override;
+
     void* nativeHandle() override;
     IWindowCallbacks& callbacks() override;
 

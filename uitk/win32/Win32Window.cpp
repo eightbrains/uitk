@@ -245,6 +245,15 @@ PicaPt Win32Window::borderWidth() const
     return PicaPt::fromPixels(GetSystemMetrics(SM_CXSIZEFRAME), dpi());
 }
 
+Point Win32Window::currentMouseLocation() const
+{
+    POINT pos;
+    GetCursorPos(&pos);
+    ScreenToClient(mImpl->hwnd, &pos);
+    return Point(PicaPt::fromPixels(pos.x, dpi()),
+                 PicaPt::fromPixels(pos.y, dpi()));
+}
+
 void* Win32Window::nativeHandle() { return mImpl->hwnd; }
 
 IWindowCallbacks& Win32Window::callbacks() { return mImpl->callbacks; }
