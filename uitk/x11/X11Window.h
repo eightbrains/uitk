@@ -62,6 +62,8 @@ public:
 
     void raiseToTop() const override;
 
+    Point currentMouseLocation() const override;
+
     void* nativeHandle() override;
     IWindowCallbacks& callbacks() override;
 

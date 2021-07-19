@@ -286,6 +286,19 @@ void X11Window::raiseToTop() const
     gActiveWindow = (X11Window*)this;
 }
 
+Point X11Window::currentMouseLocation() const
+{
+    // Note: XQueryPointer returns False and (x, y) = (0, 0) if the point
+    //       is not on the same screen as the window.
+    ::Window root, child;
+    int rootX, rootY, x, y;
+    unsigned int keyModsAndButtons;
+    XQueryPointer(mImpl->display, mImpl->xwindow, &root, &child,
+                  &rootX, &rootY, &x, &y, &keyModsAndButtons);
+    return Point(PicaPt::fromPixels(x, dpi()),
+                 PicaPt::fromPixels(y, dpi()));
+}
+
 void* X11Window::nativeHandle() { return (void*)mImpl->xwindow; }
 IWindowCallbacks& X11Window::callbacks() { return mImpl->callbacks;}
 
