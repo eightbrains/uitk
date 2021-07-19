@@ -25,6 +25,7 @@
 #include "Application.h"
 #include "Events.h"
 #include "OSWindow.h"
+#include "PopupMenu.h"
 #include "UIContext.h"
 #include "Widget.h"
 #include "themes/Theme.h"
@@ -42,6 +43,8 @@
 
 namespace uitk {
 
+enum class PopupState { kNone, kShowing, kCancelling };
+
 struct Window::Impl
 {
     std::shared_ptr<Theme> theme;
@@ -49,10 +52,27 @@ struct Window::Impl
     std::string title;
     std::unique_ptr<Widget> rootWidget;
     Widget *grabbedWidget = nullptr;
+    PopupMenu *activePopup = nullptr;
+    PopupState popupState = PopupState::kNone;
+    std::function<void(Window& w, const LayoutContext& context)> onWillShow;
+    std::function<void(Window& w)> onDidDeactivate;
+    std::function<bool(Window& w)> onShouldClose;
+    std::function<void(Window& w)> onWillClose;
     bool inResize = false;
     bool inMouse = false;
     bool inDraw = false;
     bool needsDraw = false;
+
+    void cancelPopup()
+    {
+        if (this->activePopup) {
+            this->popupState = PopupState::kCancelling;
+            this->activePopup->cancel();
+            // These are redundant, since cancel() should call setPopupMenu(nullptr)
+            this->activePopup = nullptr;
+            this->popupState = PopupState::kNone;
+        }
+    }
 };
 
 Window::Window(const std::string& title, int width, int height,
@@ -82,9 +102,17 @@ Window::Window(const std::string& title, int x, int y, int width, int height,
 
 Window::~Window()
 {
+    mImpl->cancelPopup();
     mImpl->theme.reset();
     mImpl->window.reset();
     mImpl->rootWidget.reset();
+}
+
+void Window::deleteLater()
+{
+    Application::instance().scheduleLater(this, [w = this]() {
+        delete w;
+    });
 }
 
 void* Window::nativeHandle() { return mImpl->window->nativeHandle(); }
@@ -93,11 +121,21 @@ bool Window::isShowing() const { return mImpl->window->isShowing(); }
 
 Window* Window::show(bool show)
 {
-    mImpl->window->show(show);
+    auto onWillShow = [this](const DrawContext& dc) {
+        if (mImpl->onWillShow) {
+            LayoutContext context = { *mImpl->theme, dc };
+            mImpl->onWillShow(*this, context);
+        }
+    };
+    mImpl->window->show(show, onWillShow);
     return this;
 }
 
-void Window::close() { mImpl->window->close(); }
+void Window::close()
+{
+    mImpl->cancelPopup();
+    mImpl->window->close();
+}
 
 std::string Window::title() const { return mImpl->title; }
 
@@ -106,6 +144,53 @@ Window* Window::setTitle(const std::string& title)
     mImpl->title = title;
     mImpl->window->setTitle(title);
     return this;
+}
+
+void Window::resize(const Size& contentSize)
+{
+    auto dpi = mImpl->window->dpi();
+    auto f = mImpl->window->osFrame();
+    if (Application::instance().isOriginInUpperLeft()) {
+        setOSFrame(f.x, f.y, contentSize.width.toPixels(dpi), contentSize.height.toPixels(dpi));
+    } else {
+        auto hPx = contentSize.height.toPixels(dpi);
+        setOSFrame(f.x, f.y + f.height - hPx, contentSize.width.toPixels(dpi), hPx);
+    }
+}
+
+void Window::move(const PicaPt& dx, const PicaPt& dy)
+{
+    auto dpi = mImpl->window->dpi();
+    auto f = mImpl->window->osFrame();
+    if (Application::instance().isOriginInUpperLeft()) {
+        setOSFrame(f.x + dx.toPixels(dpi), f.y + dy.toPixels(dpi), f.width, f.height);
+    } else {
+        setOSFrame(f.x + dx.toPixels(dpi), f.y - dy.toPixels(dpi), f.width, f.height);
+    }
+}
+
+OSWindow::OSRect Window::osFrame() const
+{
+    return mImpl->window->osFrame();
+}
+
+void Window::setOSFrame(float x, float y, float width, float height)
+{
+    mImpl->window->setOSFrame(x, y, width, height);
+}
+
+OSWindow::OSPoint Window::convertWindowToOSPoint(const Point& windowPt) const
+{
+    auto contentRect = mImpl->window->contentRect();
+    auto osContentRect = mImpl->window->osContentRect();
+    auto dpi = mImpl->window->dpi();
+    if (Application::instance().isOriginInUpperLeft()) {
+        return { osContentRect.x + (contentRect.x + windowPt.x).toPixels(dpi),
+                 osContentRect.y + (contentRect.y + windowPt.y).toPixels(dpi) };
+    } else {
+        return { osContentRect.x + (contentRect.x + windowPt.x).toPixels(dpi),
+                 osContentRect.y + (contentRect.maxY() - windowPt.y).toPixels(dpi) };
+    }
 }
 
 void Window::setNeedsDraw()
@@ -133,6 +218,26 @@ Window* Window::addChild(Widget *child)
     return this;
 }
 
+void Window::setOnWindowWillShow(std::function<void(Window& w, const LayoutContext& context)> onWillShow)
+{
+    mImpl->onWillShow = onWillShow;
+}
+
+void Window::setOnWindowDidDeactivate(std::function<void(Window& w)> onDidDeactivate)
+{
+    mImpl->onDidDeactivate = onDidDeactivate;
+}
+
+void Window::setOnWindowShouldClose(std::function<bool(Window& w)> onShouldClose)
+{
+    mImpl->onShouldClose = onShouldClose;
+}
+
+void Window::setOnWindowWillClose(std::function<void(Window& w)> onWillClose)
+{
+    mImpl->onWillClose = onWillClose;
+}
+
 void Window::setMouseGrab(Widget *w)
 {
     mImpl->grabbedWidget = w;
@@ -143,8 +248,39 @@ Widget* Window::mouseGrabWidget() const
     return mImpl->grabbedWidget;
 }
 
+PicaPt Window::borderWidth() const { return mImpl->window->borderWidth(); }
+
+void Window::setPopupMenu(PopupMenu *menu)
+{
+    if (mImpl->activePopup != nullptr && menu == mImpl->activePopup
+        && mImpl->popupState == PopupState::kShowing) {
+        // Removing popup: need to call activate, in case mouse is over a widget
+        // Q: How do we know this window is actually active?
+        // A: Because if it weren't, onDeactivate would be called, cancelling the popup
+        onActivated(mImpl->window->currentMouseLocation());
+    }
+
+    mImpl->activePopup = menu;
+
+    if (menu) {
+        mImpl->popupState = PopupState::kShowing;
+        if (auto *w = menu->window()) {
+            w->onActivated(w->mImpl->window->currentMouseLocation());
+        }
+    } else {
+        mImpl->popupState = PopupState::kNone;
+    }
+}
+
 void Window::onMouse(const MouseEvent& eOrig)
 {
+    if (mImpl->activePopup) {
+        if (eOrig.type == MouseEvent::Type::kButtonDown) {
+            mImpl->cancelPopup();
+        }
+        return;
+    }
+
     mImpl->inMouse = true;
 
     MouseEvent e = eOrig;
@@ -158,9 +294,6 @@ void Window::onMouse(const MouseEvent& eOrig)
     }
 #endif // !__APPLE__
 
-    if (e.type == MouseEvent::Type::kButtonUp) {  // debugging; remove
-        e.type = e.type;
-    }
     if (mImpl->grabbedWidget == nullptr) {
         mImpl->rootWidget->setState(Theme::WidgetState::kMouseOver);  // so onDeactivated works
         mImpl->rootWidget->mouse(e);
@@ -260,6 +393,8 @@ void Window::onDraw(DrawContext& dc)
 
 void Window::onActivated(const Point& currentMousePos)
 {
+    mImpl->cancelPopup();
+
     // If mouse is over the window when it is activated (especially by
     // Alt-Tab), send an artifical mouse move event, so that if the mouse
     // is over a control it will be properly highlighted.
@@ -274,8 +409,29 @@ void Window::onActivated(const Point& currentMousePos)
 
 void Window::onDeactivated()
 {
+    mImpl->cancelPopup();
+
     mImpl->rootWidget->mouseExited();
+    if (mImpl->onDidDeactivate) {
+        mImpl->onDidDeactivate(*this);
+    }
     postRedraw();
+}
+
+bool Window::onWindowShouldClose()
+{
+    if (mImpl->onShouldClose) {
+        return mImpl->onShouldClose(*this);
+    }
+    return true;
+}
+
+void Window::onWindowWillClose()
+{
+    mImpl->cancelPopup();
+    if (mImpl->onWillClose) {
+        mImpl->onWillClose(*this);
+    }
 }
 
 }  // namespace uitk

@@ -22,8 +22,11 @@
 
 #include "Win32Application.h"
 
+#include "../Window.h"
 #include "../themes/EmpireTheme.h"
 
+#include <list>
+#include <mutex>
 #include <unordered_map>
 
 #define WIN32_LEAN_AND_MEAN
@@ -34,9 +37,16 @@
 
 namespace uitk {
 
+static const int kCheckPostedFunctionsMsg = WM_USER + 1534;
+
 struct Win32Application::Impl {
     std::unordered_map<HWND, Win32Window*> hwnd2window;
     bool needsToUnitializeCOM;
+
+    std::mutex postedFunctionsLock;
+    // This is a linked list because adding and removing does not invalidate
+    // iterators.
+    std::list<std::function<void()>> postedFunctions;
 };
 
 Win32Application::Win32Application()
@@ -61,7 +71,7 @@ Win32Application::~Win32Application()
 
 void Win32Application::setExitWhenLastWindowCloses(bool exits)
 {
-    // Do nothing, this is pretty much always true on Linux, as there would
+    // Do nothing, this is pretty much always true on Windows, as there would
     // be no way to open a new window after the last one closes.
 }
 
@@ -71,7 +81,32 @@ int Win32Application::run()
     while (GetMessage(&msg, NULL, 0, 0))
     {
         TranslateMessage(&msg);
-        DispatchMessage(&msg);
+        if (msg.message != kCheckPostedFunctionsMsg) {
+            DispatchMessage(&msg);
+        } else {
+            // The posted function might generate another posted function
+            // (for example, an animation), so we only run the functions
+            // that we have right now. Also, we need to not be holding the
+            // lock when we run the function, otherwise posting a function
+            // will deadlock.
+            size_t n = 0;
+            mImpl->postedFunctionsLock.lock();
+            n = mImpl->postedFunctions.size();
+            mImpl->postedFunctionsLock.unlock();
+
+            for (size_t i = 0; i < n; ++i) {
+                std::function<void()> f;
+                mImpl->postedFunctionsLock.lock();
+                f = *mImpl->postedFunctions.begin();
+                mImpl->postedFunctionsLock.unlock();
+
+                f();
+
+                mImpl->postedFunctionsLock.lock();
+                mImpl->postedFunctions.erase(mImpl->postedFunctions.begin());
+                mImpl->postedFunctionsLock.unlock();
+            }
+        }
     }
 
     // msg is WM_QUIT, and WinMain return value should be wParam
@@ -79,6 +114,18 @@ int Win32Application::run()
     // it is zero by convention).
     return int(msg.wParam);
 }
+
+void Win32Application::scheduleLater(Window *w, std::function<void()> f)
+{
+    {
+    std::lock_guard<std::mutex> locker(mImpl->postedFunctionsLock);
+    mImpl->postedFunctions.push_back(f);
+    }
+
+    PostMessage((HWND)w->nativeHandle(), kCheckPostedFunctionsMsg, 0, 0);
+}
+
+bool Win32Application::isOriginInUpperLeft() const { return true; }
 
 bool Win32Application::shouldHideScrollbars() const { return false; }
 

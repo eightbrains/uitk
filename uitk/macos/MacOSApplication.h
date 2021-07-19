@@ -38,6 +38,9 @@ public:
     void setExitWhenLastWindowCloses(bool exits) override;
     int run() override;
 
+    void scheduleLater(Window* w, std::function<void()> f) override;
+
+    bool isOriginInUpperLeft() const override;
     bool shouldHideScrollbars() const override;
 
     Theme::Params themeParams() const override;

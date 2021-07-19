@@ -111,15 +111,25 @@ public:
     virtual const Params& params() const = 0;
     virtual void setParams(const Params& params) = 0;
 
+    /// The text margin vertically is around capHeight, NOT ascent + descent.
+    /// So in more traditional terms, the margin is (margin - descent) below the
+    /// descender, and (margin) above (baseline + capHeight). Note that baseline + ascent
+    /// is can be substantially above the top of the text, and seems to act like
+    /// leading (which in these fonts is usually zero).
+    virtual Size calcPreferredTextMargins(const DrawContext& dc, const Font& font) const = 0;
     virtual Size calcPreferredButtonSize(const DrawContext& dc, const Font& font,
                                          const std::string& text) const = 0;
     virtual Size calcPreferredCheckboxSize(const DrawContext& dc,
                                            const Font& font) const = 0;
     virtual Size calcPreferredSegmentSize(const DrawContext& dc, const Font& font,
                                           const std::string& text) const = 0;
+    virtual Size calcPreferredComboBoxSize(const DrawContext& dc, const PicaPt& preferredMenuWidth) const = 0;
     virtual Size calcPreferredSliderThumbSize(const DrawContext& dc) const = 0;
     virtual Size calcPreferredProgressBarSize(const DrawContext& dc) const = 0;
     virtual PicaPt calcPreferredScrollbarThickness(const DrawContext& dc) const = 0;
+    virtual Size calcPreferredMenuItemSize(const DrawContext& dc, const std::string& text) const = 0;
+
+    virtual void drawCheckmark(UIContext& ui, const Rect& r, const WidgetStyle& style) const = 0;
 
     virtual void drawWindowBackground(UIContext& ui, const Size& size) const = 0;
     virtual void drawFrame(UIContext& ui, const Rect& frame,
@@ -143,6 +153,8 @@ public:
                                     const WidgetStyle& ctrlStyle,
                                     WidgetState ctrlState) const = 0;
     virtual const WidgetStyle& segmentTextStyle(WidgetState state, bool isOn) const = 0;
+    virtual void drawComboBoxAndClip(UIContext& ui, const Rect& frame,
+                                     const WidgetStyle& style, WidgetState state) const = 0;
     virtual void drawSliderTrack(UIContext& ui, SliderDir dir, const Rect& frame, const Point& thumbMid,
                                  const WidgetStyle& style, WidgetState state) const = 0;
     virtual void drawSliderThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
@@ -163,6 +175,12 @@ public:
                               const WidgetStyle& style, WidgetState state) const = 0;
     virtual void drawListViewSelectedRow(UIContext& ui, const Rect& frame,
                                          const WidgetStyle& style, WidgetState state) const = 0;
+    virtual void drawMenuBackground(UIContext& ui, const Rect& frame) = 0;
+    virtual void calcMenuItemFrames(const DrawContext& dc, const Rect& frame,
+                                    Rect *checkRect, Rect *textRect) const = 0;
+    virtual void drawMenuItem(UIContext& ui, const Rect& frame, const std::string& text,
+                              const bool isChecked, const WidgetStyle& style, WidgetState state) const = 0;
+    virtual void drawMenuSeparatorItem(UIContext& ui, const Rect& frame) const = 0;
 };
 
 }  // namespace uitk

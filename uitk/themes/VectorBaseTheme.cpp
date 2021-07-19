@@ -181,6 +181,20 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mSegmentOnStyles[DOWN].borderRadius = PicaPt::kZero;
     mSegmentOnStyles[DOWN].borderWidth = PicaPt::kZero;
 
+    // ComboBox
+    copyStyles(mButtonStyles, mComboBoxStyles);
+    mComboBoxStyles[DOWN] = mComboBoxStyles[OVER];
+    mComboBoxIconAreaStyles[NORMAL].bgColor = params.accentColor;
+    mComboBoxIconAreaStyles[NORMAL].fgColor = params.accentedBackgroundTextColor;
+    mComboBoxIconAreaStyles[NORMAL].borderColor = Color::kTransparent;
+    mComboBoxIconAreaStyles[NORMAL].borderWidth = PicaPt::kZero;
+    mComboBoxIconAreaStyles[DISABLED] = mComboBoxIconAreaStyles[NORMAL];
+    mComboBoxIconAreaStyles[DISABLED].bgColor = Color::kTransparent;
+    mComboBoxIconAreaStyles[DISABLED].fgColor = mComboBoxStyles[DISABLED].fgColor;
+    mComboBoxIconAreaStyles[OVER] = mComboBoxIconAreaStyles[NORMAL];
+    mComboBoxIconAreaStyles[OVER].bgColor = mCheckboxOnStyles[OVER].bgColor;
+    mComboBoxIconAreaStyles[DOWN] = mComboBoxIconAreaStyles[OVER];
+
     // Slider
     copyStyles(mButtonStyles, mSliderTrackStyles);
     mSliderTrackStyles[NORMAL].fgColor = params.accentColor;
@@ -253,6 +267,18 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     copyStyles(mScrollViewStyles, mListViewStyles);
     mListViewStyles[NORMAL].fgColor = params.accentColor;
     mListViewStyles[DISABLED].fgColor = Color(0.5f, 0.5f, 0.5f);
+
+    // Menu Items
+    mMenuItemStyles[NORMAL].bgColor = Color::kTransparent;
+    mMenuItemStyles[NORMAL].fgColor = params.textColor;
+    mMenuItemStyles[NORMAL].borderColor = Color::kTransparent;
+    mMenuItemStyles[NORMAL].borderWidth = PicaPt::kZero;
+    mMenuItemStyles[NORMAL].borderRadius = PicaPt::kZero;
+    mMenuItemStyles[DISABLED] = mMenuItemStyles[NORMAL];
+    mMenuItemStyles[DISABLED].fgColor = params.disabledTextColor;
+    mMenuItemStyles[OVER] = mMenuItemStyles[NORMAL];
+    mMenuItemStyles[OVER].bgColor = params.accentColor;
+    mMenuItemStyles[DOWN] = mMenuItemStyles[OVER];
 }
 
 const Theme::Params& VectorBaseTheme::params() const { return mParams; }
@@ -260,6 +286,108 @@ const Theme::Params& VectorBaseTheme::params() const { return mParams; }
 void VectorBaseTheme::setParams(const Params& params)
 {
     setVectorParams(params);
+}
+
+Size VectorBaseTheme::calcPreferredTextMargins(const DrawContext& dc, const Font& font) const
+{
+    auto fm = dc.fontMetrics(font);
+    auto tm = dc.textMetrics("Ag", font, kPaintFill);
+    auto em = tm.height;
+    auto margin = dc.ceilToNearestPixel(1.5 * fm.descent);
+    return Size(margin, margin);
+}
+
+Size VectorBaseTheme::calcPreferredButtonSize(const DrawContext& dc, const Font& font,
+                                              const std::string& text) const
+{
+    auto fm = dc.fontMetrics(font);
+    auto tm = dc.textMetrics(text.c_str(), font, kPaintFill);
+    auto em = tm.height;
+    auto margin = dc.ceilToNearestPixel(1.5 * fm.descent);
+    // Height works best if the descent is part of the bottom margin,
+    // because it looks visually empty even if there are a few descenders.
+    // Now the ascent can be anything the font designer want it to be,
+    // which is not helpful for computing accurate margins. But cap-height
+    // is well-defined, so use that instead.
+    return Size(dc.ceilToNearestPixel(2.0f * em + tm.width) + 2.0f * margin,
+                dc.ceilToNearestPixel(fm.capHeight) + 2.0f * margin);
+}
+
+Size VectorBaseTheme::calcPreferredCheckboxSize(const DrawContext& dc,
+                                                const Font& font) const
+{
+    auto size = calcPreferredButtonSize(dc, font, "Ag");
+    return Size(size.height, size.height);
+}
+
+Size VectorBaseTheme::calcPreferredSegmentSize(const DrawContext& dc,
+                                               const Font& font,
+                                               const std::string& text) const
+{
+    auto pref = calcPreferredButtonSize(dc, font, text);
+    auto tm = dc.textMetrics(text.c_str(), font, kPaintFill);
+    auto margin = tm.height;  // 0.5*em on either side
+    return Size(dc.ceilToNearestPixel(tm.width + margin),
+                pref.height);  // height is already ceil'd.
+}
+
+Size VectorBaseTheme::calcPreferredComboBoxSize(const DrawContext& dc,
+                                                const PicaPt& preferredMenuWidth) const
+{
+    auto height = calcPreferredButtonSize(dc, mParams.labelFont, "Ag").height;
+    return Size(dc.ceilToNearestPixel(preferredMenuWidth + 0.8f * height), height);
+}
+
+Size VectorBaseTheme::calcPreferredSliderThumbSize(const DrawContext& ui) const
+{
+    auto buttonHeight = calcPreferredButtonSize(ui, mParams.labelFont, "Ag").height;
+    return Size(buttonHeight, buttonHeight);
+}
+
+Size VectorBaseTheme::calcPreferredProgressBarSize(const DrawContext& dc) const
+{
+    auto buttonHeight = calcPreferredButtonSize(dc, mParams.labelFont, "Ag").height;
+    return Size(PicaPt(144.0f), buttonHeight);
+}
+
+PicaPt VectorBaseTheme::calcPreferredScrollbarThickness(const DrawContext& dc) const
+{
+    auto fm = dc.fontMetrics(mParams.labelFont);
+    return dc.ceilToNearestPixel(0.5f * fm.capHeight + fm.descent);
+}
+
+Size VectorBaseTheme::calcPreferredMenuItemSize(const DrawContext& dc, const std::string& text) const
+{
+    auto fm = dc.fontMetrics(mParams.labelFont);
+    auto tm = dc.textMetrics(text.c_str(), mParams.labelFont, kPaintFill);
+    auto em = fm.capHeight + fm.descent;
+    auto xMargin = dc.ceilToNearestPixel(0.5f * em);
+    auto checkboxWidth = fm.capHeight;
+
+    return Size(dc.ceilToNearestPixel(xMargin + checkboxWidth + xMargin + tm.width + xMargin),
+                calcPreferredButtonSize(dc, mParams.labelFont, text).height);
+}
+
+void VectorBaseTheme::drawCheckmark(UIContext& ui, const Rect& r, const WidgetStyle& style) const
+{
+    const auto strokeWidth = PicaPt(2);
+    // We need to inset to compensate for the stroke, since the points will
+    // be at the center of the stroke. Don't adjust to nearest pixel, because
+    // we actually want the partial pixels, otherwise it is a pixel too much,
+    // visually.
+    auto margin = 0.707f * strokeWidth;
+    auto thirdW = (r.width - 2.0f * margin) / 3.0f;
+    auto thirdH = (r.height - 2.0f * margin) / 3.0f;
+    ui.dc.save();
+    ui.dc.setStrokeColor(style.fgColor);
+    ui.dc.setStrokeWidth(strokeWidth);
+    ui.dc.setStrokeEndCap(kEndCapRound);
+    ui.dc.setStrokeJoinStyle(kJoinRound);
+    Point p1(r.x + margin, r.y + margin + 2.0f * thirdH);
+    Point p2(r.x + margin + thirdW, r.y + margin + 3.0f * thirdH);
+    Point p3(r.x + margin + 3.0f * thirdW, r.y + margin);
+    ui.dc.drawLines({ p1, p2, p3 });
+    ui.dc.restore();
 }
 
 void VectorBaseTheme::drawWindowBackground(UIContext& ui, const Size& size) const
@@ -327,59 +455,6 @@ void VectorBaseTheme::clipFrame(UIContext& ui, const Rect& frame,
     }
 }
 
-
-Size VectorBaseTheme::calcPreferredButtonSize(const DrawContext& dc, const Font& font,
-                                              const std::string& text) const
-{
-    auto fm = dc.fontMetrics(font);
-    auto tm = dc.textMetrics(text.c_str(), font, kPaintFill);
-    auto em = tm.height;
-    auto margin = dc.ceilToNearestPixel(1.5 * fm.descent);
-    // Height works best if the descent is part of the bottom margin,
-    // because it looks visually empty even if there are a few descenders.
-    // Now the ascent can be anything the font designer want it to be,
-    // which is not helpful for computing accurate margins. But cap-height
-    // is well-defined, so use that instead.
-    return Size(dc.ceilToNearestPixel(2.0f * em + tm.width) + 2.0f * margin,
-                dc.ceilToNearestPixel(fm.capHeight) + 2.0f * margin);
-}
-
-Size VectorBaseTheme::calcPreferredCheckboxSize(const DrawContext& dc,
-                                                const Font& font) const
-{
-    auto size = calcPreferredButtonSize(dc, font, "Ag");
-    return Size(size.height, size.height);
-}
-
-Size VectorBaseTheme::calcPreferredSegmentSize(const DrawContext& dc,
-                                               const Font& font,
-                                               const std::string& text) const
-{
-    auto pref = calcPreferredButtonSize(dc, font, text);
-    auto tm = dc.textMetrics(text.c_str(), font, kPaintFill);
-    auto margin = tm.height;  // 0.5*em on either side
-    return Size(dc.ceilToNearestPixel(tm.width + margin),
-                pref.height);  // height is already ceil'd.
-}
-
-Size VectorBaseTheme::calcPreferredSliderThumbSize(const DrawContext& ui) const
-{
-    auto buttonHeight = calcPreferredButtonSize(ui, mParams.labelFont, "Ag").height;
-    return Size(buttonHeight, buttonHeight);
-}
-
-Size VectorBaseTheme::calcPreferredProgressBarSize(const DrawContext& dc) const
-{
-    auto buttonHeight = calcPreferredButtonSize(dc, mParams.labelFont, "Ag").height;
-    return Size(PicaPt(144.0f), buttonHeight);
-}
-
-PicaPt VectorBaseTheme::calcPreferredScrollbarThickness(const DrawContext& dc) const
-{
-    auto fm = dc.fontMetrics(mParams.labelFont);
-    return 0.5f * fm.capHeight + fm.descent;
-}
-
 void VectorBaseTheme::drawButton(UIContext& ui, const Rect& frame,
                                  const WidgetStyle& style, WidgetState state,
                                  bool isOn) const
@@ -415,19 +490,8 @@ void VectorBaseTheme::drawCheckbox(UIContext& ui, const Rect& frame,
     drawFrame(ui, frame, bs->merge(style));
 
     if (isOn) {
-        auto margin = ui.dc.ceilToNearestPixel(0.25f * frame.width);
-        auto thirdW = (frame.width - 2.0f * margin) / 3.0f;
-        auto thirdH = (frame.height - 2.0f * margin) / 3.0f;
-        ui.dc.save();
-        ui.dc.setStrokeColor(bs->fgColor);
-        ui.dc.setStrokeWidth(PicaPt(2));
-        ui.dc.setStrokeEndCap(kEndCapRound);
-        ui.dc.setStrokeJoinStyle(kJoinRound);
-        Point p1(frame.x + margin, frame.y + margin + 2.0f * thirdH);
-        Point p2(frame.x + margin + thirdW, frame.y + margin + 3.0f * thirdH);
-        Point p3(frame.x + margin + 3.0f * thirdW, frame.y + margin);
-        ui.dc.drawLines({ p1, p2, p3 });
-        ui.dc.restore();
+        auto margin = ui.dc.ceilToNearestPixel(0.15f * frame.width);
+        drawCheckmark(ui, frame.insetted(margin, margin), *bs);
     }
 }
 
@@ -546,6 +610,68 @@ const Theme::WidgetStyle& VectorBaseTheme::segmentTextStyle(WidgetState state, b
     }
 }
 
+void VectorBaseTheme::drawComboBoxAndClip(UIContext& ui, const Rect& frame,
+                                          const WidgetStyle& style, WidgetState state) const
+{
+    auto s = mComboBoxStyles[int(state)].merge(style);
+    drawFrame(ui, frame, s);
+
+    auto iconWidth = ui.dc.roundToNearestPixel(0.8f * frame.height - 2.0f * s.borderWidth);
+    Rect iconRect(frame.maxX() - s.borderWidth - iconWidth, frame.y + s.borderWidth,
+                  iconWidth, frame.height - 2.0f * s.borderWidth);
+    auto path = ui.dc.createBezierPath();
+    auto radius = s.borderRadius - 1.414f * s.borderWidth;
+    if (radius > PicaPt::kZero) {
+        // Modified from nativedraw.cpp, BezierPath::addRoundedRect().
+        PicaPt tangentWeight(0.551784f);
+        PicaPt zero(0);
+        PicaPt dTangent = tangentWeight * radius;
+
+        auto topRight = iconRect.upperRight() + Point(-radius, zero);
+        auto rightTop = iconRect.upperRight() + Point(zero, radius);
+        auto rightBottom = iconRect.lowerRight() + Point(zero, -radius);
+        auto bottomLeft = iconRect.lowerLeft() + Point(radius, zero);
+        auto bottomRight = iconRect.lowerRight() + Point(-radius, zero);
+
+        path->moveTo(iconRect.upperLeft());
+        path->lineTo(topRight);
+        path->cubicTo(topRight + Point(dTangent, zero),
+                      rightTop + Point(zero, -dTangent),
+                      rightTop);
+        path->lineTo(rightBottom);
+        path->cubicTo(rightBottom + Point(zero, dTangent),
+                      bottomRight + Point(dTangent, zero),
+                      bottomRight);
+        path->lineTo(iconRect.lowerLeft());
+        path->close();
+    } else {
+        path->addRect(iconRect);
+    }
+    s = mComboBoxIconAreaStyles[int(state)];
+    ui.dc.setFillColor(s.bgColor);
+    ui.dc.drawPath(path, kPaintFill);
+
+    ui.dc.save();  // so line style changes get cleaned up
+    ui.dc.setStrokeColor(s.fgColor);
+    ui.dc.setStrokeWidth(PicaPt(1.5));
+    ui.dc.setStrokeEndCap(kEndCapRound);
+    ui.dc.setStrokeJoinStyle(kJoinRound);
+    auto h = 0.2f * iconRect.height;
+    ui.dc.drawLines({ Point(iconRect.midX() - h, iconRect.midY() - 0.5f * h),
+                      Point(iconRect.midX(), iconRect.midY() - 1.5f * h),
+                      Point(iconRect.midX() + h, iconRect.midY() - 0.5f * h) });
+    ui.dc.drawLines({ Point(iconRect.midX() - h, iconRect.midY() + 0.5f * h),
+                      Point(iconRect.midX(), iconRect.midY() + 1.5f * h),
+                      Point(iconRect.midX() + h, iconRect.midY() + 0.5f * h) });
+    ui.dc.restore();
+
+    auto x = frame.x + std::max(s.borderWidth, s.borderRadius);
+    ui.dc.clipToRect(Rect(x,
+                          frame.y + s.borderWidth,
+                          iconRect.x - x,
+                          frame.height - 2.0f * s.borderWidth));
+}
+
 void VectorBaseTheme::drawSliderTrack(UIContext& ui, SliderDir dir, const Rect& frame, const Point& thumbMid,
                                       const WidgetStyle& style, WidgetState state) const
 {
@@ -662,6 +788,56 @@ void VectorBaseTheme::drawListViewSelectedRow(UIContext& ui, const Rect& frame,
 
     ui.dc.setFillColor(s.fgColor);
     ui.dc.drawRect(frame, kPaintFill);
+}
+
+void VectorBaseTheme::drawMenuBackground(UIContext& ui, const Rect& frame)
+{
+    drawWindowBackground(ui, frame.size());
+}
+
+void VectorBaseTheme::calcMenuItemFrames(const DrawContext& dc, const Rect& frame,
+                                         Rect *checkRect, Rect *textRect) const
+{
+    auto fm = mParams.labelFont.metrics(dc);
+    auto em = fm.capHeight + fm.descent;
+    auto xMargin = dc.ceilToNearestPixel(0.5f * em);
+    // Checkmark should be in the cap-height of the text
+    Rect checkmarkRect(frame.x + xMargin, frame.midY() - 0.5f * fm.capHeight, fm.capHeight, fm.capHeight);
+    auto x = dc.ceilToNearestPixel(checkmarkRect.maxX() + xMargin);
+    if (checkRect) {
+        *checkRect = checkmarkRect;
+    }
+    if (textRect) {
+        *textRect = Rect(x, frame.y, frame.width - x, frame.height);
+    }
+}
+
+void VectorBaseTheme::drawMenuItem(UIContext& ui, const Rect& frame, const std::string& text,
+                                   const bool isChecked, const WidgetStyle& style, WidgetState state) const
+{
+    Rect checkmarkRect, textRect;
+    calcMenuItemFrames(ui.dc, frame, &checkmarkRect, &textRect);
+
+    auto s = mMenuItemStyles[int(state)].merge(style);
+    drawFrame(ui, frame, s);
+    if (isChecked) {
+        drawCheckmark(ui, checkmarkRect, s);
+    }
+    ui.dc.setFillColor(s.fgColor);
+    ui.dc.drawText(text.c_str(), textRect, Alignment::kLeft | Alignment::kVCenter, mParams.labelFont,
+                   kPaintFill);
+}
+
+void VectorBaseTheme::drawMenuSeparatorItem(UIContext& ui, const Rect& frame) const
+{
+    int thicknessPx = PicaPt(2) / ui.dc.onePixel();
+    if (thicknessPx % 2 == 1) {
+        thicknessPx += 1;
+    }
+    ui.dc.setStrokeColor(mMenuItemStyles[int(WidgetState::kDisabled)].fgColor);
+    ui.dc.setStrokeWidth(float(thicknessPx) * ui.dc.onePixel());
+    ui.dc.setStrokeEndCap(kEndCapButt);
+    ui.dc.drawLines({Point(frame.x, frame.midY()), Point(frame.maxX(), frame.midY()) });
 }
 
 }  // namespace uitk

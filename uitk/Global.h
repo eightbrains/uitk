@@ -25,18 +25,6 @@
 
 namespace uitk {
 
-struct Alignment {
-    static const int kLeft = (1 << 0);
-    static const int kHCenter = (1 << 1);
-    static const int kRight = (1 << 2);
-    static const int kTop = (1 << 4);
-    static const int kVCenter = (1 << 5);
-    static const int kBottom = (1 << 6);
-    static const int kCenter = kHCenter | kVCenter;
-    static const int kHorizMask = 0b00001111;
-    static const int kVertMask =  0b11110000;
-};
-
 enum class Dir { kHoriz, kVert };
 
 enum class SliderDir { kHoriz, kVertZeroAtTop, kVertZeroAtBottom };

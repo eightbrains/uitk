@@ -20,40 +20,55 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_LABEL_H
-#define UITK_LABEL_H
+#ifndef UITK_COMBOBOX_H
+#define UITK_COMBOBOX_H
 
 #include "Widget.h"
 
+#include <functional>
 #include <string>
 
 namespace uitk {
 
-class Label : public Widget {
+class ComboBox : public Widget {
     using Super = Widget;
 public:
-    explicit Label(const std::string& text);
-    ~Label();
+    ComboBox();
+    ~ComboBox();
 
-    const std::string& text() const;
-    Label* setText(const std::string& text);
+    void clear();
+    ComboBox* addItem(const std::string& text, int value = 0);
+    ComboBox* addSeparator();
 
-    int alignment() const;
-    Label* setAlignment(int align);
+    /// Returns the text of the item at the requested index, or "" if the
+    /// index is invalid.
+    const std::string& textAtIndex(int index) const;
+    ComboBox* setTextAtIndex(int index, const std::string& text);
+    /// Returns the value of the item at the requested index, or 0 if the
+    /// index is invalid.
+    int valueAtIndex(int index) const;
 
-    const Color& textColor() const;
-    /// Sets the text color. If the color is Color(0, 0, 0, 0), the color
-    /// will be automatically chosen. (Use show(false) if you wish to hide
-    /// the label.)
-    Label* setTextColor(const Color& c);
+    /// Returns the selected index or -1 if there is none.
+    int selectedIndex() const;
+    ComboBox* setSelectedIndex(int index);
+    /// Sets the selected index to the item with requested value. (If multiple
+    /// items have the value, one of them will be chosen.) If no items have the
+    /// value, nothing will be changed.
+    ComboBox* setSelectedValue(int value);
+    /// Sets the selected index to the item with requested text. (If multiple
+    /// items have the text, one of them will be chosen.) If no items have the
+    /// text, nothing will be changed.
+    ComboBox* setSelectedText(const std::string& text);
+
+    ComboBox* setOnSelectionChanged(std::function<void(ComboBox*)> onChanged);
 
     Size preferredSize(const LayoutContext& context) const override;
+    void layout(const LayoutContext& context) override;
+    EventResult mouse(const MouseEvent& e) override;
     void draw(UIContext& context) override;
 
-    /// Widgets that use a label as a child can set the label state
-    /// as the parent's state changes so that the colors are correct.
-    /// This should not be called if using a Label as a UI element directly.
-    void setWidgetState(Theme::WidgetState state);
+protected:
+    bool shouldAutoGrab() const override;
 
 private:
     struct Impl;
@@ -61,4 +76,6 @@ private:
 };
 
 }  // namespace uitk
-#endif // UITK_LABEL_H
+#endif // UITK_COMBOBOX_H
+
+

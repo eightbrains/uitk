@@ -25,6 +25,7 @@
 
 #include <nativedraw.h>
 
+#include <functional>
 #include <string>
 
 namespace uitk {
@@ -43,25 +44,60 @@ public:
     virtual void onMouse(const MouseEvent& e) = 0;
     virtual void onActivated(const Point& currentMousePos) = 0;
     virtual void onDeactivated() = 0;
+    virtual bool onWindowShouldClose() = 0;
+    virtual void onWindowWillClose() = 0;
 };
 
 class OSWindow
 {
 public:
+    struct OSPoint
+    {
+        float x;
+        float y;
+    };
+
+    struct OSRect
+    {
+        float x;
+        float y;
+        float width;
+        float height;
+    };
+
     virtual ~OSWindow() {}
 
     virtual bool isShowing() const = 0;
-    virtual void show(bool show) = 0;
+    // Q: Why not call onWillShow in Window instead of forcing the logic duplicated
+    //    on each platform?
+    // A: The lifetime of the DrawContext can only be properly controlled
+    //    from the platform side.
+    virtual void show(bool show, std::function<void(const DrawContext&)> onWillShow) = 0;
 
     virtual void close() = 0;
 
     virtual void setTitle(const std::string& title) = 0;
 
+    // This is the drawable rectangle. It may or may not have upper left at (0, 0)
     virtual Rect contentRect() const = 0;
+
+    // This is the contentRect in OS coordinates, same as osFrame().
+    virtual OSRect osContentRect() const = 0;
+
+    virtual float dpi() const = 0;
+    virtual OSRect osFrame() const = 0;
+    virtual void setOSFrame(float x, float y, float width, float height) = 0;
+
+    virtual PicaPt borderWidth() const = 0;
 
     virtual void postRedraw() const = 0;
 
     virtual void raiseToTop() const = 0;
+
+    // The current mouse location, in window coordinates. Note that the current
+    // mouse location may not actually be in this window;  the window might not
+    // even be active.
+    virtual Point currentMouseLocation() const = 0;
 
     virtual void* nativeHandle() = 0;
     virtual IWindowCallbacks& callbacks() = 0;

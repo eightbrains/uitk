@@ -29,7 +29,9 @@
 #include <X11/Xlib.h>
 #include <X11/Xresource.h>
 
+#include <list>
 #include <map>
+#include <mutex>
 #include <unordered_map>
 
 namespace {
@@ -70,12 +72,20 @@ struct X11Application::Impl
     std::map<std::string, std::string> xrdbStrings;
     std::vector<std::map<std::string, std::string>> xrdbScreenStrings;
     std::unordered_map<::Window, X11Window*> xwin2window;
+
+    Atom postedFuncAtom;
+    std::mutex postedFunctionsLock;
+    // This is a linked list because adding and removing does not invalidate
+    // iterators.
+    std::list<std::function<void()>> postedFunctions;
 };
 
 X11Application::X11Application()
     : mImpl(new Impl())
 {
     mImpl->display = XOpenDisplay(NULL);
+
+    mImpl->postedFuncAtom = XInternAtom(mImpl->display, "PostedFunction", False);
 
     // Read the resource databases from each screen.
     int nScreens = XScreenCount(mImpl->display);
@@ -126,10 +136,30 @@ void X11Application::setExitWhenLastWindowCloses(bool exits)
     // be no way to open a new window after the last one closes.
 }
 
+bool X11Application::isOriginInUpperLeft() const { return true; }
+
 bool X11Application::shouldHideScrollbars() const { return false; }
+
+void X11Application::scheduleLater(uitk::Window* w, std::function<void()> f)
+{
+    {
+    std::lock_guard<std::mutex> locker(mImpl->postedFunctionsLock);
+    mImpl->postedFunctions.push_back(f);
+    }
+
+    XEvent xe;
+    xe.type = ClientMessage;
+    xe.xclient.type = ClientMessage;  // maybe X server sets this?
+    xe.xclient.window = (::Window)w->nativeHandle();
+    xe.xclient.message_type = mImpl->postedFuncAtom;
+    xe.xclient.format = 32;  // 8, 16, 32 (size of xclient.data), we do not
+                             // use that, so this does not matter
+    XSendEvent(mImpl->display, xe.xclient.window, False, NoEventMask, &xe);
+}
 
 int X11Application::run()
 {
+    Atom kWMProtocolType = XInternAtom(mImpl->display, "WM_PROTOCOLS", True);
     Atom kWMDeleteMsg = XInternAtom(mImpl->display, "WM_DELETE_WINDOW", False);
 
     bool done = false;
@@ -255,12 +285,8 @@ int X11Application::run()
                 break;
             case KeyRelease:
                 break;
-            case ClientMessage:
-                if (event.xclient.data.l[0] == kWMDeleteMsg) {
-                    w->close();
-                }
-                break;
             case DestroyNotify:  // get with StructureNotifyMask
+                w->onWindowWillClose();
                 mImpl->xwin2window.erase(wit);
                 if (mImpl->xwin2window.empty()) {
                     done = true;
@@ -271,6 +297,36 @@ int X11Application::run()
                 break;
             case KeymapNotify:
                 // Update keyboard state
+                break;
+            case ClientMessage:
+                if (event.xclient.message_type == kWMProtocolType) {
+                    if (event.xclient.data.l[0] == kWMDeleteMsg) {
+                        w->close();
+                    }
+                } else if (event.xclient.message_type == mImpl->postedFuncAtom) {
+                    // The posted function might generate another posted function
+                    // (for example, an animation), so we only run the functions
+                    // that we have right now. Also, we need to not be holding
+                    // the lock when we run the function, otherwise posting a
+                    // function will deadlock.
+                    size_t n = 0;
+                    mImpl->postedFunctionsLock.lock();
+                    n = mImpl->postedFunctions.size();
+                    mImpl->postedFunctionsLock.unlock();
+
+                    for (size_t i = 0; i < n; ++i) {
+                        std::function<void()> f;
+                        mImpl->postedFunctionsLock.lock();
+                        f = *mImpl->postedFunctions.begin();
+                        mImpl->postedFunctionsLock.unlock();
+
+                        f();
+
+                        mImpl->postedFunctionsLock.lock();
+                        mImpl->postedFunctions.erase(mImpl->postedFunctions.begin());
+                        mImpl->postedFunctionsLock.unlock();
+                    }
+                }
                 break;
             default:
                 break;

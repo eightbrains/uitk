@@ -293,6 +293,38 @@ private:
     SegmentedControl *mSelectMany;
 };
 
+class ComboBoxTest : public Widget
+{
+    using Super = Widget;
+public:
+    ComboBoxTest()
+    {
+        mCombo = new ComboBox();
+        mCombo->addItem("Magic");
+        mCombo->addItem("More magic");
+        mCombo->addItem("Deep magic");
+        mCombo->addItem("Deep magic from before the dawn of time");
+        addChild(mCombo);
+    }
+
+    Size preferredSize(const LayoutContext& context) const override
+    {
+        auto pref = mCombo->preferredSize(context);
+        return Size(pref.width, 1.5f * pref.height);
+    }
+
+    void layout(const LayoutContext& context) override
+    {
+        auto pref = mCombo->preferredSize(context);
+        mCombo->setFrame(Rect(PicaPt::kZero, PicaPt::kZero, bounds().width, pref.height));
+
+        Super::layout(context);
+    }
+
+private:
+    ComboBox *mCombo;
+};
+
 class SliderTest : public Widget
 {
     using Super = Widget;
@@ -531,6 +563,8 @@ public:
         addChild(mButtons);
         mSegments = new SegmentsTest();
         addChild(mSegments);
+        mCombos = new ComboBoxTest();
+        addChild(mCombos);
         mSliders = new SliderTest();
         addChild(mSliders);
         mProgress = new ProgressBarTest();
@@ -552,8 +586,10 @@ public:
         mButtons->setFrame(Rect(x, mLabels->frame().maxY(), pref.width, pref.height));
         pref = mSegments->preferredSize(context);
         mSegments->setFrame(Rect(x, mButtons->frame().maxY(), pref.width, pref.height));
+        pref = mCombos->preferredSize(context);
+        mCombos->setFrame(Rect(x, mSegments->frame().maxY(), pref.width, pref.height));
         pref = mSliders->preferredSize(context);
-        mSliders->setFrame(Rect(x, mSegments->frame().maxY(), pref.width, pref.height));
+        mSliders->setFrame(Rect(x, mCombos->frame().maxY(), pref.width, pref.height));
         pref = mProgress->preferredSize(context);
         mProgress->setFrame(Rect(x, mSliders->frame().maxY(), pref.width, pref.height));
         pref = mScroll->preferredSize(context);
@@ -571,6 +607,7 @@ private:
     LabelTest *mLabels;
     ButtonTest *mButtons;
     SegmentsTest *mSegments;
+    ComboBoxTest *mCombos;
     SliderTest *mSliders;
     ProgressBarTest *mProgress;
     ScrollTest *mScroll;

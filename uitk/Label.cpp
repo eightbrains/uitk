@@ -104,37 +104,13 @@ void Label::draw(UIContext& ui)
     auto metrics = font.metrics(ui.dc);
     auto margin = ui.dc.ceilToNearestPixel(metrics.descent);
     Point pt;
-    if (mImpl->alignment & Alignment::kBottom) {
-        pt.y = r.maxY() - (metrics.ascent + metrics.descent);
-    } else if (mImpl->alignment & Alignment::kVCenter) {
-        // Visually the descenders (if any) do not feel like they are part of the
-        // block of text, so just the cap-height should be centered. However,
-        // drawing will start from the ascent (which may be above the cap-height).
-        // The descent below acts as the lower margin.
-        pt.y = r.midY() - 0.5f * metrics.capHeight - (metrics.ascent - metrics.capHeight);
-    } else {
-        // The ascent value is kind of arbitrary, and many fonts seem to use it
-        // to put the leading in, so it is taller than necessary (either that or there
-        // are some really tall glyphs somewhere in those Unicode characters). The cap-height
-        // is the visual ascent.
-        pt.y = r.minY() + margin - (metrics.ascent - metrics.capHeight);
-    }
-    if (mImpl->alignment & Alignment::kRight) {
-        auto width = ui.dc.textMetrics(mImpl->text.c_str(), font, kPaintFill).width;
-        pt.x = r.maxX() - margin - width;
-    } else if (mImpl->alignment & Alignment::kHCenter) {
-        auto width = ui.dc.textMetrics(mImpl->text.c_str(), font, kPaintFill).width;
-        pt.x = r.midX() - 0.5f * width;
-    } else {
-        pt.x = r.minX() + margin;
-    }
 
     if (mImpl->textColor.alpha() == 0.0f) {  // color is unset
         ui.dc.setFillColor(ui.theme.params().textColor);
     } else {
         ui.dc.setFillColor(mImpl->textColor);
     }
-    ui.dc.drawText(mImpl->text.c_str(), pt, font, kPaintFill);
+    ui.dc.drawText(mImpl->text.c_str(), r.insetted(margin, margin), mImpl->alignment, font, kPaintFill);
 
 #if DEBUG_BASELINE
     auto onePx = ui.dc.onePixel();

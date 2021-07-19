@@ -84,6 +84,16 @@ int Application::run()
     return mImpl->osApp->run();
 }
 
+void Application::scheduleLater(Window* w, std::function<void()> f)
+{
+    return mImpl->osApp->scheduleLater(w, f);
+}
+
+bool Application::isOriginInUpperLeft() const
+{
+    return mImpl->osApp->isOriginInUpperLeft();
+}
+
 bool Application::shouldHideScrollbars() const
 {
     return mImpl->osApp->shouldHideScrollbars();

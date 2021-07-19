@@ -35,6 +35,8 @@ struct Point;
 
 struct MouseEvent;
 class Widget;
+struct LayoutContext;
+class PopupMenu;
 
 class Window : public IWindowCallbacks
 {
@@ -48,18 +50,20 @@ class Window : public IWindowCallbacks
 public:
     struct Flags {  // the struct provides scoping like enum class
         enum Value {
-            kNone = 0
+            kNormal = 0,
+            kPopup = (1 << 0)
         };
     };
 
     /// Creates a window with default (x, y) position.
-    /// width, height are in operating-system coordinates.
+    /// width, height are in operating-system coordinates. The window is not
+    /// shown.
     Window(const std::string& title, int width, int height,
-           Flags::Value flags = Flags::kNone);
+           Flags::Value flags = Flags::kNormal);
     /// Creates a window. x, y, width, height are in operating-system
-    /// coordinates.
+    /// coordinates. The window is not shown.
     Window(const std::string& title, int x, int y, int width, int height,
-           Flags::Value flags = Flags::kNone);
+           Flags::Value flags = Flags::kNormal);
     virtual ~Window();
 
     bool isShowing() const;
@@ -67,8 +71,34 @@ public:
 
     void close();
 
+    /// Schedules the window for deletion at a point in the event loop where
+    /// it is safe. This function is safe to call in the setOnWindowWillClose
+    /// callback. (Delete is not safe, as it may delete lambda that is executing.)
+    void deleteLater();
+
     std::string title() const;
     Window* setTitle(const std::string& title);
+
+    /// Resizes the window so that the content rect is of the specified size.
+    /// The actual window may be larger due to the title bar (if the size of the
+    /// window includes the title bar on the OS) and the menubar (if a menubar is
+    /// specified and if the OS includes the menubar as part of the window).
+    /// Use setOSFrame if you need to set the size of the actual window (this is
+    /// not normally helpful).
+    void resize(const Size& contentSize);
+    void move(const PicaPt& dx, const PicaPt& dy);
+
+    OSWindow::OSRect osFrame() const;
+    /// Sets the window rectangle of the operating system's window, in operating
+    /// system coordinates (pixels in Windows and X11, virtual-pixels in macOS).
+    /// Note that this is NOT the content rect, as the operating system may include
+    /// titlebars and/or menubars in the window area. resize() is probably a
+    /// more convenient function if you need to change the window's size.
+    void setOSFrame(float x, float y, float width, float height);
+
+    /// Returns the point in the operating system's window manager of the
+    /// point passed it. This is useful for positioning popup windows.
+    OSWindow::OSPoint convertWindowToOSPoint(const Point& windowPt) const;
 
     /// Adds the child to the Window. Returns pointer this window.
     Window* addChild(Widget *child);
@@ -78,7 +108,14 @@ public:
 
     void raiseToTop() const;
 
+    PicaPt borderWidth() const;
+    
     void* nativeHandle();
+
+    void setOnWindowWillShow(std::function<void(Window& w, const LayoutContext& context)> onWillShow);
+    void setOnWindowDidDeactivate(std::function<void(Window& w)> onDidDeactivate);
+    void setOnWindowShouldClose(std::function<bool(Window& w)> onShouldClose);
+    void setOnWindowWillClose(std::function<void(Window& w)> onWillClose);
 
 public:
     /// Directs mouse events directly to the widget specified until mouse up.
@@ -87,12 +124,18 @@ public:
     void setMouseGrab(Widget *w);
     Widget* mouseGrabWidget() const;
 
+    // On macOS windows without a titlebar do not get activated/deactivated
+    // messages, so we need to register the popup menu
+    void setPopupMenu(PopupMenu *menu);
+
     void onResize(const DrawContext& dc) override;
     void onLayout(const DrawContext& dc) override;
     void onDraw(DrawContext& dc) override;
     void onMouse(const MouseEvent& e) override;
     void onActivated(const Point& currentMousePos) override;
     void onDeactivated() override;
+    bool onWindowShouldClose() override;
+    void onWindowWillClose() override;
 
 protected:
     /// Posts a redraw message to the event loop scheduling a redraw.

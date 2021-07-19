@@ -35,11 +35,54 @@ namespace uitk {
 
 namespace {
 
-uitk::PicaPt calcMargin(const uitk::LayoutContext& context)
+static const PicaPt kUnsetPadding(-10000.0f);
+
+uitk::Size calcPadding(const uitk::LayoutContext& context, const Size& userPadding)
 {
+    if (userPadding.width != kUnsetPadding && userPadding.height != kUnsetPadding) {
+        return userPadding;
+    } else {
+        auto fm = context.theme.params().labelFont.metrics(context.dc);
+        auto em = fm.ascent + fm.descent;
+        auto defaultPadding =  context.dc.roundToNearestPixel(0.25f * em);
+
+        Size padding = userPadding;
+        if (padding.width == kUnsetPadding) {
+            padding.width = defaultPadding;
+        }
+        if (padding.height == kUnsetPadding) {
+            padding.height = defaultPadding;
+        }
+        return padding;
+    }
+}
+
+enum class LayoutMode { kCalcHeight, kLayout };
+
+PicaPt layoutItems(const uitk::LayoutContext& context, LayoutMode mode,
+                   const Rect& frame, const Size& userPadding, const std::vector<Widget*> children)
+{
+    auto padding = calcPadding(context, userPadding);
+
     auto fm = context.theme.params().labelFont.metrics(context.dc);
     auto em = fm.ascent + fm.descent;
-    return context.dc.roundToNearestPixel(0.25f * em);
+
+    auto width = frame.width - 2.0f * padding.width;
+    auto x = padding.width; // inset a little left and right in case cell draw bg and obscures the selection
+    auto y = padding.height;
+    for (auto *child : children) {
+        auto pref = child->preferredSize(context);
+        if (mode == LayoutMode::kLayout) {
+            if (pref.height < Widget::kDimGrow) {
+                child->setFrame(Rect(x, y, width, pref.height));
+            } else {
+                child->setFrame(Rect(x, y, width, em));
+            }
+        }
+        y += pref.height;
+    }
+
+    return y + padding.height;
 }
 
 } // namespace
@@ -47,6 +90,7 @@ uitk::PicaPt calcMargin(const uitk::LayoutContext& context)
 struct ListView::Impl
 {
     Widget *content = nullptr;  // super owns this
+    Size contentPadding = Size(kUnsetPadding, kUnsetPadding);
     SelectionMode selectionMode = SelectionMode::kSingleItem;
     std::unordered_set<int> selectedIndices;
     std::function<void(ListView*)> onChanged;
@@ -67,6 +111,7 @@ ListView::~ListView()
 ListView* ListView::setOnSelectionChanged(std::function<void(ListView*)> onChanged)
 {
     mImpl->onChanged = onChanged;
+    return this;
 }
 
 ListView::SelectionMode ListView::selectionMode() const
@@ -82,12 +127,13 @@ ListView* ListView::setSelectionModel(SelectionMode mode)
     } else if (mode == SelectionMode::kSingleItem && mImpl->selectedIndices.size() > 1) {
         setSelectedIndex(*mImpl->selectedIndices.begin());
     }
+    return this;
 }
 
 void ListView::clearCells()
 {
     clearSelection();
-    mImpl->content->removeAllChildren();
+    mImpl->content->clearAllChildren();
 }
 
 ListView* ListView::addCell(Widget *cell)
@@ -124,6 +170,7 @@ std::vector<int> ListView::selectedIndices() const
     std::vector<int> selection;
     selection.reserve(mImpl->selectedIndices.size());
     selection.insert(selection.end(), mImpl->selectedIndices.begin(), mImpl->selectedIndices.end());
+    return selection;
 }
 
 void ListView::clearSelection()
@@ -145,35 +192,46 @@ void ListView::setSelectedIndices(const std::unordered_set<int> indices)
     setNeedsDraw();
 }
 
+Size ListView::contentPadding() const
+{
+    return mImpl->contentPadding;
+}
+
+ListView* ListView::setContentPadding(const PicaPt& xPadding, const PicaPt& yPadding)
+{
+    mImpl->contentPadding = Size(xPadding, yPadding);
+    return this;
+}
+
+Size ListView::preferredContentSize(const LayoutContext& context) const
+{
+    auto width = preferredSize(context).width;
+    auto height = layoutItems(context, LayoutMode::kCalcHeight, frame(), mImpl->contentPadding,
+                              mImpl->content->children());
+    return Size(width, height);
+}
+
 Size ListView::preferredSize(const LayoutContext& context) const
 {
-    //auto margin = calcMargin(context);
-    return Size(kDimGrow, kDimGrow);
+    auto fm = context.theme.params().labelFont.metrics(context.dc);
+    auto em = fm.ascent + fm.descent;
+
+    auto padding = calcPadding(context, mImpl->contentPadding);
+    auto width = PicaPt::kZero;
+    for (auto *child : mImpl->content->children()) {
+        width = std::max(width, child->preferredSize(context).width);
+    }
+    return Size(width + 2 * padding.width, kDimGrow);
 }
 
 void ListView::layout(const LayoutContext& context)
 {
-    auto margin = calcMargin(context);
-
-    auto fm = context.theme.params().labelFont.metrics(context.dc);
-    auto em = fm.ascent + fm.descent;
-
-    auto width = frame().width - 2.0f * margin;
-    auto x = margin; // inset a little left and right in case cell draw bg and obscures the selection
-    auto y = margin;
-    for (auto *child : mImpl->content->children()) {
-        auto pref = child->preferredSize(context);
-        if (pref.height < kDimGrow) {
-            child->setFrame(Rect(x, y, width, pref.height));
-        } else {
-            child->setFrame(Rect(x, y, width, em));
-        }
-        y += pref.height;
-    }
-
-    Rect contentRect(mImpl->content->frame().x, mImpl->content->frame().y, width, y);
+    auto &f = frame();
+    auto height = layoutItems(context, LayoutMode::kLayout, f, mImpl->contentPadding,
+                              mImpl->content->children());
+    Rect contentRect(mImpl->content->frame().x, mImpl->content->frame().y, f.width, height);
     mImpl->content->setFrame(contentRect);
-    setContentSize(Size(width, contentRect.maxY() + margin));
+    setContentSize(Size(f.width, height));
 
     Super::layout(context);
 }
@@ -183,11 +241,14 @@ Widget::EventResult ListView::mouse(const MouseEvent& e)
     if (e.type == MouseEvent::Type::kButtonUp && e.button.button == MouseButton::kLeft) {
         int idx = calcRowIndex(e.pos);
         if (idx >= 0) {
+            bool selectionChanged = false;
             if (mImpl->selectionMode == SelectionMode::kSingleItem) {
                 setSelectedIndex(idx);
+                selectionChanged = true;
             } else if (mImpl->selectionMode == SelectionMode::kMultipleItems) {
                 if (e.keymods == 0) {
                     setSelectedIndex(idx);
+                    selectionChanged = true;
                 } else if (e.keymods == KeyModifier::kCtrl) {
                     auto it = mImpl->selectedIndices.find(idx);
                     if (it != mImpl->selectedIndices.end()) {
@@ -196,6 +257,7 @@ Widget::EventResult ListView::mouse(const MouseEvent& e)
                         mImpl->selectedIndices.insert(idx);
                     }
                     setSelectedIndices(mImpl->selectedIndices);
+                    selectionChanged = true;
                 } else if (e.keymods == KeyModifier::kShift) {
                     int startIdx = std::min(idx, mImpl->lastClickedRow);
                     int endIdx = std::max(idx, mImpl->lastClickedRow);
@@ -203,8 +265,12 @@ Widget::EventResult ListView::mouse(const MouseEvent& e)
                         mImpl->selectedIndices.insert(i);
                     }
                     setSelectedIndices(mImpl->selectedIndices);
+                    selectionChanged = true;
                 }
                 mImpl->lastClickedRow = idx;
+            }
+            if (selectionChanged && mImpl->onChanged) {
+                mImpl->onChanged(this);
             }
         }
     }

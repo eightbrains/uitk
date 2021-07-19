@@ -68,10 +68,9 @@ MacOSApplication::~MacOSApplication()
     mImpl->delegate = nil;  // ARC releases
 }
 
-bool MacOSApplication::shouldHideScrollbars() const
-{
-    return true;
-}
+bool MacOSApplication::isOriginInUpperLeft() const { return false; }
+
+bool MacOSApplication::shouldHideScrollbars() const { return true; }
 
 Theme::Params MacOSApplication::themeParams() const
 {
@@ -106,6 +105,11 @@ Theme::Params MacOSApplication::themeParams() const
 void MacOSApplication::setExitWhenLastWindowCloses(bool exits)
 {
     mImpl->delegate.exitsWhenLastWindowCloses = exits;
+}
+
+void MacOSApplication::scheduleLater(Window* w, std::function<void()> f)
+{
+    dispatch_async(dispatch_get_main_queue(), ^{ f(); });
 }
 
 int MacOSApplication::run()

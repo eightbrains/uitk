@@ -23,12 +23,14 @@
 #ifndef UITK_APPLICATION_H
 #define UITK_APPLICATION_H
 
+#include <functional>
 #include <memory>
 
 namespace uitk {
 
 class OSApplication;
 class Theme;
+class Window;
 
 class Application
 {
@@ -57,6 +59,15 @@ public:
 
     /// Runs the event loop
     int run();
+
+    /// Posts a function that will be called on the main thread later.
+    /// This function is safe to call on either the main thread or another thread.
+    void scheduleLater(Window* w, std::function<void()> f);
+
+    /// Returns true if the operating system's coordinate system has the
+    /// origin in the upper left (Linux, Windows), otherwise false (macOS,
+    /// which has the origin in the lower left).
+    bool isOriginInUpperLeft() const;
 
     /// Returns true if the operating system hides scrollbars when not
     /// scrolling (e.g. macOS), false otherwise.
