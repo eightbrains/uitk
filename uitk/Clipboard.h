@@ -20,29 +20,35 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
+#ifndef UITK_CLIPBOARD_H
+#define UITK_CLIPBOARD_H
 
-#define ND_NAMESPACE uitk
+#include <memory>
+#include <string>
 
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
+namespace uitk {
 
-#include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "ComboBox.h"
-#include "Events.h"
-#include "Label.h"
-#include "ListView.h"
-#include "ProgressBar.h"
-#include "ScrollView.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
-#include "StringEdit.h"
-#include "UIContext.h"
-#include "Window.h"
+class Clipboard
+{
+    friend class Application;
+public:
+    ~Clipboard();
 
-#include <nativedraw.h>
+    bool hasString() const;
 
-#endif // UITK_H
+    std::string string() const;
+
+    void setString(const std::string& utf8);
+
+protected:
+    Clipboard();
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
+};
+
+} // namespace uitk
+#endif // UITK_CLIPBOARD_H
+
+

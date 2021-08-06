@@ -20,29 +20,25 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
+#ifndef UITK_MACOS_CLIPBOARD_H
+#define UITK_MACOS_CLIPBOARD_H
 
-#define ND_NAMESPACE uitk
+#include "../OSClipboard.h"
 
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
+namespace uitk {
 
-#include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "ComboBox.h"
-#include "Events.h"
-#include "Label.h"
-#include "ListView.h"
-#include "ProgressBar.h"
-#include "ScrollView.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
-#include "StringEdit.h"
-#include "UIContext.h"
-#include "Window.h"
+class MacOSClipboard : public OSClipboard
+{
+public:
+    MacOSClipboard();
+    ~MacOSClipboard();
 
-#include <nativedraw.h>
+    bool hasString() const override;
 
-#endif // UITK_H
+    std::string string() const override;
+
+    void setString(const std::string& utf8) override;
+};
+
+} // namespace uitk
+#endif // UITK_MACOS_CLIPBOARD_H

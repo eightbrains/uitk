@@ -3,12 +3,15 @@ set(ND_NAMESPACE "uitk")
 set(UITK_HEADERS Application.h
                  Button.h
                  Checkbox.h
+                 Clipboard.h
                  ComboBox.h
                  Events.h
+                 Global.h
                  Label.h
                  ListView.h
-                 Global.h
+                 Menu.h
                  OSApplication.h
+                 OSClipboard.h
                  OSWindow.h
                  PopupMenu.h
                  ProgressBar.h
@@ -17,6 +20,9 @@ set(UITK_HEADERS Application.h
                  SegmentedControl.h
                  Slider.h
                  SliderLogic.h
+                 StringEdit.h
+                 StringEditorLogic.h
+                 TextEditorLogic.h
                  UIContext.h
                  Widget.h
                  Window.h
@@ -27,9 +33,11 @@ set(UITK_HEADERS Application.h
 set(UITK_SOURCES Application.cpp
                  Button.cpp
                  Checkbox.cpp
+                 Clipboard.cpp
                  ComboBox.cpp
                  Label.cpp
                  ListView.cpp
+                 Menu.cpp
                  PopupMenu.cpp
                  ProgressBar.cpp
                  ScrollBar.cpp
@@ -37,6 +45,9 @@ set(UITK_SOURCES Application.cpp
                  SegmentedControl.cpp
                  Slider.cpp
                  SliderLogic.cpp
+                 StringEdit.cpp
+                 StringEditorLogic.cpp
+                 TextEditorLogic.cpp
                  Widget.cpp
                  Window.cpp
                  themes/EmpireTheme.cpp
@@ -56,18 +67,22 @@ list(APPEND UITK_LIBS nativedraw)
 
 if (APPLE)
     list(APPEND UITK_HEADERS macos/MacOSApplication.h
+                             macos/MacOSClipboard.h
                              macos/MacOSWindow.h)
     list(APPEND UITK_SOURCES macos/MacOSApplication.mm
+                             macos/MacOSClipboard.mm
                              macos/MacOSWindow.mm)
     find_library(CORE_GRAPHICS CoreGraphics)
     find_library(APPKIT AppKit)
     list(APPEND UITK_LIBS ${APPKIT} ${CORE_GRAPHICS})
 elseif (WIN32)
     list(APPEND UITK_SOURCES win32/Win32Application.cpp
+                             win32/Win32Clipboard.cpp
                              win32/Win32Window.cpp)
     list(APPEND UITK_LIBS d3d11 d2d1 dwrite shcore WindowsApp)
 elseif (UNIX)  # note that APPLE is UNIX, so need to check that first
     list(APPEND UITK_SOURCES x11/X11Application.cpp
+                             x11/X11Clipboard.cpp
                              x11/X11Window.cpp)
     find_package(X11)
     find_path(CAIRO_INCLUDE_DIRS

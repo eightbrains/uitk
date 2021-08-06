@@ -20,29 +20,54 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
+#include "Clipboard.h"
 
-#define ND_NAMESPACE uitk
+#if defined(__APPLE__)
+#include "macos/MacOSClipboard.h"
+#elif defined(_WIN32) || defined(_WIN64)  // _WIN32 covers everything except 64-bit ARM
+#include "win32/Win32Clipboard.h"
+#else
+#include "x11/X11Clipboard.h"
+#endif
 
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
+namespace uitk {
 
-#include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "ComboBox.h"
-#include "Events.h"
-#include "Label.h"
-#include "ListView.h"
-#include "ProgressBar.h"
-#include "ScrollView.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
-#include "StringEdit.h"
-#include "UIContext.h"
-#include "Window.h"
+struct Clipboard::Impl
+{
+    std::unique_ptr<OSClipboard> osClipboard;
+};
 
-#include <nativedraw.h>
+Clipboard::Clipboard()
+    : mImpl(new Impl())
+{
+#if defined(__APPLE__)
+    mImpl->osClipboard = std::make_unique<MacOSClipboard>();
+#elif defined(_WIN32) || defined(_WIN64)  // _WIN32 covers everything except 64-bit ARM
+    mImpl->osClipboard = std::make_unique<Win32Clipboard>();
+#else
+    mImpl->osClipboard = std::make_unique<X11Clipboard>();
+#endif
+}
 
-#endif // UITK_H
+Clipboard::~Clipboard()
+{
+}
+
+bool Clipboard::hasString() const
+{
+    return mImpl->osClipboard->hasString();
+}
+
+std::string Clipboard::string() const
+{
+    return mImpl->osClipboard->string();
+}
+
+void Clipboard::setString(const std::string& utf8)
+{
+    mImpl->osClipboard->setString(utf8);
+}
+
+} // namespace uitk
+
+

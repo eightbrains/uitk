@@ -30,6 +30,7 @@
 namespace uitk {
 
 struct LayoutContext;
+class TextEditorLogic;
 struct UIContext;
 
 class Theme {
@@ -126,6 +127,9 @@ public:
     virtual Size calcPreferredComboBoxSize(const DrawContext& dc, const PicaPt& preferredMenuWidth) const = 0;
     virtual Size calcPreferredSliderThumbSize(const DrawContext& dc) const = 0;
     virtual Size calcPreferredProgressBarSize(const DrawContext& dc) const = 0;
+    virtual Size calcPreferredTextEditSize(const DrawContext& dc, const Font& font) const = 0;
+    virtual Rect calcTextEditRectForFrame(const Rect& frame, const DrawContext& dc,
+                                          const Font& font) const = 0;
     virtual PicaPt calcPreferredScrollbarThickness(const DrawContext& dc) const = 0;
     virtual Size calcPreferredMenuItemSize(const DrawContext& dc, const std::string& text) const = 0;
 
@@ -165,6 +169,11 @@ public:
                                     WidgetState state) const = 0;
     virtual void drawProgressBar(UIContext& ui, const Rect& frame, float value,
                                  const WidgetStyle& style, WidgetState state) const = 0;
+    virtual WidgetStyle textEditStyle(const WidgetStyle& style, WidgetState state) const = 0;
+    virtual void drawTextEdit(UIContext& ui, const Rect& frame, const PicaPt& scrollOffset,
+                              const std::string& placeholder, const std::string& text,
+                              TextEditorLogic& editor,
+                              const WidgetStyle& style, WidgetState state, bool hasFocus) const = 0;
     virtual void clipScrollView(UIContext& ui, const Rect& frame,
                                 const WidgetStyle& style, WidgetState state) const = 0;
     virtual void drawScrollView(UIContext& ui, const Rect& frame,

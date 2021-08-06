@@ -20,29 +20,59 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
+#include "MacOSClipboard.h"
 
-#define ND_NAMESPACE uitk
+#import <AppKit/AppKit.h>
 
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
+namespace uitk {
 
-#include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "ComboBox.h"
-#include "Events.h"
-#include "Label.h"
-#include "ListView.h"
-#include "ProgressBar.h"
-#include "ScrollView.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
-#include "StringEdit.h"
-#include "UIContext.h"
-#include "Window.h"
+namespace {
+NSString* bestTypeForString()
+{
+    return [NSPasteboard.generalPasteboard availableTypeFromArray:@[
+        NSPasteboardTypeString, NSPasteboardTypeHTML, NSPasteboardTypeURL, NSPasteboardTypeFileURL ] ];
+}
 
-#include <nativedraw.h>
+} // namespace
 
-#endif // UITK_H
+MacOSClipboard::MacOSClipboard()
+{
+}
+
+MacOSClipboard::~MacOSClipboard()
+{
+}
+
+bool MacOSClipboard::hasString() const
+{
+    NSString *best = bestTypeForString();
+    return (best != nil);
+}
+
+std::string MacOSClipboard::string() const
+{
+    NSString *best = bestTypeForString();
+    NSString *str = nil;
+    if (best != nil) {
+        str = [NSPasteboard.generalPasteboard stringForType:best];
+    }
+    if (str != nil) {
+        return str.UTF8String;
+    } else {
+        return "";
+    }
+}
+
+void MacOSClipboard::setString(const std::string& utf8)
+{
+    [NSPasteboard.generalPasteboard clearContents];
+    if (!utf8.empty()) {
+        NSString *s = [NSString stringWithUTF8String:utf8.c_str()];
+        [NSPasteboard.generalPasteboard setString:s forType:NSPasteboardTypeString];
+    }
+}
+
+} // namespace uitk
+
+
+

@@ -20,29 +20,47 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
+#ifndef UITK_STRING_EDIT_H
+#define UITK_STRING_EDIT_H
 
-#define ND_NAMESPACE uitk
+#include "Widget.h"
 
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
+namespace uitk {
 
-#include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "ComboBox.h"
-#include "Events.h"
-#include "Label.h"
-#include "ListView.h"
-#include "ProgressBar.h"
-#include "ScrollView.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
-#include "StringEdit.h"
-#include "UIContext.h"
-#include "Window.h"
+class StringEdit : public Widget
+{
+    using Super = Widget;
+public:
+    StringEdit();
+    ~StringEdit();
 
-#include <nativedraw.h>
+    const std::string& text() const;
+    StringEdit* setText(const std::string& text);
 
-#endif // UITK_H
+    const std::string& placeholderText() const;
+    StringEdit* setPlaceholderText(const std::string& text);
+
+    Size preferredSize(const LayoutContext& context) const override;
+    void layout(const LayoutContext& context) override;
+
+    EventResult mouse(const MouseEvent& e) override;
+    void key(const KeyEvent& e) override;
+    void keyFocusEnded() override;
+
+    void draw(UIContext& context) override;
+
+    /// Called whenever the text changes in response to user input.
+    /// Is not called when the text is changed directly through setText().
+    void setOnTextChanged(std::function<void(const std::string&)> onChanged);
+
+    /// Called whenever the text is commited via Enter/Return or losing
+    /// focus.
+    void setOnValueChanged(std::function<void(StringEdit*)> onChanged);
+    
+private:
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
+};
+
+}  // namespace uitk
+#endif // UITK_STRING_EDIT_H

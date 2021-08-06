@@ -28,6 +28,7 @@
 
 namespace uitk {
 
+class Clipboard;
 class OSApplication;
 class Theme;
 class Window;
@@ -72,6 +73,9 @@ public:
     /// Returns true if the operating system hides scrollbars when not
     /// scrolling (e.g. macOS), false otherwise.
     bool shouldHideScrollbars() const;
+
+    /// Gets the application's clipboard
+    Clipboard& clipboard() const;
 
     /// Gets the application's theme.
     std::shared_ptr<Theme> theme() const;

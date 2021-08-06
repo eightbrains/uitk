@@ -22,12 +22,13 @@
 
 #include "Application.h"
 
+#include "Clipboard.h"
 #include "OSApplication.h"
 #include "themes/EmpireTheme.h"
 
 #if defined(__APPLE__)
 #include "macos/MacOSApplication.h"
-#elif defined(_WIN32) || defined(_WIN64)
+#elif defined(_WIN32) || defined(_WIN64)  // _WIN32 covers everything except 64-bit ARM
 #include "win32/Win32Application.h"
 #else
 #include "x11/X11Application.h"
@@ -42,6 +43,7 @@ struct Application::Impl
     static Application* instance;
 
     std::unique_ptr<OSApplication> osApp;
+    std::unique_ptr<Clipboard> clipboard;
     std::shared_ptr<Theme> theme;
 };
 Application* Application::Impl::instance = nullptr;
@@ -112,6 +114,16 @@ std::shared_ptr<Theme> Application::theme() const
 #endif
     }
     return mImpl->theme;
+}
+
+Clipboard& Application::clipboard() const
+{
+    if (!mImpl->clipboard) {
+        // Application is a friend of Clipboard, so we can construct one, but
+        // std::make_unique() is not a friend, so that fails.
+        mImpl->clipboard = std::unique_ptr<Clipboard>(new Clipboard());
+    }
+    return *mImpl->clipboard;
 }
 
 void Application::onSystemThemeChanged()

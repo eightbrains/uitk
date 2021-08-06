@@ -30,6 +30,7 @@
 
 namespace uitk {
 
+struct KeyEvent;
 struct MouseEvent;
 struct LayoutContext;
 struct UIContext;
@@ -103,6 +104,9 @@ public:
     Point convertToLocalFromWindow(const Point& windowPt) const;
     Point convertToWindowFromLocal(const Point& localPt) const;
 
+    bool focused() const;
+    void resignKeyFocus() const;
+
     /// returned by size calculations to indicate that the widget wants
     /// as much space as possible in that dimension.
     static const PicaPt kDimGrow;
@@ -123,6 +127,10 @@ public:
     virtual EventResult mouse(const MouseEvent& e);
     virtual void mouseEntered();
     virtual void mouseExited();
+
+    virtual void key(const KeyEvent& e);
+    virtual void keyFocusStarted();
+    virtual void keyFocusEnded();
 
     /// Draws the widget. Classes inheriting from Widget must draw the frame
     /// themselves with Theme::drawFrame() or the desired equivalent. (This

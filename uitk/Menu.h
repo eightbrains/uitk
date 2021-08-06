@@ -20,29 +20,33 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
+#ifndef UITK_MENU_H
+#define UITK_MENU_H
 
-#define ND_NAMESPACE uitk
+#include <string>
 
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
+namespace uitk {
 
-#include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "ComboBox.h"
-#include "Events.h"
-#include "Label.h"
-#include "ListView.h"
-#include "ProgressBar.h"
-#include "ScrollView.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
-#include "StringEdit.h"
-#include "UIContext.h"
-#include "Window.h"
+class KeyEvent;
 
-#include <nativedraw.h>
+class Menu
+{
+public:
+    enum class StandardItem {
+        kAbout = 1,
+        kQuit,
+        kCopy, kCut, kPaste,
+        kUndo, kRedo,
+        kPreferences
+    };
 
-#endif // UITK_H
+    /// Returns true if the key event is the shortcut key for the given item
+    /// type (assuming a standard shortcut exists). You should
+    /// not need to call this function if you are using the menus.
+    static bool isShortcutFor(StandardItem item, const KeyEvent& e);
+
+public:
+};
+
+} // namespace uitk
+#endif // UITK_MENU_H

@@ -52,6 +52,7 @@ struct Window::Impl
     std::string title;
     std::unique_ptr<Widget> rootWidget;
     Widget *grabbedWidget = nullptr;
+    Widget *focusedWidget = nullptr;
     PopupMenu *activePopup = nullptr;
     PopupState popupState = PopupState::kNone;
     std::function<void(Window& w, const LayoutContext& context)> onWillShow;
@@ -60,6 +61,7 @@ struct Window::Impl
     std::function<void(Window& w)> onWillClose;
     bool inResize = false;
     bool inMouse = false;
+    bool inKey = false;
     bool inDraw = false;
     bool needsDraw = false;
 
@@ -200,7 +202,7 @@ void Window::setNeedsDraw()
     // it sends an actual message, like on X11), or we may draw continuously.
     // Note that Button sets the color of the text, and that calls
     // setNeedsDraw().
-    if (mImpl->inMouse || mImpl->inResize || mImpl->inDraw) {
+    if (mImpl->inMouse || mImpl->inKey || mImpl->inResize || mImpl->inDraw) {
         mImpl->needsDraw = true;
     } else {
         postRedraw();
@@ -243,10 +245,27 @@ void Window::setMouseGrab(Widget *w)
     mImpl->grabbedWidget = w;
 }
 
-Widget* Window::mouseGrabWidget() const
+Widget* Window::mouseGrabWidget() const { return mImpl->grabbedWidget; }
+
+void Window::setFocusWidget(Widget *w)
 {
-    return mImpl->grabbedWidget;
+    auto *oldFocusedWidget = mImpl->focusedWidget;
+    bool isDifferent = (w != oldFocusedWidget);
+
+    mImpl->focusedWidget = w;
+
+    // Call keyFocusEnded after setting, to avoid an infinite loop
+    // in case oldFocusedWidget calls resignKeyFocus().
+    if (oldFocusedWidget && isDifferent) {
+        oldFocusedWidget->keyFocusEnded();
+    }
+
+    if (isDifferent && w) {
+        mImpl->focusedWidget->keyFocusStarted();
+    }
 }
+
+Widget* Window::focusWidget() const { return mImpl->focusedWidget; }
 
 PicaPt Window::borderWidth() const { return mImpl->window->borderWidth(); }
 
@@ -350,6 +369,19 @@ void Window::onMouse(const MouseEvent& eOrig)
     }
 
     mImpl->inMouse = false;
+    if (mImpl->needsDraw) {
+        postRedraw();
+        mImpl->needsDraw = false;
+    }
+}
+
+void Window::onKey(const KeyEvent &e)
+{
+    mImpl->inKey = true;
+    if (mImpl->focusedWidget) {
+        mImpl->focusedWidget->key(e);
+    }
+    mImpl->inKey = false;
     if (mImpl->needsDraw) {
         postRedraw();
         mImpl->needsDraw = false;

@@ -30,6 +30,7 @@
 
 namespace uitk {
 
+struct KeyEvent;
 struct MouseEvent;
 
 class IWindowCallbacks
@@ -42,6 +43,7 @@ public:
     virtual void onLayout(const DrawContext& dc) = 0;
     virtual void onDraw(DrawContext& dc) = 0;
     virtual void onMouse(const MouseEvent& e) = 0;
+    virtual void onKey(const KeyEvent& e) = 0;
     virtual void onActivated(const Point& currentMousePos) = 0;
     virtual void onDeactivated() = 0;
     virtual bool onWindowShouldClose() = 0;

@@ -20,29 +20,24 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
+#ifndef UITK_OS_CLIPBOARD_H
+#define UITK_OS_CLIPBOARD_H
 
-#define ND_NAMESPACE uitk
+#include <string>
 
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
+namespace uitk {
 
-#include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "ComboBox.h"
-#include "Events.h"
-#include "Label.h"
-#include "ListView.h"
-#include "ProgressBar.h"
-#include "ScrollView.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
-#include "StringEdit.h"
-#include "UIContext.h"
-#include "Window.h"
+class OSClipboard
+{
+public:
+    virtual ~OSClipboard() {};
 
-#include <nativedraw.h>
+    virtual bool hasString() const = 0;
 
-#endif // UITK_H
+    virtual std::string string() const = 0;
+
+    virtual void setString(const std::string& utf8) = 0;
+};
+
+} // namespace uitk
+#endif // UITK_OS_CLIPBOARD_H
