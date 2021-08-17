@@ -63,8 +63,13 @@ const std::string& StringEditorLogic::string() const
 void StringEditorLogic::setString(const std::string& utf8)
 {
     mImpl->stringUTF8 = utf8;
-    setSelection(Selection(mImpl->stringUTF8.size()));
+    setSelection(Selection(Index(mImpl->stringUTF8.size())));
     mImpl->needsLayout = true;
+}
+
+bool StringEditorLogic::isEmpty() const
+{
+    return mImpl->stringUTF8.empty();
 }
 
 std::string StringEditorLogic::textForRange(Index start, Index end) const

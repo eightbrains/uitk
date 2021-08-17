@@ -53,7 +53,7 @@ struct StandardItemInfo
         add(Menu::StandardItem::kCut, "Cut", KeyModifier::kCtrl, Key::kX);
         add(Menu::StandardItem::kPaste, "Paste", KeyModifier::kCtrl, Key::kV);
         add(Menu::StandardItem::kUndo, "Undo", KeyModifier::kCtrl, Key::kZ);
-        add(Menu::StandardItem::kRedo, "Redo", KeyModifier::kCtrl, Key::kShiftZ);
+        add(Menu::StandardItem::kRedo, "Redo", KeyModifier::kCtrl | KeyModifier::kShift, Key::kZ);
         add(Menu::StandardItem::kAbout, "About...");
         add(Menu::StandardItem::kPreferences, "Preferences...");
 #if defined(__APPLE__)

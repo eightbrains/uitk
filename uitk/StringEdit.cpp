@@ -207,6 +207,13 @@ void StringEdit::key(const KeyEvent& e)
     }
 }
 
+
+void StringEdit::text(const TextEvent& e)
+{
+    mImpl->editor.handleTextEvent(e);
+    setNeedsDraw();
+}
+
 void StringEdit::keyFocusEnded()
 {
     // Call editor.onTextCommitted() so that we do not duplicate code and do not
@@ -235,8 +242,7 @@ void StringEdit::draw(UIContext& context)
     }
 
     context.theme.drawTextEdit(context, bounds(), mImpl->scrollOffset,
-                               mImpl->placeholder, mImpl->editor.string(),
-                               mImpl->editor, style(state()), state(), focused());
+                               mImpl->placeholder, mImpl->editor, style(state()), state(), focused());
     Super::draw(context);
 }
 

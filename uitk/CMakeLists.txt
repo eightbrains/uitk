@@ -76,8 +76,13 @@ if (APPLE)
     find_library(APPKIT AppKit)
     list(APPEND UITK_LIBS ${APPKIT} ${CORE_GRAPHICS})
 elseif (WIN32)
+    list(APPEND UITK_HEADERS win32/Win32Application.h
+                             win32/Win32Clipboard.h
+                             win32/Win32Utils.h
+                             win32/Win32Window.h)
     list(APPEND UITK_SOURCES win32/Win32Application.cpp
                              win32/Win32Clipboard.cpp
+                             win32/Win32Utils.cpp
                              win32/Win32Window.cpp)
     list(APPEND UITK_LIBS d3d11 d2d1 dwrite shcore WindowsApp)
 elseif (UNIX)  # note that APPLE is UNIX, so need to check that first

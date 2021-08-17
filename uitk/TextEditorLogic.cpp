@@ -212,26 +212,32 @@ bool TextEditorLogic::handleKeyEvent(const KeyEvent& e)
             }
             break;
         default:
-            if (!isCommandMod && int(e.key) >= ' ' && int(e.key) <= '~') {
-                char s[2] = { char(e.key), 0 };
-                insertText(s);
-                if (onTextChanged) {
-                    onTextChanged();
+            if (e.keymods == KeyModifier::kCtrl
+                && (int(e.key) >= int(Key::kA) && int(e.key) <= int(Key::kZ))) {
+                // Handle copy/paste in case the menu is not used. If it is used,
+                // the shortcut handling should grab the event and we should not even
+                // see it.
+                if (Menu::isShortcutFor(Menu::StandardItem::kCopy, e)) {
+                    copyToClipboard();
+                } else if (Menu::isShortcutFor(Menu::StandardItem::kCut, e)) {
+                    cutToClipboard();
+                    if (onTextChanged) { onTextChanged(); }
+                } else if (Menu::isShortcutFor(Menu::StandardItem::kPaste, e)) {
+                    pasteFromClipboard();
+                    if (onTextChanged) { onTextChanged(); }
                 }
-            }
-            // Handle copy/paste in case the menu is not used. If it is used,
-            // the shortcut handling should grab the event and we should not even
-            // see it.
-            else if (Menu::isShortcutFor(Menu::StandardItem::kCopy, e)) {
-                copyToClipboard();
-            } else if (Menu::isShortcutFor(Menu::StandardItem::kCut, e)) {
-                cutToClipboard();
-            } else if (Menu::isShortcutFor(Menu::StandardItem::kPaste, e)) {
-                pasteFromClipboard();
             }
             break;
     }
     return true;
+}
+
+void TextEditorLogic::handleTextEvent(const TextEvent& e)
+{
+    insertText(e.utf8);
+    if (onTextChanged) {
+        onTextChanged();
+    }
 }
 
 void TextEditorLogic::insertText(const std::string& utf8)
@@ -357,7 +363,7 @@ void TextEditorLogic::moveToPrevWord(SelectionMode mode)
 {
     auto currIdx = selection().cursorIndex(-1);
     if (currIdx == 0) {
-        return currIdx;
+        return;
     }
     auto wordStartIdx = startOfWord(currIdx);
     if (wordStartIdx == currIdx) {

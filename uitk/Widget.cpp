@@ -447,6 +447,10 @@ void Widget::keyFocusEnded()
 {
 }
 
+void Widget::text(const TextEvent& e)
+{
+}
+
 void Widget::draw(UIContext& context)
 {
     // If we are truly just a Widget (instead of a derived class that is

@@ -20,33 +20,15 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_MENU_H
-#define UITK_MENU_H
+#ifndef UITK_WIN32_UTILS_H
+#define UITK_WIN32_UTILS_H
 
 #include <string>
 
 namespace uitk {
 
-struct KeyEvent;
-
-class Menu
-{
-public:
-    enum class StandardItem {
-        kAbout = 1,
-        kQuit,
-        kCopy, kCut, kPaste,
-        kUndo, kRedo,
-        kPreferences
-    };
-
-    /// Returns true if the key event is the shortcut key for the given item
-    /// type (assuming a standard shortcut exists). You should
-    /// not need to call this function if you are using the menus.
-    static bool isShortcutFor(StandardItem item, const KeyEvent& e);
-
-public:
-};
+std::wstring win32UnicodeFromUTF8(const std::string& utf8);
+std::string utf8FromWin32Unicode(wchar_t *wstr);
 
 } // namespace uitk
-#endif // UITK_MENU_H
+#endif // UITK_WIN32_UTILS_H

@@ -36,6 +36,7 @@ public:
     const std::string& string() const;
     void setString(const std::string& utf8);
 
+    bool isEmpty() const override;
     std::string textForRange(Index start, Index end) const override;
 
     void insertText(Index i, const std::string& utf8) override;

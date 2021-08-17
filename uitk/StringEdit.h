@@ -25,6 +25,8 @@
 
 #include "Widget.h"
 
+#include <functional>
+
 namespace uitk {
 
 class StringEdit : public Widget
@@ -45,6 +47,7 @@ public:
 
     EventResult mouse(const MouseEvent& e) override;
     void key(const KeyEvent& e) override;
+    void text(const TextEvent& e) override;
     void keyFocusEnded() override;
 
     void draw(UIContext& context) override;

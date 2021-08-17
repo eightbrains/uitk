@@ -32,6 +32,7 @@ namespace uitk {
 
 struct KeyEvent;
 struct MouseEvent;
+struct TextEvent;
 struct LayoutContext;
 struct UIContext;
 class Window;
@@ -131,6 +132,8 @@ public:
     virtual void key(const KeyEvent& e);
     virtual void keyFocusStarted();
     virtual void keyFocusEnded();
+
+    virtual void text(const TextEvent& e);
 
     /// Draws the widget. Classes inheriting from Widget must draw the frame
     /// themselves with Theme::drawFrame() or the desired equivalent. (This

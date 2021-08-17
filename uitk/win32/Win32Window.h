@@ -28,6 +28,8 @@
 
 namespace uitk {
 
+class ClickCounter;
+
 class Win32Window : public OSWindow
 {
 public:
@@ -65,12 +67,16 @@ public:
     void* nativeHandle() override;
     IWindowCallbacks& callbacks() override;
 
-public:
+public:  // these are public so that WndProc (which cannot be a member function) can use them
+    ClickCounter& clickCounter();
+
     void onMoved();
     void onResize();
     void onLayout();
     void onDraw();
     void onMouse(MouseEvent& e, int x, int y);
+    void onKey(const KeyEvent& e);
+    void onText(const TextEvent& e);
     void onActivated(const Point& currentMousePos);
     void onDeactivated();
     bool onWindowShouldClose();

@@ -795,8 +795,7 @@ Theme::WidgetStyle VectorBaseTheme::textEditStyle(const WidgetStyle& style, Widg
 }
 
 void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaPt& scrollOffset,
-                                   const std::string& placeholder, const std::string& text,
-                                   TextEditorLogic& editor,
+                                   const std::string& placeholder, TextEditorLogic& editor,
                                    const WidgetStyle& style, WidgetState state, bool hasFocus) const
 {
     auto s = textEditStyle(style, state);
@@ -832,7 +831,7 @@ void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaP
         ui.dc.drawRect(selectionRect, kPaintFill);
     }
 
-    if (text.empty()) {
+    if (editor.isEmpty()) {
         if (!placeholder.empty()) {
             ui.dc.setFillColor(mTextEditStyles[int(WidgetState::kDisabled)].fgColor);
             ui.dc.drawText(placeholder.c_str(), textRect, Alignment::kLeft | Alignment::kVCenter,
@@ -935,7 +934,7 @@ void VectorBaseTheme::drawMenuItem(UIContext& ui, const Rect& frame, const std::
 
 void VectorBaseTheme::drawMenuSeparatorItem(UIContext& ui, const Rect& frame) const
 {
-    int thicknessPx = PicaPt(2) / ui.dc.onePixel();
+    int thicknessPx = int(PicaPt(2) / ui.dc.onePixel());
     if (thicknessPx % 2 == 1) {
         thicknessPx += 1;
     }

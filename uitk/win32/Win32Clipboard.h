@@ -20,33 +20,25 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_MENU_H
-#define UITK_MENU_H
+#ifndef UITK_WIN32_CLIPBOARD_H
+#define UITK_WIN32_CLIPBOARD_H
 
-#include <string>
+#include "../OSClipboard.h"
 
 namespace uitk {
 
-struct KeyEvent;
-
-class Menu
+class Win32Clipboard : public OSClipboard
 {
 public:
-    enum class StandardItem {
-        kAbout = 1,
-        kQuit,
-        kCopy, kCut, kPaste,
-        kUndo, kRedo,
-        kPreferences
-    };
+    Win32Clipboard();
+    ~Win32Clipboard();
 
-    /// Returns true if the key event is the shortcut key for the given item
-    /// type (assuming a standard shortcut exists). You should
-    /// not need to call this function if you are using the menus.
-    static bool isShortcutFor(StandardItem item, const KeyEvent& e);
+    bool hasString() const override;
 
-public:
+    std::string string() const override;
+
+    void setString(const std::string& utf8) override;
 };
 
 } // namespace uitk
-#endif // UITK_MENU_H
+#endif // UITK_WIN32_CLIPBOARD_H

@@ -31,12 +31,13 @@ namespace uitk {
 class Color;
 class DrawContext;
 class Font;
-class PicaPt;
-class Point;
+struct PicaPt;
+struct Point;
 class TextLayout;
 
 struct KeyEvent;
 struct MouseEvent;
+struct TextEvent;
 
 class TextEditorLogic
 {
@@ -79,11 +80,14 @@ public:
                     }
                     return end;
             }
+            return Index(-1);  // cannot happen but makes MSVC happy
         }
     };
 
     TextEditorLogic();
     virtual ~TextEditorLogic();
+
+    virtual bool isEmpty() const = 0;
 
     /// Returns the text in the range [start, end).
     virtual std::string textForRange(Index start, Index end) const = 0;
@@ -122,6 +126,7 @@ public:
     /// Returns true if consumed the event.
     virtual bool handleMouseEvent(const MouseEvent& e);
     virtual bool handleKeyEvent(const KeyEvent& e);  // returns true if consumed event
+    virtual void handleTextEvent(const TextEvent& e);
     enum class SelectionMode { kReplace, kExtend };
     virtual void insertText(const std::string& utf8);
     virtual void deleteSelection();

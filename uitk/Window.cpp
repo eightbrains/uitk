@@ -388,6 +388,19 @@ void Window::onKey(const KeyEvent &e)
     }
 }
 
+void Window::onText(const TextEvent& e)
+{
+    mImpl->inKey = true; // these are usually generated from key events
+    if (mImpl->focusedWidget) {
+        mImpl->focusedWidget->text(e);
+    }
+    mImpl->inKey = false;
+    if (mImpl->needsDraw) {
+        postRedraw();
+        mImpl->needsDraw = false;
+    }
+}
+
 void Window::onResize(const DrawContext& dc)
 {
     if (!mImpl->window) {

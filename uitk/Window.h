@@ -138,6 +138,7 @@ public:
     void onDraw(DrawContext& dc) override;
     void onMouse(const MouseEvent& e) override;
     void onKey(const KeyEvent& e) override;
+    void onText(const TextEvent& e) override;
     void onActivated(const Point& currentMousePos) override;
     void onDeactivated() override;
     bool onWindowShouldClose() override;

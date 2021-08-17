@@ -171,8 +171,7 @@ public:
                                  const WidgetStyle& style, WidgetState state) const = 0;
     virtual WidgetStyle textEditStyle(const WidgetStyle& style, WidgetState state) const = 0;
     virtual void drawTextEdit(UIContext& ui, const Rect& frame, const PicaPt& scrollOffset,
-                              const std::string& placeholder, const std::string& text,
-                              TextEditorLogic& editor,
+                              const std::string& placeholder, TextEditorLogic& editor,
                               const WidgetStyle& style, WidgetState state, bool hasFocus) const = 0;
     virtual void clipScrollView(UIContext& ui, const Rect& frame,
                                 const WidgetStyle& style, WidgetState state) const = 0;
