@@ -43,6 +43,10 @@ MacOSClipboard::~MacOSClipboard()
 {
 }
 
+bool MacOSClipboard::supportsX11SelectionString() const { return false; }
+void MacOSClipboard::setX11SelectionString(const std::string& utf8) { }
+std::string MacOSClipboard::x11SelectionString() const { return ""; }
+
 bool MacOSClipboard::hasString() const
 {
     NSString *best = bestTypeForString();

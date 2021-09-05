@@ -22,6 +22,9 @@
 
 #include "StringEditorLogic.h"
 
+#include "Application.h"
+#include "Clipboard.h"
+
 #include <nativedraw.h>
 
 namespace uitk {
@@ -254,6 +257,12 @@ TextEditorLogic::Selection StringEditorLogic::selection() const
 void StringEditorLogic::setSelection(const Selection& sel)
 {
     mImpl->selection = sel;
+    if (sel.start < sel.end) {
+        auto &clip = Application::instance().clipboard();
+        if (clip.supportsX11SelectionString()) {
+            clip.setX11SelectionString(textForRange(sel.start, sel.end));
+        }
+    }
 }
 
 }  // namespace uitk

@@ -37,6 +37,10 @@ Win32Clipboard::~Win32Clipboard()
 {
 }
 
+bool Win32Clipboard::supportsX11SelectionString() const { return false; }
+void Win32Clipboard::setX11SelectionString(const std::string& utf8) {}
+std::string Win32Clipboard::x11SelectionString() const { return ""; }
+
 bool Win32Clipboard::hasString() const
 {
     // CF_TEXT and CF_OEMTEXT are automatically converted to CF_UNICODETEXT.

@@ -29,6 +29,7 @@
 
 namespace uitk {
 
+class Clipboard;
 class Window;
 
 class OSApplication
@@ -43,6 +44,8 @@ public:
 
     virtual bool isOriginInUpperLeft() const = 0;
     virtual bool shouldHideScrollbars() const = 0;
+
+    virtual Clipboard& clipboard() const = 0;
 
     virtual Theme::Params themeParams() const = 0;
 };

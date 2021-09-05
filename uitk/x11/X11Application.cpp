@@ -22,12 +22,18 @@
 
 #include "X11Application.h"
 
+#include "X11Clipboard.h"
 #include "X11Window.h"
+#include "../Application.h"
 #include "../Events.h"
 #include "../themes/EmpireTheme.h"
 
 #include <X11/Xlib.h>
+#include <X11/Xatom.h>
 #include <X11/Xresource.h>
+#include <X11/Xutil.h>
+
+#include <locale.h>
 
 #include <list>
 #include <map>
@@ -37,6 +43,68 @@
 namespace {
 static const char *kDB_XftDPI = "Xft.dpi";
 static const char *kDB_XftDPI_alt = "Xft.Dpi";
+
+static const long kDoubleClickMaxMillisecs = 500;  // Windows' default
+static const uitk::PicaPt kDoubleClickMaxRadiusPicaPt(2);  // 2/72 inch
+}
+
+namespace uitk {
+
+static std::unordered_map<KeySym, Key> gKeysym2key = {
+    { XK_BackSpace, Key::kBackspace },
+    { XK_Tab, Key::kTab },
+    { XK_KP_Enter, Key::kEnter },
+    { XK_Return, Key::kReturn },
+    { XK_Escape, Key::kEscape },
+    { XK_space, Key::kSpace },
+    { XK_KP_Multiply, Key::kNumMultiply },
+    { XK_KP_Add, Key::kNumPlus },
+    { XK_KP_Separator, Key::kNumComma },
+    { XK_KP_Subtract, Key::kNumMinus },
+    { XK_KP_Decimal, Key::kNumPeriod },
+    { XK_KP_Divide, Key::kNumSlash },
+    { XK_Delete, Key::kDelete },
+    { XK_Insert, Key::kInsert },
+    { XK_Shift_L, Key::kShift },
+    { XK_Shift_R, Key::kShift },
+    { XK_Control_L, Key::kCtrl },
+    { XK_Control_R, Key::kCtrl },
+    { XK_Alt_L, Key::kAlt },
+    { XK_Alt_R, Key::kAlt },
+    { XK_Meta_L, Key::kMeta },
+    { XK_Meta_R, Key::kMeta },
+    { XK_Caps_Lock, Key::kCapsLock },
+    { XK_Num_Lock, Key::kNumLock },
+    { XK_Left, Key::kLeft },
+    { XK_KP_Left, Key::kLeft },
+    { XK_Right, Key::kRight },
+    { XK_KP_Right, Key::kRight },
+    { XK_Up, Key::kUp },
+    { XK_KP_Up, Key::kUp },
+    { XK_Down, Key::kDown },
+    { XK_KP_Down, Key::kDown },
+    { XK_Home, Key::kHome },
+    { XK_KP_Home, Key::kHome },
+    { XK_End, Key::kEnd },
+    { XK_KP_End, Key::kEnd },
+    { XK_Page_Up, Key::kPageUp },
+    { XK_KP_Page_Up, Key::kPageUp },
+    { XK_Page_Down, Key::kPageDown },
+    { XK_KP_Page_Down, Key::kPageDown },
+    { XK_F1, Key::kF1 },
+    { XK_F2, Key::kF2 },
+    { XK_F3, Key::kF3 }, 
+    { XK_F4, Key::kF4 }, 
+    { XK_F5, Key::kF5 }, 
+    { XK_F6, Key::kF6 }, 
+    { XK_F7, Key::kF7 }, 
+    { XK_F8, Key::kF8 }, 
+    { XK_F9, Key::kF9 }, 
+    { XK_F10, Key::kF10 },
+    { XK_F11, Key::kF11 },
+    { XK_F12, Key::kF12 },
+    { XK_Print, Key::kPrintScreen }
+};
 
 int toKeymods(unsigned int xstate) {
     int keymods = 0;
@@ -49,22 +117,83 @@ int toKeymods(unsigned int xstate) {
     if (xstate & Mod1Mask) {
         keymods |= uitk::KeyModifier::kAlt;
     }
-    //if (xstate & Mod2Mask) {
-    //    keymods |= uitk::KeyModifier::kNumLock;
-    //}
     if (xstate & Mod4Mask) {
         keymods |= uitk::KeyModifier::kMeta;
     }
-    if (xstate & LockMask) {
-        keymods |= uitk::KeyModifier::kCapsLock;
-    }
+    // Do not set numlock or capslock in the keymods, otherwise you have
+    // to remember to mask them out when checking for other things, which
+    // you are almost sure to forget to do.
+    // (Mod2Mask is numlock and LockMask is capslock)
     return keymods;
 }
 
-}
+// Adjusted from n-click detection in Win32Window.cpp.
+// See https://devblogs.microsoft.com/oldnewthing/20041018-00/?p=37543 for
+// pitfalls in detecting double-clicks, triple-clicks, etc.
+class ClickCounter
+{
+public:
+    ClickCounter()
+    {
+        reset();
+    }
 
-namespace uitk {
+    int nClicks() const { return mNClicks;  }
 
+    void reset()
+    {
+        mLastClickTime = Time(-1);  // also will exercise rollover code path!
+        mLastClickWindow = 0;
+        mButton = -1;
+        mNClicks = 0;
+    }
+
+    int click(X11Window *w, const XButtonEvent& e)
+    {
+        if (!w) {  // should never happen, but prevents a crash with maxDistPx
+            reset();
+            return 0;
+        }
+
+        int maxRadiusPx = std::max(1, int(std::round(kDoubleClickMaxRadiusPicaPt.toPixels(w->dpi()))));
+
+        // 'Time' turns out to be unsigned long, so once every 49.7 days
+        // a double click can get missed. Since it is unsigned, we cannot use
+        // Raymond Chen's rollover trick, and have to detect the rollover.
+        Time dt;
+        if (e.time >= mLastClickTime) {
+            dt = e.time - mLastClickTime;
+        } else {
+            dt = (Time(-1) - mLastClickTime) + e.time;
+        }
+
+        if (w != mLastClickWindow || e.button != mButton
+            || std::abs(e.x - mLastClickX) > maxRadiusPx
+            || std::abs(e.y - mLastClickY) > maxRadiusPx
+            || dt > kDoubleClickMaxMillisecs) {
+            mButton = e.button;
+            mNClicks = 0;
+        }
+        mNClicks++;
+
+        mLastClickTime = e.time;
+        mLastClickWindow = w;
+        mLastClickX = e.x;
+        mLastClickY = e.y;
+
+        return mNClicks;
+    }
+
+private:
+    unsigned int mButton;
+    int mNClicks;
+    Time mLastClickTime;
+    X11Window *mLastClickWindow;  // we do not own this
+    int mLastClickX = 0;
+    int mLastClickY = 0;
+};
+
+//-----------------------------------------------------------------------------
 struct X11Application::Impl
 {
     Display *display;
@@ -72,6 +201,8 @@ struct X11Application::Impl
     std::map<std::string, std::string> xrdbStrings;
     std::vector<std::map<std::string, std::string>> xrdbScreenStrings;
     std::unordered_map<::Window, X11Window*> xwin2window;
+    ClickCounter clickCounter;
+    std::unique_ptr<X11Clipboard> clipboard;
 
     Atom postedFuncAtom;
     std::mutex postedFunctionsLock;
@@ -83,7 +214,13 @@ struct X11Application::Impl
 X11Application::X11Application()
     : mImpl(new Impl())
 {
+    // Required to read in user values of the LC_* variables. These influence
+    // the default fonts that Pango chooses.
+    setlocale(LC_ALL, "");
+
     mImpl->display = XOpenDisplay(NULL);
+
+    mImpl->clipboard = std::make_unique<X11Clipboard>(mImpl->display);
 
     mImpl->postedFuncAtom = XInternAtom(mImpl->display, "PostedFunction", False);
 
@@ -140,6 +277,8 @@ bool X11Application::isOriginInUpperLeft() const { return true; }
 
 bool X11Application::shouldHideScrollbars() const { return false; }
 
+Clipboard& X11Application::clipboard() const { return *mImpl->clipboard; }
+
 void X11Application::scheduleLater(uitk::Window* w, std::function<void()> f)
 {
     {
@@ -161,6 +300,13 @@ int X11Application::run()
 {
     Atom kWMProtocolType = XInternAtom(mImpl->display, "WM_PROTOCOLS", True);
     Atom kWMDeleteMsg = XInternAtom(mImpl->display, "WM_DELETE_WINDOW", False);
+    Atom kClipboard = XInternAtom(mImpl->display, "CLIPBOARD", False);
+    Atom kPrimary = XInternAtom(mImpl->display, "PRIMARY", False);
+    Atom kClipboardTargets = XInternAtom(mImpl->display, "TARGETS", False);
+
+    XIM xim = XOpenIM(mImpl->display, 0, 0, 0);
+    XIC xic = XCreateIC(xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
+                        NULL);
 
     bool done = false;
     XEvent event;
@@ -228,7 +374,7 @@ int X11Application::run()
                 MouseEvent me;
                 if (event.type == ButtonPress) {
                     me.type = MouseEvent::Type::kButtonDown;
-                    me.button.nClicks = 1;
+                    me.button.nClicks = mImpl->clickCounter.click(w, event.xbutton);
                 } else {
                     me.type = MouseEvent::Type::kButtonUp;
                     me.button.nClicks = 0;
@@ -240,10 +386,10 @@ int X11Application::run()
                         me.button.button = MouseButton::kLeft;
                         break;
                     case Button2:
-                        me.button.button = MouseButton::kRight;
+                        me.button.button = MouseButton::kMiddle;
                         break;
                     case Button3:
-                        me.button.button = MouseButton::kMiddle;
+                        me.button.button = MouseButton::kRight;
                         break;
                     case Button4:
                         me.type = MouseEvent::Type::kScroll;
@@ -281,10 +427,54 @@ int X11Application::run()
                 }
                 break;
             }
-            case KeyPress:
+            case KeyPress:  // fall through
+            case KeyRelease: {
+                mImpl->clickCounter.reset();
+
+                KeySym ksym = XLookupKeysym(&event.xkey, 0);
+                Key key;
+                if (ksym >= XK_A && ksym <= XK_Z) {
+                    key = Key(int(Key::kA) + (ksym - XK_A));
+                } else if (ksym >= XK_a && ksym <= XK_z) {
+                    key = Key(int(Key::kA) + (ksym - XK_a));
+                } else if (ksym >= XK_0 && ksym <= XK_9) {
+                    key = Key(int(Key::k0) + (ksym - XK_0));
+                } else {
+                    auto kit = gKeysym2key.find(ksym);
+                    if (kit != gKeysym2key.end()) {
+                        key = kit->second;
+                    } else {
+                        key = Key::kUnknown;
+                    }
+                }
+
+                KeyEvent ke;
+                ke.type = (event.type == KeyPress ? KeyEvent::Type::kKeyDown
+                                                  : KeyEvent::Type::kKeyUp);
+                ke.key = key;
+                ke.nativeKey = ksym;
+                ke.keymods = toKeymods(event.xkey.state);
+                ke.isRepeat = false;  // TODO: figure this out
+
+                w->onKey(ke);
+
+                if (event.type == KeyPress && ke.keymods == 0 &&
+                    ((ksym >= 0x0020 && ksym <= 0xfdff) || // most languages
+                     (ksym >= XK_braille_dot_1 && ksym <= XK_braille_dot_10) ||
+                     (ksym >= 0x10000000 && ksym < 0x11000000))) {
+                    char utf8[32];
+                    Status status;
+                    int len = Xutf8LookupString(xic, &event.xkey, utf8, 32,
+                                                nullptr, &status);
+                    utf8[len] = '\0';  // just in case
+
+                    TextEvent te;
+                    te.utf8 = utf8;
+                    w->onText(te);
+                }
+
                 break;
-            case KeyRelease:
-                break;
+            }
             case DestroyNotify:  // get with StructureNotifyMask
                 w->onWindowWillClose();
                 mImpl->xwin2window.erase(wit);
@@ -293,11 +483,77 @@ int X11Application::run()
                 }
                 break;
             case FocusIn:
+                mImpl->clickCounter.reset();
+                // X11 makes the clipboard owned by the window, instead of
+                // globally, which is how it functions (and how macOS and Win32
+                // expose it). To avoid exporting this lousy interface, we
+                // keep track of the active window so that the clipboard class
+                // can do a copy at any time without the caller needing to
+                // be aware of this mess.
+                mImpl->clipboard->setActiveWindow(event.xany.window);
+                break;
             case FocusOut:
+                mImpl->clickCounter.reset();
                 break;
             case KeymapNotify:
                 // Update keyboard state
                 break;
+            case SelectionClear: {  // lost clipboard ownership
+                // We consider the clipboard to be global to us, so if the
+                // new window is still our window, we do not consider this
+                // losing ownership. (Also, this prevents us from incorrectly
+                // clearing our knowledge of ownership if we cut/copy from a
+                // different window of ours.)
+                auto newOwner = XGetSelectionOwner(mImpl->display,
+                                                event.xselectionclear.selection);
+                auto clipWinIt = mImpl->xwin2window.find(newOwner);
+                if (clipWinIt == mImpl->xwin2window.end()) {
+                    auto which = (event.xselectionclear.selection == kClipboard
+                              ? X11Clipboard::Selection::kClipboard
+                              : X11Clipboard::Selection::kTextSelection);
+                    mImpl->clipboard->weAreNoLongerOwner(which);
+                }
+                break;
+            }
+            case SelectionRequest: {  // someone wants to paste
+                if (event.xselectionrequest.selection != kClipboard &&
+                    event.xselectionrequest.selection != kPrimary) {
+                    break;
+                }
+                auto which = (event.xselectionrequest.selection == kClipboard
+                              ? X11Clipboard::Selection::kClipboard
+                              : X11Clipboard::Selection::kTextSelection);
+
+                XSelectionEvent e = {0};
+                e.type = SelectionNotify;
+                e.display = event.xselectionrequest.display;
+                e.requestor = event.xselectionrequest.requestor;
+                e.selection = event.xselectionrequest.selection;
+                e.time = event.xselectionrequest.time;
+                e.target = event.xselectionrequest.target;
+                e.property = event.xselectionrequest.property;
+
+                //char* name = XGetAtomName(instance.display, ev.target);
+                //std::cout << "target " << name << std::endl;
+                //XFree(name);
+
+                if (e.target == kClipboardTargets) {
+                    auto targets = mImpl->clipboard->supportedTypes(which);
+                    XChangeProperty(mImpl->display, e.requestor, e.property,
+                                    XA_ATOM, 32, PropModeReplace,
+                                    targets.data(), targets.size());
+                } else if (mImpl->clipboard->doWeHaveDataForTarget(which, e.target)) {
+                    auto data = mImpl->clipboard->dataForTarget(which, e.target);
+                    XChangeProperty(mImpl->display, e.requestor,
+                                    e.property, e.target, 8, PropModeReplace,
+                                    data.data(), data.size());
+                } else {
+                    e.property = None;
+                }
+
+                XSendEvent(mImpl->display, e.requestor, 0, 0, (XEvent *)&e);
+                break;
+            }
             case ClientMessage:
                 if (event.xclient.message_type == kWMProtocolType) {
                     if (event.xclient.data.l[0] == kWMDeleteMsg) {
@@ -332,6 +588,9 @@ int X11Application::run()
                 break;
         }
     }
+
+    XDestroyIC(xic);
+    XCloseIM(xim);
 }
 
 Theme::Params X11Application::themeParams() const

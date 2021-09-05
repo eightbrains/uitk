@@ -106,6 +106,7 @@ enum class Key
     kA = 97, kB, kC, kD, kE, kF, kG, kH, kI, kJ, kK, kL, kM,
     kN, kO, kP, kQ, kR, kS, kT, kU, kV, kW, kX, kY, kZ,
     kDelete = 127,
+    kInsert,
     kShift = 512,
     kCtrl,
     kAlt,

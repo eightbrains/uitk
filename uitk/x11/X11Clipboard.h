@@ -20,54 +20,47 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#include "Clipboard.h"
+#ifndef UITK_X11_CLIPBOARD_H
+#define UITK_X11_CLIPBOARD_H
 
-#if defined(__APPLE__)
-#include "macos/MacOSClipboard.h"
-#elif defined(_WIN32) || defined(_WIN64)  // _WIN32 covers everything except 64-bit ARM
-#include "win32/Win32Clipboard.h"
-#else
-#include "x11/X11Clipboard.h"
-#endif
+#include "../Clipboard.h"
+
+#include <memory>
+#include <vector>
 
 namespace uitk {
 
-struct Clipboard::Impl
+class X11Clipboard : public Clipboard
 {
-    std::unique_ptr<OSClipboard> osClipboard;
+public:
+    X11Clipboard(void *display);
+    ~X11Clipboard();
+
+    bool hasString() const override;
+
+    std::string string() const override;
+
+    void setString(const std::string& utf8) override;
+
+    bool supportsX11SelectionString() const override;
+    void setX11SelectionString(const std::string& utf8) override;
+    std::string x11SelectionString() const override;
+
+    // ---- internal usage ----
+    enum class Selection { kClipboard, kTextSelection };
+    void setActiveWindow(unsigned long w);
+    void weAreNoLongerOwner(Selection sel);
+    bool doWeHaveDataForTarget(Selection sel, unsigned int targetAtom);
+    // These will copy, which is inefficient, but a) prevents us from needing
+    // to store in X-native format, which would inhibit our own usage, and b)
+    // pasting is infrequent, so not too much of a problem.
+    std::vector<unsigned char> supportedTypes(Selection sel) const;
+    std::vector<unsigned char> dataForTarget(Selection sel, unsigned int targetAtom) const;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
 };
 
-Clipboard::Clipboard()
-    : mImpl(new Impl())
-{
-#if defined(__APPLE__)
-    mImpl->osClipboard = std::make_unique<MacOSClipboard>();
-#elif defined(_WIN32) || defined(_WIN64)  // _WIN32 covers everything except 64-bit ARM
-    mImpl->osClipboard = std::make_unique<Win32Clipboard>();
-#else
-    mImpl->osClipboard = std::make_unique<X11Clipboard>();
-#endif
-}
-
-Clipboard::~Clipboard()
-{
-}
-
-bool Clipboard::hasString() const
-{
-    return mImpl->osClipboard->hasString();
-}
-
-std::string Clipboard::string() const
-{
-    return mImpl->osClipboard->string();
-}
-
-void Clipboard::setString(const std::string& utf8)
-{
-    mImpl->osClipboard->setString(utf8);
-}
-
 } // namespace uitk
-
-
+#endif // UITK_X11_CLIPBOARD_H

@@ -77,8 +77,8 @@ static const std::unordered_map<int, Key> kVK2Key = {
 
 }  // namespace
 
-// See https://devblogs.microsoft.com/oldnewthing/20041018-00/?p=37543 for pitfalls
-// in detecting double-clicks, triple-clicks, etc.
+// See https://devblogs.microsoft.com/oldnewthing/20041018-00/?p=37543 for
+// pitfalls in detecting double-clicks, triple-clicks, etc.
 class ClickCounter
 {
 public:

@@ -11,7 +11,6 @@ set(UITK_HEADERS Application.h
                  ListView.h
                  Menu.h
                  OSApplication.h
-                 OSClipboard.h
                  OSWindow.h
                  PopupMenu.h
                  ProgressBar.h
@@ -33,7 +32,6 @@ set(UITK_HEADERS Application.h
 set(UITK_SOURCES Application.cpp
                  Button.cpp
                  Checkbox.cpp
-                 Clipboard.cpp
                  ComboBox.cpp
                  Label.cpp
                  ListView.cpp
@@ -92,10 +90,7 @@ elseif (UNIX)  # note that APPLE is UNIX, so need to check that first
     find_package(X11)
     find_path(CAIRO_INCLUDE_DIRS
               NAMES cairo.h
-              HINTS /usr/include/cairo
-                    /usr/local/include/cairo
-                    /opt/include/cairo
-                    /opt/local/include/cairo)
+              PATH_SUFFIXES cairo)
     if ("${CAIRO_INCLUDE_DIRS}" MATCHES "NOTFOUND")
         message(FATAL_ERROR "Cannot find cairo.h")
     endif()
@@ -104,8 +99,52 @@ elseif (UNIX)  # note that APPLE is UNIX, so need to check that first
         message(FATAL_ERROR "Cannot find Cairo library")
     endif()
 
+    # Find Pango (and GLib which it requires)
+    find_path(PANGO_INCLUDE_DIRS
+              NAME pango/pango.h
+              PATH_SUFFIXES pango
+                            pango-1.0 # Ubuntu 18.04
+             )
+    if ("${PANGO_INCLUDE_DIRS}" MATCHES "NOTFOUND")
+        message(FATAL_ERROR "Cannot find pango.h")
+    endif()
+    find_path(GLIB_INCLUDE_DIR
+              NAME glib.h
+              PATH_SUFFIXES glib
+                            glib-2.0 # Ubuntu 18.04
+             )
+    if ("${GLIB_INCLUDE_DIR}" MATCHES "NOTFOUND")
+         message(FATAL_ERROR "Cannot find glib.h")
+    endif()
+    find_path(GLIBCONFIG_INCLUDE_DIR
+              NAME glibconfig.h
+              PATHS /usr/lib/${CMAKE_LIBRARY_ARCHITECTURE}/glib/include
+                    /usr/lib/${CMAKE_LIBRARY_ARCHITECTURE}/glib-2.0/include)
+    if ("${GLIBCONFIG_INCLUDE_DIR}" MATCHES "NOTFOUND")
+         message(FATAL_ERROR "Cannot find glibconfig.h")
+    endif()
+    list(APPEND PANGO_INCLUDE_DIRS "${GLIB_INCLUDE_DIR}" "${GLIBCONFIG_INCLUDE_DIR}")
+    find_library(PANGO_LIB NAMES pango pango-1.0)
+    if ("${PANGO_LIB}" MATCHES "NOTFOUND")
+        message(FATAL_ERROR "Cannot find Pango library")
+    endif()
+    find_library(PANGOCAIRO_LIB NAMES pangocairo pangocairo-1.0)
+    if ("${PANGOCAIRO_LIB}" MATCHES "NOTFOUND")
+        message(FATAL_ERROR "Cannot find Pango-cairo library")
+    endif()
+    find_library(GLIB_LIB NAMES glib glib-2.0)
+    if ("${GLIB_LIB}" MATCHES "NOTFOUND")
+        message(FATAL_ERROR "Cannot find GLib library")
+    endif()
+    find_library(GOBJECT_LIB NAMES gobject gobject-2.0)
+    if ("${GOBJECT_LIB}" MATCHES "NOTFOUND")
+        message(FATAL_ERROR "Cannot find GObject library")
+    endif()
+    set(PANGO_LIBRARIES ${PANGO_LIB} ${PANGOCAIRO_LIB} ${GLIB_LIB} ${GOBJECT_LIB})
+
     include_directories(${X11_INCLUDE_DIRS} ${CAIRO_INCLUDE_DIRS})
     list(APPEND UITK_LIBS ${CAIRO_LIBRARIES}
+                          ${PANGO_LIBRARIES}
                           ${X11_Xrender_LIB}
                           ${X11_LIBRARIES})
 endif()

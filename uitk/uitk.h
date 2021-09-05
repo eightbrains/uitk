@@ -31,6 +31,7 @@
 #include "Application.h"
 #include "Button.h"
 #include "Checkbox.h"
+#include "Clipboard.h"
 #include "ComboBox.h"
 #include "Events.h"
 #include "Label.h"

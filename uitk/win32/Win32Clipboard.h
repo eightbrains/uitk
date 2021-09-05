@@ -23,11 +23,11 @@
 #ifndef UITK_WIN32_CLIPBOARD_H
 #define UITK_WIN32_CLIPBOARD_H
 
-#include "../OSClipboard.h"
+#include "../Clipboard.h"
 
 namespace uitk {
 
-class Win32Clipboard : public OSClipboard
+class Win32Clipboard : public Clipboard
 {
 public:
     Win32Clipboard();
@@ -38,6 +38,10 @@ public:
     std::string string() const override;
 
     void setString(const std::string& utf8) override;
+
+    bool supportsX11SelectionString() const override;
+    void setX11SelectionString(const std::string& utf8) override;
+    std::string x11SelectionString() const override;
 };
 
 } // namespace uitk

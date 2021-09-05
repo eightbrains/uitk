@@ -23,32 +23,34 @@
 #ifndef UITK_CLIPBOARD_H
 #define UITK_CLIPBOARD_H
 
-#include <memory>
 #include <string>
 
 namespace uitk {
 
 class Clipboard
 {
-    friend class Application;
 public:
-    ~Clipboard();
+    virtual ~Clipboard() {};
 
-    bool hasString() const;
+    virtual bool hasString() const = 0;
 
-    std::string string() const;
+    virtual std::string string() const = 0;
 
-    void setString(const std::string& utf8);
+    virtual void setString(const std::string& utf8) = 0;
+
+    /// Returns true if this platform supports X11 primary selection (used
+    /// by middle-click).
+    virtual bool supportsX11SelectionString() const = 0;
+    /// Sets the X11 primary selection (used by middle-click). Noop on other
+    /// platforms.
+    virtual void setX11SelectionString(const std::string& utf8) = 0;
+    /// Reads the X11 primary selection (used by middle-click). Returns an
+    /// empty string on other platforms.
+    virtual std::string x11SelectionString() const = 0;
 
 protected:
-    Clipboard();
-
-private:
-    struct Impl;
-    std::unique_ptr<Impl> mImpl;
+    Clipboard() {}
 };
 
 } // namespace uitk
 #endif // UITK_CLIPBOARD_H
-
-

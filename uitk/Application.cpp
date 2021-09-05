@@ -22,7 +22,6 @@
 
 #include "Application.h"
 
-#include "Clipboard.h"
 #include "OSApplication.h"
 #include "themes/EmpireTheme.h"
 
@@ -43,7 +42,6 @@ struct Application::Impl
     static Application* instance;
 
     std::unique_ptr<OSApplication> osApp;
-    std::unique_ptr<Clipboard> clipboard;
     std::shared_ptr<Theme> theme;
 };
 Application* Application::Impl::instance = nullptr;
@@ -118,12 +116,7 @@ std::shared_ptr<Theme> Application::theme() const
 
 Clipboard& Application::clipboard() const
 {
-    if (!mImpl->clipboard) {
-        // Application is a friend of Clipboard, so we can construct one, but
-        // std::make_unique() is not a friend, so that fails.
-        mImpl->clipboard = std::unique_ptr<Clipboard>(new Clipboard());
-    }
-    return *mImpl->clipboard;
+    return mImpl->osApp->clipboard();
 }
 
 void Application::onSystemThemeChanged()

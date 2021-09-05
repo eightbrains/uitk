@@ -106,6 +106,17 @@ bool TextEditorLogic::handleMouseEvent(const MouseEvent& e)
             }
         }
         return true;
+    } else if (e.type == MouseEvent::Type::kButtonDown && e.button.button == MouseButton::kMiddle) {
+        if (e.keymods == 0 && e.button.nClicks == 1) {
+            if (Application::instance().clipboard().supportsX11SelectionString()) {
+                auto start = calcIndex(e.pos);
+                auto selString = Application::instance().clipboard().x11SelectionString();
+                insertText(start, selString);
+                start += Index(selString.size());
+                setSelection(Selection(start, start, Selection::CursorLocation::kEnd));
+                if (onTextChanged) { onTextChanged(); }
+            }
+        }
     }
 
     // It seems like it would be nice to have right-click for a context menu

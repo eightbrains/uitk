@@ -190,6 +190,11 @@ Widget::EventResult StringEdit::mouse(const MouseEvent& e)
 
             consumed = true;
         }
+    } else if (e.type == MouseEvent::Type::kButtonDown && e.button.button == MouseButton::kMiddle && e.button.nClicks == 1) {
+        // For middle-click paste on X11
+        auto me = e;
+        me.pos = e.pos - mImpl->editorTextRect.upperLeft() - Point(mImpl->scrollOffset, PicaPt::kZero);
+        consumed = mImpl->editor.handleMouseEvent(me);
     }
 
     if (consumed) {

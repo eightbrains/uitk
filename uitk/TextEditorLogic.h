@@ -24,6 +24,7 @@
 #define UITK_TEXT_EDITOR_LOGIC_H
 
 #include <functional>
+#include <memory>
 #include <string>
 
 namespace uitk {
