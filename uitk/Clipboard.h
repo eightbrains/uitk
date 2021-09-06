@@ -20,35 +20,37 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_OS_APPLICATION_H
-#define UITK_OS_APPLICATION_H
+#ifndef UITK_CLIPBOARD_H
+#define UITK_CLIPBOARD_H
 
-#include "themes/Theme.h"
-
-#include <functional>
+#include <string>
 
 namespace uitk {
 
-class Clipboard;
-class Window;
-
-class OSApplication
+class Clipboard
 {
 public:
-    virtual ~OSApplication() {};
+    virtual ~Clipboard() {};
 
-    virtual void setExitWhenLastWindowCloses(bool exits) = 0;
-    virtual int run() = 0;
+    virtual bool hasString() const = 0;
 
-    virtual void scheduleLater(Window* w, std::function<void()> f) = 0;
+    virtual std::string string() const = 0;
 
-    virtual bool isOriginInUpperLeft() const = 0;
-    virtual bool shouldHideScrollbars() const = 0;
+    virtual void setString(const std::string& utf8) = 0;
 
-    virtual Clipboard& clipboard() const = 0;
+    /// Returns true if this platform supports X11 primary selection (used
+    /// by middle-click).
+    virtual bool supportsX11SelectionString() const = 0;
+    /// Sets the X11 primary selection (used by middle-click). Noop on other
+    /// platforms.
+    virtual void setX11SelectionString(const std::string& utf8) = 0;
+    /// Reads the X11 primary selection (used by middle-click). Returns an
+    /// empty string on other platforms.
+    virtual std::string x11SelectionString() const = 0;
 
-    virtual Theme::Params themeParams() const = 0;
+protected:
+    Clipboard() {}
 };
 
 } // namespace uitk
-#endif // UITK_OS_APPLICATION_H
+#endif // UITK_CLIPBOARD_H

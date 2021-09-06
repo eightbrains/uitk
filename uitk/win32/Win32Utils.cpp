@@ -20,35 +20,35 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_OS_APPLICATION_H
-#define UITK_OS_APPLICATION_H
+#include "Win32Utils.h"
 
-#include "themes/Theme.h"
-
-#include <functional>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
 
 namespace uitk {
 
-class Clipboard;
-class Window;
-
-class OSApplication
+std::wstring win32UnicodeFromUTF8(const std::string& utf8)
 {
-public:
-    virtual ~OSApplication() {};
+    const int kNullTerminated = -1;
+    int nCharsNeeded = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(),
+                                           kNullTerminated, NULL, 0);
+    std::wstring wstr(nCharsNeeded + 1, wchar_t(0));  // nCharsNeeded includes \0, but +1 just in case
+    MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), kNullTerminated, &wstr[0], nCharsNeeded);
+    return wstr;
+}
 
-    virtual void setExitWhenLastWindowCloses(bool exits) = 0;
-    virtual int run() = 0;
-
-    virtual void scheduleLater(Window* w, std::function<void()> f) = 0;
-
-    virtual bool isOriginInUpperLeft() const = 0;
-    virtual bool shouldHideScrollbars() const = 0;
-
-    virtual Clipboard& clipboard() const = 0;
-
-    virtual Theme::Params themeParams() const = 0;
-};
+std::string utf8FromWin32Unicode(wchar_t *wstr)
+{
+    const int kNullTerminated = -1;
+    int nCharsNeeded = WideCharToMultiByte(CP_UTF8, 0, wstr, kNullTerminated,
+                                           NULL, 0, NULL, NULL);
+    char *str = new char[nCharsNeeded + 1];
+    str[0] = '\0';
+    WideCharToMultiByte(CP_UTF8, 0, wstr, kNullTerminated,
+                        str, nCharsNeeded, NULL, NULL);
+    std::string utf8(str);
+    delete [] str;
+    return utf8;
+}
 
 } // namespace uitk
-#endif // UITK_OS_APPLICATION_H

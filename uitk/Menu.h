@@ -20,35 +20,33 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_OS_APPLICATION_H
-#define UITK_OS_APPLICATION_H
+#ifndef UITK_MENU_H
+#define UITK_MENU_H
 
-#include "themes/Theme.h"
-
-#include <functional>
+#include <string>
 
 namespace uitk {
 
-class Clipboard;
-class Window;
+struct KeyEvent;
 
-class OSApplication
+class Menu
 {
 public:
-    virtual ~OSApplication() {};
+    enum class StandardItem {
+        kAbout = 1,
+        kQuit,
+        kCopy, kCut, kPaste,
+        kUndo, kRedo,
+        kPreferences
+    };
 
-    virtual void setExitWhenLastWindowCloses(bool exits) = 0;
-    virtual int run() = 0;
+    /// Returns true if the key event is the shortcut key for the given item
+    /// type (assuming a standard shortcut exists). You should
+    /// not need to call this function if you are using the menus.
+    static bool isShortcutFor(StandardItem item, const KeyEvent& e);
 
-    virtual void scheduleLater(Window* w, std::function<void()> f) = 0;
-
-    virtual bool isOriginInUpperLeft() const = 0;
-    virtual bool shouldHideScrollbars() const = 0;
-
-    virtual Clipboard& clipboard() const = 0;
-
-    virtual Theme::Params themeParams() const = 0;
+public:
 };
 
 } // namespace uitk
-#endif // UITK_OS_APPLICATION_H
+#endif // UITK_MENU_H

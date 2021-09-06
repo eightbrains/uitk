@@ -32,6 +32,8 @@
 
 #import <Cocoa/Cocoa.h>
 
+#include <unordered_map>
+
 namespace {
 // macOS (and iOS) uses a 72 dpi assumption, and units to the API are
 // given in 72 dpi pixels. Underneath the hood, the pixels might be
@@ -39,6 +41,33 @@ namespace {
 static const float kDPI = 72.0f;
 
 static const float kPopopBorderWidth = 1;
+
+static const std::unordered_map<unichar, uitk::Key> kKeychar2key = {
+    { 3, uitk::Key::kEnter },
+    { 127, uitk::Key::kBackspace },
+    { 63232, uitk::Key::kUp },
+    { 63233, uitk::Key::kDown },
+    { 63234, uitk::Key::kLeft },
+    { 63235, uitk::Key::kRight },
+    { 63272, uitk::Key::kDelete },
+    { 63273, uitk::Key::kHome },
+    { 63275, uitk::Key::kEnd },
+    { 63276, uitk::Key::kPageUp },
+    { 63277, uitk::Key::kPageDown }
+};
+
+uitk::Key toKey(NSEvent *e)
+{
+    if (e.characters == nil || e.characters.length == 0) {
+        return uitk::Key::kNone;
+    }
+    unichar keychar = [e.characters characterAtIndex:0];
+    auto it = kKeychar2key.find(keychar);
+    if (it != kKeychar2key.end()) {
+        return it->second;
+    }
+    return uitk::Key(keychar);
+}
 
 int toKeymods(NSEventModifierFlags flags)
 {
@@ -55,9 +84,9 @@ int toKeymods(NSEventModifierFlags flags)
     if (flags & NSEventModifierFlagOption) {
         keymods |= uitk::KeyModifier::kAlt;
     }
-    if (flags & NSEventModifierFlagCapsLock) {
-        keymods |= uitk::KeyModifier::kCapsLock;
-    }
+    //if (flags & NSEventModifierFlagCapsLock) {
+    //    keymods |= uitk::KeyModifier::kCapsLock;
+    //}
     return keymods;
 }
 
@@ -198,6 +227,7 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
                          uitk::PicaPt::fromPixels(self.frame.size.height - pt.y, kDPI));
     me.keymods = toKeymods(e.modifierFlags);
     me.button.button = toUITKMouseButton(e.buttonNumber);
+    me.button.nClicks = e.clickCount;
 
     [self doOnMouse:me];
 }
@@ -292,6 +322,35 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
         }
         mDeferredCalls.clear();
     }
+}
+
+- (void)keyDown:(NSEvent *)e
+{
+    [self doOnKey:uitk::KeyEvent::Type::kKeyDown event:e];
+}
+
+- (void)keyUp:(NSEvent *)e
+{
+    [self doOnKey:uitk::KeyEvent::Type::kKeyUp event:e];
+}
+
+- (void)doOnKey:(uitk::KeyEvent::Type)type event:(NSEvent*)e
+{
+    uitk::KeyEvent ke;
+    ke.type = type;
+    ke.keymods = toKeymods(e.modifierFlags);
+    ke.isRepeat = (e.isARepeat == YES ? true : false);
+    ke.key = toKey(e);
+
+    self.inEvent = true;
+    self.callbacks->onKey(ke);
+    if (type == uitk::KeyEvent::Type::kKeyDown
+        && (ke.keymods == 0 && ((ke.key >= uitk::Key::kSpace && ke.key < uitk::Key::kDelete)
+                                || ke.key == uitk::Key::kUnknown))) {
+        uitk::TextEvent te{ e.characters.UTF8String };
+        self.callbacks->onText(te);
+    }
+    self.inEvent = false;
 }
 
 - (void)viewDidChangeEffectiveAppearance

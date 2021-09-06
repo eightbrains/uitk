@@ -43,6 +43,8 @@ public:
     bool isOriginInUpperLeft() const override;
     bool shouldHideScrollbars() const override;
 
+    Clipboard& clipboard() const override;
+
     Theme::Params themeParams() const override;
 
 private:

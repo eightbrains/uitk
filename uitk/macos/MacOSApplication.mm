@@ -22,6 +22,8 @@
 
 #include "MacOSApplication.h"
 
+#include "MacOSClipboard.h"
+
 #include "../themes/EmpireTheme.h"
 
 #import <Cocoa/Cocoa.h>
@@ -55,12 +57,14 @@ namespace uitk {
 struct MacOSApplication::Impl
 {
     AppDelegate *delegate;
+    std::unique_ptr<MacOSClipboard> clipboard;
 };
 
 MacOSApplication::MacOSApplication()
     : mImpl(new Impl())
 {
     mImpl->delegate = [[AppDelegate alloc] init];
+    mImpl->clipboard = std::make_unique<MacOSClipboard>();
 }
 
 MacOSApplication::~MacOSApplication()
@@ -71,6 +75,8 @@ MacOSApplication::~MacOSApplication()
 bool MacOSApplication::isOriginInUpperLeft() const { return false; }
 
 bool MacOSApplication::shouldHideScrollbars() const { return true; }
+
+Clipboard& MacOSApplication::clipboard() const { return *mImpl->clipboard; }
 
 Theme::Params MacOSApplication::themeParams() const
 {

@@ -31,6 +31,7 @@
 #include "Application.h"
 #include "Button.h"
 #include "Checkbox.h"
+#include "Clipboard.h"
 #include "ComboBox.h"
 #include "Events.h"
 #include "Label.h"
@@ -39,6 +40,7 @@
 #include "ScrollView.h"
 #include "SegmentedControl.h"
 #include "Slider.h"
+#include "StringEdit.h"
 #include "UIContext.h"
 #include "Window.h"
 

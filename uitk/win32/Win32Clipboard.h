@@ -20,35 +20,29 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_OS_APPLICATION_H
-#define UITK_OS_APPLICATION_H
+#ifndef UITK_WIN32_CLIPBOARD_H
+#define UITK_WIN32_CLIPBOARD_H
 
-#include "themes/Theme.h"
-
-#include <functional>
+#include "../Clipboard.h"
 
 namespace uitk {
 
-class Clipboard;
-class Window;
-
-class OSApplication
+class Win32Clipboard : public Clipboard
 {
 public:
-    virtual ~OSApplication() {};
+    Win32Clipboard();
+    ~Win32Clipboard();
 
-    virtual void setExitWhenLastWindowCloses(bool exits) = 0;
-    virtual int run() = 0;
+    bool hasString() const override;
 
-    virtual void scheduleLater(Window* w, std::function<void()> f) = 0;
+    std::string string() const override;
 
-    virtual bool isOriginInUpperLeft() const = 0;
-    virtual bool shouldHideScrollbars() const = 0;
+    void setString(const std::string& utf8) override;
 
-    virtual Clipboard& clipboard() const = 0;
-
-    virtual Theme::Params themeParams() const = 0;
+    bool supportsX11SelectionString() const override;
+    void setX11SelectionString(const std::string& utf8) override;
+    std::string x11SelectionString() const override;
 };
 
 } // namespace uitk
-#endif // UITK_OS_APPLICATION_H
+#endif // UITK_WIN32_CLIPBOARD_H

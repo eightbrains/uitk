@@ -426,6 +426,35 @@ private:
     ProgressBar *mProgress;
 };
 
+class TextEditTest : public Widget
+{
+    using Super = Widget;
+public:
+    TextEditTest()
+    {
+        mString = new StringEdit();
+        mString->setPlaceholderText("Edit string");
+        addChild(mString);
+    }
+
+    Size preferredSize(const LayoutContext& context) const override
+    {
+        auto pref = mString->preferredSize(context);
+        return Size(PicaPt(200.0), 2.0f * pref.height);
+    }
+
+    void layout(const LayoutContext& context) override
+    {
+        auto pref = mString->preferredSize(context);
+        mString->setFrame(Rect(PicaPt::kZero, PicaPt::kZero, bounds().width, pref.height));
+        
+        Super::layout(context);
+    }
+
+private:
+    StringEdit *mString;
+};
+
 class ScrollTest : public Widget
 {
     using Super = Widget;
@@ -569,6 +598,8 @@ public:
         addChild(mSliders);
         mProgress = new ProgressBarTest();
         addChild(mProgress);
+        mText = new TextEditTest();
+        addChild(mText);
         mScroll = new ScrollTest();
         addChild(mScroll);
         mListView = new ListViewTest();
@@ -592,8 +623,10 @@ public:
         mSliders->setFrame(Rect(x, mCombos->frame().maxY(), pref.width, pref.height));
         pref = mProgress->preferredSize(context);
         mProgress->setFrame(Rect(x, mSliders->frame().maxY(), pref.width, pref.height));
+        pref = mText->preferredSize(context);
+        mText->setFrame(Rect(x, mProgress->frame().maxY(), pref.width, pref.height));
         pref = mScroll->preferredSize(context);
-        mScroll->setFrame(Rect(x, mProgress->frame().maxY(), pref.width, pref.height));
+        mScroll->setFrame(Rect(x, mText->frame().maxY(), pref.width, pref.height));
 
         x += PicaPt(400);
         pref = mListView->preferredSize(context);
@@ -610,6 +643,7 @@ private:
     ComboBoxTest *mCombos;
     SliderTest *mSliders;
     ProgressBarTest *mProgress;
+    TextEditTest *mText;
     ScrollTest *mScroll;
     ListViewTest *mListView;
 };

@@ -20,35 +20,15 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_OS_APPLICATION_H
-#define UITK_OS_APPLICATION_H
+#ifndef UITK_WIN32_UTILS_H
+#define UITK_WIN32_UTILS_H
 
-#include "themes/Theme.h"
-
-#include <functional>
+#include <string>
 
 namespace uitk {
 
-class Clipboard;
-class Window;
-
-class OSApplication
-{
-public:
-    virtual ~OSApplication() {};
-
-    virtual void setExitWhenLastWindowCloses(bool exits) = 0;
-    virtual int run() = 0;
-
-    virtual void scheduleLater(Window* w, std::function<void()> f) = 0;
-
-    virtual bool isOriginInUpperLeft() const = 0;
-    virtual bool shouldHideScrollbars() const = 0;
-
-    virtual Clipboard& clipboard() const = 0;
-
-    virtual Theme::Params themeParams() const = 0;
-};
+std::wstring win32UnicodeFromUTF8(const std::string& utf8);
+std::string utf8FromWin32Unicode(wchar_t *wstr);
 
 } // namespace uitk
-#endif // UITK_OS_APPLICATION_H
+#endif // UITK_WIN32_UTILS_H

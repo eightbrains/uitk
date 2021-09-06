@@ -292,6 +292,22 @@ void Widget::setNeedsDraw()
     }
 }
 
+
+bool Widget::focused() const
+{
+    if (auto *w = window()) {
+        return (w->focusWidget() == this);
+    }
+    return false;
+}
+
+void Widget::resignKeyFocus() const
+{
+    if (auto *w = window()) {
+        w->setFocusWidget(nullptr);
+    }
+}
+
 Theme::WidgetState Widget::state() const { return mImpl->state; }
 
 void Widget::setState(Theme::WidgetState state)
@@ -417,6 +433,22 @@ void Widget::mouseExited()
             child->mouseExited();
         }
     }
+}
+
+void Widget::key(const KeyEvent& e)
+{
+}
+
+void Widget::keyFocusStarted()
+{
+}
+
+void Widget::keyFocusEnded()
+{
+}
+
+void Widget::text(const TextEvent& e)
+{
 }
 
 void Widget::draw(UIContext& context)

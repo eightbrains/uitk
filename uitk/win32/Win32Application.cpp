@@ -22,6 +22,7 @@
 
 #include "Win32Application.h"
 
+#include "Win32Clipboard.h"
 #include "../Window.h"
 #include "../themes/EmpireTheme.h"
 
@@ -40,6 +41,7 @@ namespace uitk {
 static const int kCheckPostedFunctionsMsg = WM_USER + 1534;
 
 struct Win32Application::Impl {
+    std::unique_ptr<Win32Clipboard> clipboard;
     std::unordered_map<HWND, Win32Window*> hwnd2window;
     bool needsToUnitializeCOM;
 
@@ -60,6 +62,8 @@ Win32Application::Win32Application()
     // way we can have thinner lines because we will know what our DPI
     // really is.
     SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+
+    mImpl->clipboard = std::make_unique<Win32Clipboard>();
 }
 
 Win32Application::~Win32Application()
@@ -74,6 +78,8 @@ void Win32Application::setExitWhenLastWindowCloses(bool exits)
     // Do nothing, this is pretty much always true on Windows, as there would
     // be no way to open a new window after the last one closes.
 }
+
+Clipboard& Win32Application::clipboard() const { return *mImpl->clipboard; }
 
 int Win32Application::run()
 {

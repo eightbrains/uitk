@@ -33,6 +33,7 @@ namespace uitk {
 class DrawContext;
 struct Point;
 
+struct KeyEvent;
 struct MouseEvent;
 class Widget;
 struct LayoutContext;
@@ -124,6 +125,10 @@ public:
     void setMouseGrab(Widget *w);
     Widget* mouseGrabWidget() const;
 
+    /// Sets the widget that gets key events.
+    void setFocusWidget(Widget *w);;
+    Widget* focusWidget() const;
+
     // On macOS windows without a titlebar do not get activated/deactivated
     // messages, so we need to register the popup menu
     void setPopupMenu(PopupMenu *menu);
@@ -132,6 +137,8 @@ public:
     void onLayout(const DrawContext& dc) override;
     void onDraw(DrawContext& dc) override;
     void onMouse(const MouseEvent& e) override;
+    void onKey(const KeyEvent& e) override;
+    void onText(const TextEvent& e) override;
     void onActivated(const Point& currentMousePos) override;
     void onDeactivated() override;
     bool onWindowShouldClose() override;

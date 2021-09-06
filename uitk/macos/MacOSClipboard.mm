@@ -20,35 +20,63 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_OS_APPLICATION_H
-#define UITK_OS_APPLICATION_H
+#include "MacOSClipboard.h"
 
-#include "themes/Theme.h"
-
-#include <functional>
+#import <AppKit/AppKit.h>
 
 namespace uitk {
 
-class Clipboard;
-class Window;
-
-class OSApplication
+namespace {
+NSString* bestTypeForString()
 {
-public:
-    virtual ~OSApplication() {};
+    return [NSPasteboard.generalPasteboard availableTypeFromArray:@[
+        NSPasteboardTypeString, NSPasteboardTypeHTML, NSPasteboardTypeURL, NSPasteboardTypeFileURL ] ];
+}
 
-    virtual void setExitWhenLastWindowCloses(bool exits) = 0;
-    virtual int run() = 0;
+} // namespace
 
-    virtual void scheduleLater(Window* w, std::function<void()> f) = 0;
+MacOSClipboard::MacOSClipboard()
+{
+}
 
-    virtual bool isOriginInUpperLeft() const = 0;
-    virtual bool shouldHideScrollbars() const = 0;
+MacOSClipboard::~MacOSClipboard()
+{
+}
 
-    virtual Clipboard& clipboard() const = 0;
+bool MacOSClipboard::supportsX11SelectionString() const { return false; }
+void MacOSClipboard::setX11SelectionString(const std::string& utf8) { }
+std::string MacOSClipboard::x11SelectionString() const { return ""; }
 
-    virtual Theme::Params themeParams() const = 0;
-};
+bool MacOSClipboard::hasString() const
+{
+    NSString *best = bestTypeForString();
+    return (best != nil);
+}
+
+std::string MacOSClipboard::string() const
+{
+    NSString *best = bestTypeForString();
+    NSString *str = nil;
+    if (best != nil) {
+        str = [NSPasteboard.generalPasteboard stringForType:best];
+    }
+    if (str != nil) {
+        return str.UTF8String;
+    } else {
+        return "";
+    }
+}
+
+void MacOSClipboard::setString(const std::string& utf8)
+{
+    [NSPasteboard.generalPasteboard clearContents];
+    if (!utf8.empty()) {
+        NSString *s = [NSString stringWithUTF8String:utf8.c_str()];
+        [NSPasteboard.generalPasteboard setString:s forType:NSPasteboardTypeString];
+    }
+}
 
 } // namespace uitk
-#endif // UITK_OS_APPLICATION_H
+
+
+

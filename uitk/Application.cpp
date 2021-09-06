@@ -27,7 +27,7 @@
 
 #if defined(__APPLE__)
 #include "macos/MacOSApplication.h"
-#elif defined(_WIN32) || defined(_WIN64)
+#elif defined(_WIN32) || defined(_WIN64)  // _WIN32 covers everything except 64-bit ARM
 #include "win32/Win32Application.h"
 #else
 #include "x11/X11Application.h"
@@ -112,6 +112,11 @@ std::shared_ptr<Theme> Application::theme() const
 #endif
     }
     return mImpl->theme;
+}
+
+Clipboard& Application::clipboard() const
+{
+    return mImpl->osApp->clipboard();
 }
 
 void Application::onSystemThemeChanged()

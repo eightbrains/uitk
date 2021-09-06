@@ -20,35 +20,50 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_OS_APPLICATION_H
-#define UITK_OS_APPLICATION_H
+#ifndef UITK_STRING_EDIT_H
+#define UITK_STRING_EDIT_H
 
-#include "themes/Theme.h"
+#include "Widget.h"
 
 #include <functional>
 
 namespace uitk {
 
-class Clipboard;
-class Window;
-
-class OSApplication
+class StringEdit : public Widget
 {
+    using Super = Widget;
 public:
-    virtual ~OSApplication() {};
+    StringEdit();
+    ~StringEdit();
 
-    virtual void setExitWhenLastWindowCloses(bool exits) = 0;
-    virtual int run() = 0;
+    const std::string& text() const;
+    StringEdit* setText(const std::string& text);
 
-    virtual void scheduleLater(Window* w, std::function<void()> f) = 0;
+    const std::string& placeholderText() const;
+    StringEdit* setPlaceholderText(const std::string& text);
 
-    virtual bool isOriginInUpperLeft() const = 0;
-    virtual bool shouldHideScrollbars() const = 0;
+    Size preferredSize(const LayoutContext& context) const override;
+    void layout(const LayoutContext& context) override;
 
-    virtual Clipboard& clipboard() const = 0;
+    EventResult mouse(const MouseEvent& e) override;
+    void key(const KeyEvent& e) override;
+    void text(const TextEvent& e) override;
+    void keyFocusEnded() override;
 
-    virtual Theme::Params themeParams() const = 0;
+    void draw(UIContext& context) override;
+
+    /// Called whenever the text changes in response to user input.
+    /// Is not called when the text is changed directly through setText().
+    void setOnTextChanged(std::function<void(const std::string&)> onChanged);
+
+    /// Called whenever the text is commited via Enter/Return or losing
+    /// focus.
+    void setOnValueChanged(std::function<void(StringEdit*)> onChanged);
+    
+private:
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
 };
 
-} // namespace uitk
-#endif // UITK_OS_APPLICATION_H
+}  // namespace uitk
+#endif // UITK_STRING_EDIT_H

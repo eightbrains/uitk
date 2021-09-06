@@ -352,6 +352,16 @@ void X11Window::onMouse(MouseEvent& e, int x, int y)
     mImpl->callbacks.onMouse(e);
 }
 
+void X11Window::onKey(const KeyEvent& e)
+{
+    mImpl->callbacks.onKey(e);
+}
+
+void X11Window::onText(const TextEvent& e)
+{
+    mImpl->callbacks.onText(e);
+}
+
 void X11Window::onActivated(const Point& currentMousePos)
 {
     mImpl->callbacks.onActivated(currentMousePos);

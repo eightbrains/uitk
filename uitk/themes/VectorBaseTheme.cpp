@@ -23,7 +23,9 @@
 #include "VectorBaseTheme.h"
 
 #include "../Application.h"
+#include "../TextEditorLogic.h"
 #include "../UIContext.h"
+#include "../Widget.h"
 
 #include <nativedraw.h>
 
@@ -253,6 +255,17 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     // ProgressBar
     copyStyles(mSliderTrackStyles, mProgressBarStyles);
 
+    // TextEdit
+    mTextEditStyles[NORMAL].bgColor = Color::kTransparent;
+    mTextEditStyles[NORMAL].fgColor = params.textColor;
+    mTextEditStyles[NORMAL].borderColor = borderColor;
+    mTextEditStyles[NORMAL].borderWidth = mBorderWidth;
+    mTextEditStyles[NORMAL].borderRadius = PicaPt::kZero;
+    mTextEditStyles[DISABLED] = mTextEditStyles[NORMAL];
+    mTextEditStyles[DISABLED].fgColor = params.disabledTextColor;
+    mTextEditStyles[OVER] = mTextEditStyles[NORMAL];
+    mTextEditStyles[DOWN] = mTextEditStyles[NORMAL];
+
     // ScrollView
     mScrollViewStyles[NORMAL].bgColor = Color::kTransparent;
     mScrollViewStyles[NORMAL].fgColor = params.textColor;
@@ -297,6 +310,10 @@ Size VectorBaseTheme::calcPreferredTextMargins(const DrawContext& dc, const Font
     return Size(margin, margin);
 }
 
+// Ideally all the widgets are the same size so that the naively placing them
+// next to each other aligns the text baselines nicely. Buttons are a good widget
+// to choose as the size, so this is called from the other preference-calculating
+// functions to get the height.
 Size VectorBaseTheme::calcPreferredButtonSize(const DrawContext& dc, const Font& font,
                                               const std::string& text) const
 {
@@ -348,6 +365,24 @@ Size VectorBaseTheme::calcPreferredProgressBarSize(const DrawContext& dc) const
 {
     auto buttonHeight = calcPreferredButtonSize(dc, mParams.labelFont, "Ag").height;
     return Size(PicaPt(144.0f), buttonHeight);
+}
+
+Size VectorBaseTheme::calcPreferredTextEditSize(const DrawContext& dc, const Font& font) const
+{
+    auto buttonHeight = calcPreferredButtonSize(dc, mParams.labelFont, "Ag").height;
+    return Size(Widget::kDimGrow, buttonHeight);
+}
+
+Rect VectorBaseTheme::calcTextEditRectForFrame(const Rect& frame, const DrawContext& dc,
+                                               const Font& font) const
+{
+    auto textMargins = calcPreferredTextMargins(dc, font);
+    auto fm = dc.fontMetrics(mParams.labelFont);
+    auto baseline = dc.ceilToNearestPixel(frame.y + 0.5f * (frame.height + fm.capHeight));
+    return Rect(frame.x + textMargins.width,
+                baseline - fm.ascent,
+                frame.width - 2.0f * textMargins.width,
+                fm.ascent + fm.descent);
 }
 
 PicaPt VectorBaseTheme::calcPreferredScrollbarThickness(const DrawContext& dc) const
@@ -754,6 +789,75 @@ void VectorBaseTheme::drawProgressBar(UIContext& ui, const Rect& frame, float va
                     mProgressBarStyles[int(state)].merge(style), state);
 }
 
+Theme::WidgetStyle VectorBaseTheme::textEditStyle(const WidgetStyle& style, WidgetState state) const
+{
+    return mTextEditStyles[int(state)].merge(style);
+}
+
+void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaPt& scrollOffset,
+                                   const std::string& placeholder, TextEditorLogic& editor,
+                                   const WidgetStyle& style, WidgetState state, bool hasFocus) const
+{
+    auto s = textEditStyle(style, state);
+    drawFrame(ui, frame, s);
+
+    auto font = mParams.labelFont;
+    auto textMargins = calcPreferredTextMargins(ui.dc, font);
+    auto selectionStart = PicaPt::kZero;
+    auto selectionEnd = selectionStart;
+    if (hasFocus) {
+        auto sel = editor.selection();
+        selectionStart = editor.pointAtIndex(sel.start).x + textMargins.width + scrollOffset;
+        selectionEnd = editor.pointAtIndex(sel.end).x + textMargins.width + scrollOffset;
+    }
+
+    auto textRect = frame;
+    textRect.x += textMargins.width;
+    textRect.width -= 2.0f * textMargins.width;
+
+    PicaPt caretWidth = ui.dc.ceilToNearestPixel(0.05f * textRect.height);
+
+    ui.dc.save();
+    // Outset textRect by the caret width for the clip rect so that cursor is visible at edges
+    ui.dc.clipToRect(textRect.insetted(-caretWidth, PicaPt::kZero));
+
+    if (hasFocus && selectionStart != selectionEnd) {
+        auto selectionRect = Rect(ui.dc.roundToNearestPixel(selectionStart),
+                                  textRect.y,
+                                  PicaPt::kZero,
+                                  textRect.height);
+        selectionRect.width = ui.dc.roundToNearestPixel(selectionEnd) - selectionRect.x;
+        ui.dc.setFillColor(mParams.selectionColor);
+        ui.dc.drawRect(selectionRect, kPaintFill);
+    }
+
+    if (editor.isEmpty()) {
+        if (!placeholder.empty()) {
+            ui.dc.setFillColor(mTextEditStyles[int(WidgetState::kDisabled)].fgColor);
+            ui.dc.drawText(placeholder.c_str(), textRect, Alignment::kLeft | Alignment::kVCenter,
+                           mParams.labelFont, kPaintFill);
+        }
+    } else {
+        // The layout incorporates the color, so we cannot set it.
+        auto offset = calcTextEditRectForFrame(frame, ui.dc, font).upperLeft();
+        if (editor.layout()) {
+            ui.dc.drawText(*editor.layout(), offset + Point(scrollOffset, PicaPt::kZero));
+        }
+    }
+
+    ui.dc.restore();
+
+    if (hasFocus && selectionStart == selectionEnd) {
+        PicaPt x = ui.dc.roundToNearestPixel(selectionStart) - std::floor(0.5f * caretWidth / ui.dc.onePixel());
+
+        // On macOS, text caret is same color as text. Usually there is no need to change
+        // the fill color, but in the case we have drew placeholder text the color will
+        // be wrong.
+        ui.dc.setFillColor(s.fgColor);
+        ui.dc.drawRect(Rect(x, textRect.y, caretWidth, textRect.height), kPaintFill);
+    }
+}
+
 void VectorBaseTheme::clipScrollView(UIContext& ui, const Rect& frame,
                                      const WidgetStyle& style, WidgetState state) const
 {
@@ -830,7 +934,7 @@ void VectorBaseTheme::drawMenuItem(UIContext& ui, const Rect& frame, const std::
 
 void VectorBaseTheme::drawMenuSeparatorItem(UIContext& ui, const Rect& frame) const
 {
-    int thicknessPx = PicaPt(2) / ui.dc.onePixel();
+    int thicknessPx = int(PicaPt(2) / ui.dc.onePixel());
     if (thicknessPx % 2 == 1) {
         thicknessPx += 1;
     }

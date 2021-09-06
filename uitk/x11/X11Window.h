@@ -71,6 +71,8 @@ public:
     void onLayout();
     void onDraw();
     void onMouse(MouseEvent& e, int x, int y);
+    void onKey(const KeyEvent& e);
+    void onText(const TextEvent& e);
     void onActivated(const Point& currentMousePos);
     void onDeactivated();
     bool onWindowShouldClose();

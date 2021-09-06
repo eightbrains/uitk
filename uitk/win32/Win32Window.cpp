@@ -25,6 +25,9 @@
 #include "../Application.h"
 #include "../Events.h"
 #include "Win32Application.h"
+#include "Win32Utils.h"
+
+#include <unordered_map>
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -35,13 +38,97 @@
 EXTERN_C IMAGE_DOS_HEADER __ImageBase;
 #define HINST_THISCOMPONENT ((HINSTANCE)&__ImageBase)
 
+namespace uitk {
+
 namespace {
     
 static const int kDefaultPos = -10000;
 
+static const std::unordered_map<int, Key> kVK2Key = {
+    { VK_BACK, Key::kBackspace },
+    { VK_TAB, Key::kTab },
+    //{ VK_ENTER, Key::kEnter },
+    { VK_RETURN, Key::kReturn },
+    { VK_ESCAPE, Key::kEscape },
+    { VK_SPACE, Key::kSpace },
+    { VK_MULTIPLY, Key::kNumMultiply },
+    { VK_ADD, Key::kNumPlus },
+    { VK_OEM_COMMA, Key::kNumComma },
+    { VK_SUBTRACT, Key::kNumMinus },
+    { VK_DECIMAL, Key::kNumPeriod },
+    { VK_DIVIDE, Key::kNumSlash },
+    { VK_DELETE, Key::kDelete },
+    //{ VK_LSHIFT, Key::kLeftShift },
+    //{ VK_RSHIFT, Key::kRightShift },
+    { VK_SHIFT, Key::kShift },
+    { VK_CONTROL, Key::kCtrl },
+    { VK_CAPITAL, Key::kCapsLock },
+    { VK_NUMLOCK, Key::kNumLock },
+    { VK_LEFT, Key::kLeft },
+    { VK_RIGHT, Key::kRight },
+    { VK_UP, Key::kUp },
+    { VK_DOWN, Key::kDown },
+    { VK_HOME, Key::kHome },
+    { VK_END, Key::kEnd },
+    { VK_PRIOR, Key::kPageUp },
+    { VK_NEXT, Key::kPageDown },
+    { VK_SNAPSHOT, Key::kPrintScreen },
+};
+
 }  // namespace
 
-namespace uitk {
+// See https://devblogs.microsoft.com/oldnewthing/20041018-00/?p=37543 for
+// pitfalls in detecting double-clicks, triple-clicks, etc.
+class ClickCounter
+{
+public:
+    ClickCounter()
+    {
+        reset();
+    }
+
+    int nClicks() const { return mNClicks;  }
+
+    void reset()
+    {
+        mButton = uitk::MouseButton::kNone;
+        mNClicks = 0;
+        mLastClickTime = 0;
+    }
+
+    int click(MouseButton button, LONG clickTime, int x, int y)
+    {
+        POINT pt = { x, y };
+
+        // Raymond Chen and also the docs for GetMessageTime() recommend using now - last <= doubleClickTime
+        // to detect double+ clicks across a timer wrap. It would seem like this would consider any click
+        // after the wrap to be within the time limit. However, subtracting a large is adding -largeNumber
+        // (which always valid, since INT_MAX is |INT_MIN - 1|, so -intVal never overflows, which is
+        // undefined behavior). So now we are adding two large negative numbers. This should overflow,
+        // triggering undefined behavior. Apparently MSVC handles overflow by wrapping (as does clang,
+        // at least at time of experiment), and since MSVC is what you use on Windows, everything is okay.
+        if (button != mButton || !PtInRect(&mClickRect, pt)
+            || clickTime - mLastClickTime > LONG(GetDoubleClickTime())) {
+            mButton = button;
+            mNClicks = 0;
+        }
+        mNClicks++;
+
+        mLastClickTime = clickTime;
+        SetRect(&mClickRect, x, y, x, y);
+        InflateRect(&mClickRect,
+                    GetSystemMetrics(SM_CXDOUBLECLK) / 2,
+                    GetSystemMetrics(SM_CYDOUBLECLK) / 2);
+
+        return mNClicks;
+    }
+
+private:
+    MouseButton mButton;
+    int mNClicks;
+    LONG mLastClickTime;
+    RECT mClickRect;
+};
 
 LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT uMsg,
                              WPARAM wParam, LPARAM lParam);
@@ -54,6 +141,7 @@ struct Win32Window::Impl {
     Window::Flags::Value flags;
     std::string title;
     std::shared_ptr<DrawContext> dc;
+    ClickCounter clickCounter;
     bool needsLayout = true;
 
     void updateDrawContext()
@@ -108,15 +196,15 @@ Win32Window::Win32Window(IWindowCallbacks& callbacks,
 
     DWORD style = 0;
     if (flags & Window::Flags::kPopup) {
-        style = WS_POPUPWINDOW;
+        style |= WS_POPUPWINDOW;
     } else {
-        style = WS_OVERLAPPEDWINDOW;
-        // CW_USEDEFAULT is only valide with WS_OVERLAPPEDWINDOW
+        style |= WS_OVERLAPPEDWINDOW;
+        // CW_USEDEFAULT is only valid with WS_OVERLAPPEDWINDOW
         if (x == kDefaultPos) {
-            x = CW_USEDEFAULT;
+            x |= CW_USEDEFAULT;
         }
         if (y == kDefaultPos) {
-            y = CW_USEDEFAULT;
+            y |= CW_USEDEFAULT;
         }
     }
     mImpl->hwnd = CreateWindow(Impl::wndclass,
@@ -176,17 +264,9 @@ void Win32Window::close()
 
 void Win32Window::setTitle(const std::string& title)
 {
-    const int kNullTerminated = -1;
-    int nCharsNeeded = MultiByteToWideChar(CP_UTF8, 0, title.c_str(),
-                                           kNullTerminated, NULL, 0);
-    WCHAR *wtitle = new WCHAR[nCharsNeeded + 1];  // nCharsNeeded includes \0, but +1 just in case
-    wtitle[0] = '\0';  // in case conversion fails
-    MultiByteToWideChar(CP_UTF8, 0, title.c_str(), kNullTerminated, wtitle, nCharsNeeded);
-
-    SetWindowTextW(mImpl->hwnd, wtitle);
+    auto wtitle = win32UnicodeFromUTF8(title);
+    SetWindowTextW(mImpl->hwnd, wtitle.c_str());
     mImpl->title = title;
-
-    delete [] wtitle;
 }
 
 Rect Win32Window::contentRect() const
@@ -242,7 +322,7 @@ void Win32Window::raiseToTop() const
 
 PicaPt Win32Window::borderWidth() const
 {
-    return PicaPt::fromPixels(GetSystemMetrics(SM_CXSIZEFRAME), dpi());
+    return PicaPt::fromPixels(float(GetSystemMetrics(SM_CXSIZEFRAME)), dpi());
 }
 
 Point Win32Window::currentMouseLocation() const
@@ -250,13 +330,15 @@ Point Win32Window::currentMouseLocation() const
     POINT pos;
     GetCursorPos(&pos);
     ScreenToClient(mImpl->hwnd, &pos);
-    return Point(PicaPt::fromPixels(pos.x, dpi()),
-                 PicaPt::fromPixels(pos.y, dpi()));
+    return Point(PicaPt::fromPixels(float(pos.x), dpi()),
+                 PicaPt::fromPixels(float(pos.y), dpi()));
 }
 
 void* Win32Window::nativeHandle() { return mImpl->hwnd; }
 
 IWindowCallbacks& Win32Window::callbacks() { return mImpl->callbacks; }
+
+ClickCounter& Win32Window::clickCounter() { return mImpl->clickCounter;  }
 
 void Win32Window::onMoved()
 {
@@ -300,6 +382,17 @@ void Win32Window::onMouse(MouseEvent& e, int x, int y)
     mImpl->callbacks.onMouse(e);
 }
 
+void Win32Window::onKey(const KeyEvent& e)
+{
+    mImpl->clickCounter.reset();
+    mImpl->callbacks.onKey(e);
+}
+
+void Win32Window::onText(const TextEvent& e)
+{
+    mImpl->callbacks.onText(e);
+}
+
 void Win32Window::onActivated(const Point& currentMousePos)
 {
     mImpl->callbacks.onActivated(currentMousePos);
@@ -307,6 +400,7 @@ void Win32Window::onActivated(const Point& currentMousePos)
 
 void Win32Window::onDeactivated()
 {
+    mImpl->clickCounter.reset();
     mImpl->callbacks.onDeactivated();
 }
 
@@ -375,6 +469,31 @@ MouseEvent makeMouseEvent(MouseEvent::Type type, MouseButton b, int nClicks, WPA
     return e;
 }
 
+KeyEvent makeKeyEvent(KeyEvent::Type type, bool isRepeat, WPARAM wParam)
+{
+    KeyEvent e;
+    e.type = type;
+    e.isRepeat = isRepeat;
+    e.nativeKey = int(wParam);
+    e.keymods = 0;
+    e.key = Key::kUnknown;
+    if (GetKeyState(VK_SHIFT) & 0x8000) { e.keymods |= KeyModifier::kShift; }
+    if (GetKeyState(VK_CONTROL) & 0x8000) { e.keymods |= KeyModifier::kCtrl; }
+
+    auto keyIt = kVK2Key.find(int(wParam));
+    if (keyIt != kVK2Key.end()) {
+        e.key = keyIt->second;
+    } else {
+        if (wParam >= '0' && wParam <= '9') {
+            e.key = Key(wParam);
+        } else if (wParam >= 'A' && wParam <= 'Z') {
+            e.key = Key(wParam + 32);
+        }
+    }
+
+    return e;
+}
+
 LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
                              WPARAM wParam, LPARAM lParam)
 {
@@ -419,61 +538,61 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
                                       MouseButton::kNone, 0, wParam),
                        GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             return 0;
-        case WM_LBUTTONDOWN:
+        case WM_LBUTTONDOWN: {
+            auto x = GET_X_LPARAM(lParam);
+            auto y = GET_Y_LPARAM(lParam);
+            int nClicks = w->clickCounter().click(MouseButton::kLeft,
+                                                  GetMessageTime(), x, y);
             w->onMouse(makeMouseEvent(MouseEvent::Type::kButtonDown,
-                                      MouseButton::kLeft, 1, wParam),
-                       GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+                                      MouseButton::kLeft, nClicks, wParam),
+                       x, y);
             return 0;
-        case WM_LBUTTONDBLCLK:
-            w->onMouse(makeMouseEvent(MouseEvent::Type::kButtonDown,
-                                      MouseButton::kLeft, 2, wParam),
-                       GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-            return 0;
+        }
         case WM_LBUTTONUP:
             w->onMouse(makeMouseEvent(MouseEvent::Type::kButtonUp,
                                       MouseButton::kLeft, 0, wParam),
                        GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             return 0;
-        case WM_MBUTTONDOWN:
+        case WM_MBUTTONDOWN: {
+            auto x = GET_X_LPARAM(lParam);
+            auto y = GET_Y_LPARAM(lParam);
+            int nClicks = w->clickCounter().click(MouseButton::kLeft,
+                                                  GetMessageTime(), x, y);
             w->onMouse(makeMouseEvent(MouseEvent::Type::kButtonDown,
-                                      MouseButton::kMiddle, 1, wParam),
-                       GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+                                      MouseButton::kMiddle, nClicks, wParam),
+                       x, y);
             return 0;
-        case WM_MBUTTONDBLCLK:
-            w->onMouse(makeMouseEvent(MouseEvent::Type::kButtonDown,
-                                      MouseButton::kMiddle, 2, wParam),
-                       GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-            return 0;
+        }
         case WM_MBUTTONUP:
             w->onMouse(makeMouseEvent(MouseEvent::Type::kButtonUp,
                                       MouseButton::kMiddle, 0, wParam),
                        GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             return 0;
-        case WM_RBUTTONDOWN:
+        case WM_RBUTTONDOWN: {
+            auto x = GET_X_LPARAM(lParam);
+            auto y = GET_Y_LPARAM(lParam);
+            int nClicks = w->clickCounter().click(MouseButton::kLeft,
+                                                  GetMessageTime(), x, y);
             w->onMouse(makeMouseEvent(MouseEvent::Type::kButtonDown,
-                                      MouseButton::kRight, 1, wParam),
-                       GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+                                      MouseButton::kRight, nClicks, wParam),
+                       x, y);
             return 0;
-        case WM_RBUTTONDBLCLK:
-            w->onMouse(makeMouseEvent(MouseEvent::Type::kButtonDown,
-                                      MouseButton::kRight, 2, wParam),
-                       GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-            return 0;
+        }
         case WM_RBUTTONUP:
             w->onMouse(makeMouseEvent(MouseEvent::Type::kButtonUp,
                                       MouseButton::kRight, 0, wParam),
                        GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             return 0;
-        case WM_XBUTTONDOWN:
+        case WM_XBUTTONDOWN: {
+            auto x = GET_X_LPARAM(lParam);
+            auto y = GET_Y_LPARAM(lParam);
+            int nClicks = w->clickCounter().click(MouseButton::kLeft,
+                                                  GetMessageTime(), x, y);
             w->onMouse(makeMouseEvent(MouseEvent::Type::kButtonDown,
-                                      getXButton(wParam), 1, wParam),
-                       GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+                                      getXButton(wParam), nClicks, wParam),
+                       x, y);
             return 0;
-        case WM_XBUTTONDBLCLK:
-            w->onMouse(makeMouseEvent(MouseEvent::Type::kButtonDown,
-                                      getXButton(wParam), 2, wParam),
-                       GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
-            return 0;
+        }
         case WM_XBUTTONUP:
             w->onMouse(makeMouseEvent(MouseEvent::Type::kButtonUp,
                                       getXButton(wParam), 0, wParam),
@@ -484,6 +603,103 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
                                       MouseButton::kNone, 0, wParam),
                                       GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
             return 0;
+        // We can get double-click messages if we set the CS_DBLCLKS style on the window class,
+        // but we have to do triple clicks ourselves. This makes the double-click messages
+        // pointless and more complicated, so we do both double and triple clicks ourselves.
+        //case WM_LBUTTONDBLCLK:  // requires window have CS_DBLCLKS style
+        //    w->onMouse(makeMouseEvent(MouseEvent::Type::kButtonDown,
+        //        MouseButton::kLeft, 2, wParam),
+        //        GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        //    return 0;
+        //case WM_MBUTTONDBLCLK:  // requires window have CS_DBLCLKS style
+        //    w->onMouse(makeMouseEvent(MouseEvent::Type::kButtonDown,
+        //        MouseButton::kMiddle, 2, wParam),
+        //        GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        //    return 0;
+        //case WM_RBUTTONDBLCLK:  // requires window have CS_DBLCLKS style
+        //    w->onMouse(makeMouseEvent(MouseEvent::Type::kButtonDown,
+        //        MouseButton::kRight, 2, wParam),
+        //        GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        //    return 0;
+        //case WM_XBUTTONDBLCLK:
+        //    w->onMouse(makeMouseEvent(MouseEvent::Type::kButtonDown,
+        //        getXButton(wParam), 2, wParam),
+        //        GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        //    return 0;
+
+        case WM_KEYDOWN: {  // Alt+key and F-keys use WM_SYSKEYDOWN/UP
+            int nRepeats = (lParam & 0xffff);
+            auto e = makeKeyEvent(KeyEvent::Type::kKeyDown, (nRepeats != 0), wParam);
+            if (nRepeats == 0) {
+                nRepeats = 1;
+            }
+            for (int i = 0;  i < nRepeats;  ++i) {
+                w->onKey(e);
+            }
+            return 0;
+        }
+        case WM_KEYUP:
+            w->onKey(makeKeyEvent(KeyEvent::Type::kKeyUp, false, wParam));
+            return 0;
+        case WM_CHAR: {
+            // Backspace, tab, escape are sent as WM_CHAR, even though they are really
+            // special keys, not text entry keys.
+            if (wParam < 32 /* space */ && wParam != 13 /* \r */) {
+                return 0;
+            }
+            if (wParam == 13) {  // convert Windows' silly \r into \n
+                wParam = 10;
+            }
+
+            WCHAR utf16bytes[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+            // wParam is UTF-16. We copy into array, which has extra nulls so we will be null-terminated
+            memcpy(utf16bytes, (char*)&wParam, sizeof(wParam));
+
+            TextEvent e;
+            e.utf8 = utf8FromWin32Unicode(utf16bytes);
+            w->onText(e);
+            return 0;
+        }
+        case WM_UNICHAR: {  // this only sent if an application calls Send/PostMessage()
+            TextEvent e;
+            if (wParam == UNICODE_NOCHAR) {
+                return TRUE;  // indicates we support unicode
+            }
+            else {
+                char utf8bytes[16];  // UTF-8 uses 4 bytes maximum (plus a \0)
+                int32_t utf32 = int32_t(wParam);
+                int utf8index = 0;
+                if (utf32 <= 0x007f) { utf8bytes[utf8index++] = char(utf32); }
+                else if (utf32 <= 0x07ff) {
+                    utf8bytes[utf8index++] = 0b11000000 | (utf32 & 0b00011111);
+                    utf32 = utf32 >> 5;
+                    utf8bytes[utf8index++] = 0b10000000 | (utf32 & 0b00111111);
+                }
+                else if (utf32 <= 0xffff) {
+                    if (utf32 <= 0x07ff) {
+                        utf8bytes[utf8index++] = 0b11100000 | (utf32 & 0b00001111);
+                        utf32 = utf32 >> 4;
+                        utf8bytes[utf8index++] = 0b10000000 | (utf32 & 0b00111111);
+                        utf32 = utf32 >> 6;
+                        utf8bytes[utf8index++] = 0b10000000 | (utf32 & 0b00111111);
+                    }
+                    else {
+                        utf8bytes[utf8index++] = 0b11110000 | (utf32 & 0b00000111);
+                        utf32 = utf32 >> 3;
+                        utf8bytes[utf8index++] = 0b10000000 | (utf32 & 0b00111111);
+                        utf32 = utf32 >> 6;
+                        utf8bytes[utf8index++] = 0b10000000 | (utf32 & 0b00111111);
+                        utf32 = utf32 >> 6;
+                        utf8bytes[utf8index++] = 0b10000000 | (utf32 & 0b00111111);
+                    }
+                    utf8bytes[utf8index] = '\0';
+                    e.utf8 = utf8bytes;
+                    w->onText(e);
+
+                }
+                return FALSE;
+            }
+        }
         case WM_DWMCOLORIZATIONCOLORCHANGED:
             Application::instance().onSystemThemeChanged();
             return 0;

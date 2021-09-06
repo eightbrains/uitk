@@ -48,6 +48,8 @@ public:
                                    const PicaPt& preferredMenuWidth) const override;
     Size calcPreferredSliderThumbSize(const DrawContext& dc) const override;
     Size calcPreferredProgressBarSize(const DrawContext& dc) const override;
+    Size calcPreferredTextEditSize(const DrawContext& dc, const Font& font) const override;
+    Rect calcTextEditRectForFrame(const Rect& frame, const DrawContext& dc, const Font& font) const override;
     PicaPt calcPreferredScrollbarThickness(const DrawContext& dc) const override;
     Size calcPreferredMenuItemSize(const DrawContext& dc, const std::string& text) const override;
 
@@ -88,6 +90,10 @@ public:
                             WidgetState state) const override;
     void drawProgressBar(UIContext& ui, const Rect& frame, float value,
                          const WidgetStyle& style, WidgetState state) const override;
+    WidgetStyle textEditStyle(const WidgetStyle& style, WidgetState state) const override;
+    void drawTextEdit(UIContext& ui, const Rect& frame, const PicaPt& scrollOffset,
+                      const std::string& placeholder, TextEditorLogic& editor,
+                      const WidgetStyle& style, WidgetState state, bool hasFocus) const override;
     void clipScrollView(UIContext& ui, const Rect& frame,
                         const WidgetStyle& style, WidgetState state) const override;
     void drawScrollView(UIContext& ui, const Rect& frame,
@@ -128,6 +134,7 @@ protected:
     WidgetStyle mScrollbarTrackStyles[4];
     WidgetStyle mScrollbarThumbStyles[4];
     WidgetStyle mProgressBarStyles[4];
+    WidgetStyle mTextEditStyles[4];
     WidgetStyle mScrollViewStyles[4];
     WidgetStyle mListViewStyles[4];
     WidgetStyle mMenuItemStyles[4];

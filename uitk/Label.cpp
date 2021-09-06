@@ -114,7 +114,7 @@ void Label::draw(UIContext& ui)
 
 #if DEBUG_BASELINE
     auto onePx = ui.dc.onePixel();
-    auto y = ui.dc.roundToNearestPixel(pt.y) +
+    auto y = ui.dc.roundToNearestPixel(pt.y + margin) +
              ui.dc.floorToNearestPixel(metrics.ascent) +
              0.5 * onePx;
 

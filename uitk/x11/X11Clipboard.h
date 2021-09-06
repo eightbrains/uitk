@@ -20,35 +20,47 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_OS_APPLICATION_H
-#define UITK_OS_APPLICATION_H
+#ifndef UITK_X11_CLIPBOARD_H
+#define UITK_X11_CLIPBOARD_H
 
-#include "themes/Theme.h"
+#include "../Clipboard.h"
 
-#include <functional>
+#include <memory>
+#include <vector>
 
 namespace uitk {
 
-class Clipboard;
-class Window;
-
-class OSApplication
+class X11Clipboard : public Clipboard
 {
 public:
-    virtual ~OSApplication() {};
+    X11Clipboard(void *display);
+    ~X11Clipboard();
 
-    virtual void setExitWhenLastWindowCloses(bool exits) = 0;
-    virtual int run() = 0;
+    bool hasString() const override;
 
-    virtual void scheduleLater(Window* w, std::function<void()> f) = 0;
+    std::string string() const override;
 
-    virtual bool isOriginInUpperLeft() const = 0;
-    virtual bool shouldHideScrollbars() const = 0;
+    void setString(const std::string& utf8) override;
 
-    virtual Clipboard& clipboard() const = 0;
+    bool supportsX11SelectionString() const override;
+    void setX11SelectionString(const std::string& utf8) override;
+    std::string x11SelectionString() const override;
 
-    virtual Theme::Params themeParams() const = 0;
+    // ---- internal usage ----
+    enum class Selection { kClipboard, kTextSelection };
+    void setActiveWindow(unsigned long w);
+    void weAreNoLongerOwner(Selection sel);
+    bool doWeHaveDataForTarget(Selection sel, unsigned int targetAtom);
+    // These will copy, which is inefficient, but a) prevents us from needing
+    // to store in X-native format, which would inhibit our own usage, and b)
+    // pasting is infrequent, so not too much of a problem.
+    std::vector<unsigned char> supportedTypes(Selection sel) const;
+    std::vector<unsigned char> dataForTarget(Selection sel, unsigned int targetAtom) const;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
 };
 
 } // namespace uitk
-#endif // UITK_OS_APPLICATION_H
+#endif // UITK_X11_CLIPBOARD_H
