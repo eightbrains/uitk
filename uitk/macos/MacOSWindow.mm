@@ -84,9 +84,9 @@ int toKeymods(NSEventModifierFlags flags)
     if (flags & NSEventModifierFlagOption) {
         keymods |= uitk::KeyModifier::kAlt;
     }
-    if (flags & NSEventModifierFlagCapsLock) {
-        keymods |= uitk::KeyModifier::kCapsLock;
-    }
+    //if (flags & NSEventModifierFlagCapsLock) {
+    //    keymods |= uitk::KeyModifier::kCapsLock;
+    //}
     return keymods;
 }
 
@@ -344,6 +344,12 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 
     self.inEvent = true;
     self.callbacks->onKey(ke);
+    if (type == uitk::KeyEvent::Type::kKeyDown
+        && (ke.keymods == 0 && ((ke.key >= uitk::Key::kSpace && ke.key < uitk::Key::kDelete)
+                                || ke.key == uitk::Key::kUnknown))) {
+        uitk::TextEvent te{ e.characters.UTF8String };
+        self.callbacks->onText(te);
+    }
     self.inEvent = false;
 }
 
