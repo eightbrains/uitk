@@ -20,37 +20,34 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_SLIDER_LOGIC_H
-#define UITK_SLIDER_LOGIC_H
-
-#include "Global.h"
-#include "Widget.h"
+#ifndef UITK_NUMERIC_MODEL_H
+#define UITK_NUMERIC_MODEL_H
 
 #include <functional>
 
 namespace uitk {
 
-class SliderLogic : public Widget {
-    using Super = Widget;
+class NumericModel
+{
 public:
-    explicit SliderLogic(SliderDir dir);
-    ~SliderLogic();
-
-    SliderDir direction() const;
+    NumericModel();
+    ~NumericModel();
 
     int intValue() const;
-    SliderLogic* setValue(int val);
+    NumericModel* setValue(int val);
 
     double doubleValue() const;
-    SliderLogic* setValue(double val);
+    NumericModel* setValue(double val);
 
     /// Sets the upper, lower, and increment values. Increment must be 1 or larger
-    /// for integer sliders.
-    void setLimits(int minVal, int maxVal, int inc = 1);
+    /// for integer sliders. Returns true if min/max changes resulted in changes
+    /// to value, false otherwise.
+    bool setLimits(int minVal, int maxVal, int inc = 1);
 
     /// Sets the upper, lower, and increment values. Increment of 0
-    /// is continuous (no increment).
-    void setLimits(double minVal, double maxVal, double inc = 1.0f);
+    /// is continuous (no increment). Returns true if min/max changes resulted in
+    /// changes to value, false otherwise.
+    bool setLimits(double minVal, double maxVal, double inc = 1.0f);
 
     int intMinLimit() const;
     int intMaxLimit() const;
@@ -59,30 +56,10 @@ public:
     double doubleMaxLimit() const;
     double doubleIncrement() const;
 
-    /// Called when value changes due to mouse movement; is not called
-    /// as a result of setValue() or setLimits().
-    SliderLogic* setOnValueChanged(std::function<void(SliderLogic*)> onChanged);
-
-    Size preferredSize(const LayoutContext& context) const override;
-    void layout(const LayoutContext& context) override;
-
-    Widget::EventResult mouse(const MouseEvent &e) override;
-
-    void draw(UIContext& context) override;
-
-protected:
-    virtual Size preferredThumbSize(const LayoutContext& context) const = 0;
-    virtual void drawTrack(UIContext& context, const Point& thumbMid) = 0;
-    // Coordinate system is in Slider's coordinate system, not the thumbs'
-    // (so thumb->frame() is the correct rectangle to draw into).
-    virtual void drawThumb(UIContext& context, Widget *thumb) = 0;
-
 private:
     struct Impl;
     std::unique_ptr<Impl> mImpl;
 };
 
 }  // namespace uitk
-#endif // UITK_SLIDER_LOGIC_H
-
-
+#endif // UITK_NUMERIC_MODEL_H

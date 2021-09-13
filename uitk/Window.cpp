@@ -260,7 +260,7 @@ void Window::setFocusWidget(Widget *w)
         oldFocusedWidget->keyFocusEnded();
     }
 
-    if (isDifferent && w) {
+    if (isDifferent && w && mImpl->focusedWidget) {
         mImpl->focusedWidget->keyFocusStarted();
     }
 }

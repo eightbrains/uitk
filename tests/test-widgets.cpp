@@ -331,27 +331,47 @@ class SliderTest : public Widget
 public:
     SliderTest()
     {
+        mIntEdit = new NumberEdit();
+        addChild(mIntEdit);
         mIntLabel = new Label("");
+        mIntLabel->setAlignment(Alignment::kLeft | Alignment::kVCenter);
         addChild(mIntLabel);
 
         mInt = new Slider();
         mInt->setLimits(0, 100);
         mInt->setValue(50);
+        mIntEdit->setLimits(mInt->intMinLimit(), mInt->intMaxLimit(), mInt->intIncrement());
         mInt->setOnValueChanged([this](SliderLogic *s) {
+            mIntEdit->setValue(s->intValue());
             mIntLabel->setText(std::to_string(s->intValue()));
         });
         addChild(mInt);
 
+        mDoubleEdit = new NumberEdit();
+        addChild(mDoubleEdit);
         mDoubleLabel = new Label("");
+        mDoubleLabel->setAlignment(Alignment::kLeft | Alignment::kVCenter);
         addChild(mDoubleLabel);
 
         mDouble = new Slider();
         mDouble->setLimits(0.0, 1.0, 0.01);
         mDouble->setValue(0.25);
+        mDoubleEdit->setLimits(mDouble->doubleMinLimit(), mDouble->doubleMaxLimit(),
+                               mDouble->doubleIncrement());
         mDouble->setOnValueChanged([this](SliderLogic *s) {
+            mDoubleEdit->setValue(s->doubleValue());
             mDoubleLabel->setText(std::to_string(s->doubleValue()));
         });
         addChild(mDouble);
+
+        mIntEdit->setOnValueChanged([this](NumberEdit *n) {
+            mInt->setValue(n->intValue());
+            mIntLabel->setText(std::to_string(n->intValue()));
+        });
+        mDoubleEdit->setOnValueChanged([this](NumberEdit *n) {
+            mDouble->setValue(n->doubleValue());
+            mDoubleLabel->setText(std::to_string(n->doubleValue()));
+        });
 
         mDisabled = new Slider();
         mDisabled->setLimits(0, 100);
@@ -359,6 +379,8 @@ public:
         mDisabled->setEnabled(false);
         addChild(mDisabled);
 
+        mIntEdit->setValue(mInt->intValue());
+        mDoubleEdit->setValue(mDouble->doubleValue());
         mIntLabel->setText(std::to_string(mInt->intValue()));
         mDoubleLabel->setText(std::to_string(mDouble->doubleValue()));
     }
@@ -380,10 +402,12 @@ public:
         auto sliderWidth = frame().width - spacing - labelWidth;
 
         mInt->setFrame(Rect(x, y, sliderWidth, sliderHeight));
-        mIntLabel->setFrame(Rect(mInt->frame().maxX() + spacing, y, labelWidth, sliderHeight));
+        mIntEdit->setFrame(Rect(mInt->frame().maxX() + spacing, y, labelWidth, sliderHeight));
+        mIntLabel->setFrame(Rect(mIntEdit->frame().maxX() + spacing, y, labelWidth, sliderHeight));
         y += sliderHeight + spacing;
         mDouble->setFrame(Rect(x, y, sliderWidth, sliderHeight));
-        mDoubleLabel->setFrame(Rect(mDouble->frame().maxX() + spacing, y, labelWidth, sliderHeight));
+        mDoubleEdit->setFrame(Rect(mDouble->frame().maxX() + spacing, y, labelWidth, sliderHeight));
+        mDoubleLabel->setFrame(Rect(mDoubleEdit->frame().maxX() + spacing, y, labelWidth, sliderHeight));
         y += sliderHeight + spacing;
         mDisabled->setFrame(Rect(x, y, sliderWidth, sliderHeight));
 
@@ -394,6 +418,8 @@ private:
     Slider *mInt;
     Slider *mDouble;
     Slider *mDisabled;
+    NumberEdit *mIntEdit;
+    NumberEdit *mDoubleEdit;
     Label *mIntLabel;
     Label *mDoubleLabel;
 };

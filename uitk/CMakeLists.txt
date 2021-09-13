@@ -7,9 +7,12 @@ set(UITK_HEADERS Application.h
                  ComboBox.h
                  Events.h
                  Global.h
+                 IncDecWidget.h
                  Label.h
                  ListView.h
                  Menu.h
+                 NumberEdit.h
+                 NumericModel.h
                  OSApplication.h
                  OSWindow.h
                  PopupMenu.h
@@ -33,9 +36,12 @@ set(UITK_SOURCES Application.cpp
                  Button.cpp
                  Checkbox.cpp
                  ComboBox.cpp
+                 IncDecWidget.cpp
                  Label.cpp
                  ListView.cpp
                  Menu.cpp
+                 NumberEdit.cpp
+                 NumericModel.cpp
                  PopupMenu.cpp
                  ProgressBar.cpp
                  ScrollBar.cpp

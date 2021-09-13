@@ -50,6 +50,7 @@ public:
     Size calcPreferredProgressBarSize(const DrawContext& dc) const override;
     Size calcPreferredTextEditSize(const DrawContext& dc, const Font& font) const override;
     Rect calcTextEditRectForFrame(const Rect& frame, const DrawContext& dc, const Font& font) const override;
+    Size calcPreferredIncDecSize(const DrawContext& dc) const override;
     PicaPt calcPreferredScrollbarThickness(const DrawContext& dc) const override;
     Size calcPreferredMenuItemSize(const DrawContext& dc, const std::string& text) const override;
 
@@ -90,9 +91,10 @@ public:
                             WidgetState state) const override;
     void drawProgressBar(UIContext& ui, const Rect& frame, float value,
                          const WidgetStyle& style, WidgetState state) const override;
+    void drawIncDec(UIContext& ui, const Rect& frame, WidgetState incState, WidgetState decState) const override;
     WidgetStyle textEditStyle(const WidgetStyle& style, WidgetState state) const override;
     void drawTextEdit(UIContext& ui, const Rect& frame, const PicaPt& scrollOffset,
-                      const std::string& placeholder, TextEditorLogic& editor,
+                      const std::string& placeholder, TextEditorLogic& editor, int horizAlign, 
                       const WidgetStyle& style, WidgetState state, bool hasFocus) const override;
     void clipScrollView(UIContext& ui, const Rect& frame,
                         const WidgetStyle& style, WidgetState state) const override;

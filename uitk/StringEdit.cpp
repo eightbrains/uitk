@@ -31,13 +31,40 @@
 namespace uitk {
 
 PicaPt calcScrollOffset(const StringEditorLogic& editor, const Size& viewSize,
-                        const PicaPt& currentScrollX)
+                        int horizAlign, const PicaPt& currentScrollX)
 {
     auto sel = editor.selection();
     auto idx = sel.cursorIndex(0);
-    auto cursorPt = Point(editor.pointAtIndex(idx).x, 0.5f * viewSize.height);
     auto r = Rect(PicaPt::kZero, PicaPt::kZero, viewSize.width, viewSize.height);
+    auto textWidth = editor.layout()->metrics().width;
+    if (textWidth <= r.width) {
+        return PicaPt::kZero;
+    }
+    PicaPt textStartX;
+    switch (horizAlign) {
+        default:
+        case Alignment::kLeft:
+            textStartX = PicaPt::kZero;
+            break;
+        case Alignment::kHCenter:
+            textStartX = r.midX() - 0.5f * textWidth;
+            break;
+        case Alignment::kRight:
+            textStartX = r.maxX() - textWidth;
+            break;
+    }
+    auto cursorPt = Point(textStartX, PicaPt::kZero) +
+                    Point(editor.pointAtIndex(idx).x, 0.5f * viewSize.height);
     if (r.contains(cursorPt + Point(currentScrollX, PicaPt::kZero))) {
+        // If we deleted characters from the right (subtract off 1 pt in case of roundoff errors)
+        if (textWidth > r.width && textStartX + textWidth + currentScrollX < r.maxX() - PicaPt(1)) {
+            return r.width - textWidth;
+        }
+        // If we deleted characters from the left (subtract off 1 pt in case of roundoff errors)
+        if (textWidth > r.width && textStartX + currentScrollX > r.minX() + PicaPt(1)) {
+            return PicaPt::kZero;
+        }
+        // Otherwise, no change is needed
         return currentScrollX;
     } else {
         if (sel.start == sel.end) {
@@ -56,10 +83,27 @@ PicaPt calcScrollOffset(const StringEditorLogic& editor, const Size& viewSize,
     }
 }
 
+Point calcAlignmentOffset(const StringEditorLogic& editor, const Rect& textEditRect, int horizAlign)
+{
+    switch (horizAlign & Alignment::kHorizMask) {
+        default:
+        case Alignment::kLeft:
+            return Point(PicaPt::kZero, PicaPt::kZero);
+        case Alignment::kHCenter:
+            return (Point(textEditRect.midX(), textEditRect.minY()) -
+                    Point(0.5f * editor.layout()->metrics().width, PicaPt::kZero)) -
+                   textEditRect.upperLeft();
+        case Alignment::kRight:
+            return (textEditRect.upperRight() - Point(editor.layout()->metrics().width, PicaPt::kZero)) -
+                   textEditRect.upperLeft();
+    }
+}
+
 struct StringEdit::Impl
 {
     StringEditorLogic editor;
     std::string placeholder;
+    int alignment = Alignment::kLeft | Alignment::kVCenter;
     Rect editorTextRect;
     PicaPt scrollOffset = PicaPt::kZero;
     PopupMenu *popup = nullptr;  // we own this
@@ -115,6 +159,16 @@ StringEdit* StringEdit::setPlaceholderText(const std::string& text)
     return this;
 }
 
+int StringEdit::alignment() const { return mImpl->alignment; }
+
+StringEdit* StringEdit::setAlignment(int alignment)
+{
+    alignment = (alignment & Alignment::kHorizMask);
+    mImpl->alignment = alignment | (mImpl->alignment & Alignment::kVertMask);
+    setNeedsDraw();
+    return this;
+}
+
 void StringEdit::setOnTextChanged(std::function<void(const std::string&)> onChanged)
 {
     mImpl->onTextChanged = onChanged;
@@ -140,6 +194,12 @@ void StringEdit::layout(const LayoutContext& context)
 Widget::EventResult StringEdit::mouse(const MouseEvent& e)
 {
     bool consumed = false;
+
+    auto me = e;
+    me.pos = e.pos - mImpl->editorTextRect.upperLeft() -
+             calcAlignmentOffset(mImpl->editor, mImpl->editorTextRect, mImpl->alignment) -
+             Point(mImpl->scrollOffset, PicaPt::kZero);
+
     if (e.type == MouseEvent::Type::kButtonDown && e.button.button == MouseButton::kLeft) {
         if (e.button.nClicks == 1) {
             if (auto *w = window()) {
@@ -148,12 +208,8 @@ Widget::EventResult StringEdit::mouse(const MouseEvent& e)
                 }
             }
         }
-        auto me = e;
-        me.pos = e.pos - mImpl->editorTextRect.upperLeft() - Point(mImpl->scrollOffset, PicaPt::kZero);
         consumed = mImpl->editor.handleMouseEvent(me);
     } else if (e.type == MouseEvent::Type::kDrag) {
-        auto me = e;
-        me.pos = e.pos - mImpl->editorTextRect.upperLeft() - Point(mImpl->scrollOffset, PicaPt::kZero);
         consumed = mImpl->editor.handleMouseEvent(me);
     } else if (e.type == MouseEvent::Type::kButtonDown && e.button.button == MouseButton::kRight
                && e.button.nClicks == 1) {
@@ -192,8 +248,6 @@ Widget::EventResult StringEdit::mouse(const MouseEvent& e)
         }
     } else if (e.type == MouseEvent::Type::kButtonDown && e.button.button == MouseButton::kMiddle && e.button.nClicks == 1) {
         // For middle-click paste on X11
-        auto me = e;
-        me.pos = e.pos - mImpl->editorTextRect.upperLeft() - Point(mImpl->scrollOffset, PicaPt::kZero);
         consumed = mImpl->editor.handleMouseEvent(me);
     }
 
@@ -243,11 +297,14 @@ void StringEdit::draw(UIContext& context)
     // change from user input.
     if (focused()) {
         mImpl->scrollOffset = calcScrollOffset(mImpl->editor, mImpl->editorTextRect.size(),
+                                               (mImpl->alignment & Alignment::kHorizMask),
                                                mImpl->scrollOffset);
     }
 
-    context.theme.drawTextEdit(context, bounds(), mImpl->scrollOffset,
-                               mImpl->placeholder, mImpl->editor, style(state()), state(), focused());
+    auto alignOffset = calcAlignmentOffset(mImpl->editor, mImpl->editorTextRect, mImpl->alignment).x;
+    context.theme.drawTextEdit(context, bounds(), alignOffset + mImpl->scrollOffset,
+                               mImpl->placeholder, mImpl->editor, mImpl->alignment,
+                               style(state()), state(), focused());
     Super::draw(context);
 }
 

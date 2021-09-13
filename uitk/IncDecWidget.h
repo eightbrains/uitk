@@ -20,62 +20,28 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_SLIDER_LOGIC_H
-#define UITK_SLIDER_LOGIC_H
+#ifndef UITK_INCDEC_WIDTH_H
+#define UITK_INCDEC_WIDTH_H
 
-#include "Global.h"
 #include "Widget.h"
 
 #include <functional>
 
 namespace uitk {
 
-class SliderLogic : public Widget {
+class IncDecWidget : public Widget {
     using Super = Widget;
 public:
-    explicit SliderLogic(SliderDir dir);
-    ~SliderLogic();
+    IncDecWidget();
+    ~IncDecWidget();
 
-    SliderDir direction() const;
-
-    int intValue() const;
-    SliderLogic* setValue(int val);
-
-    double doubleValue() const;
-    SliderLogic* setValue(double val);
-
-    /// Sets the upper, lower, and increment values. Increment must be 1 or larger
-    /// for integer sliders.
-    void setLimits(int minVal, int maxVal, int inc = 1);
-
-    /// Sets the upper, lower, and increment values. Increment of 0
-    /// is continuous (no increment).
-    void setLimits(double minVal, double maxVal, double inc = 1.0f);
-
-    int intMinLimit() const;
-    int intMaxLimit() const;
-    int intIncrement() const;
-    double doubleMinLimit() const;
-    double doubleMaxLimit() const;
-    double doubleIncrement() const;
-
-    /// Called when value changes due to mouse movement; is not called
-    /// as a result of setValue() or setLimits().
-    SliderLogic* setOnValueChanged(std::function<void(SliderLogic*)> onChanged);
+    void setOnClicked(std::function<void(IncDecWidget*, int)> onClicked);
 
     Size preferredSize(const LayoutContext& context) const override;
-    void layout(const LayoutContext& context) override;
 
     Widget::EventResult mouse(const MouseEvent &e) override;
 
     void draw(UIContext& context) override;
-
-protected:
-    virtual Size preferredThumbSize(const LayoutContext& context) const = 0;
-    virtual void drawTrack(UIContext& context, const Point& thumbMid) = 0;
-    // Coordinate system is in Slider's coordinate system, not the thumbs'
-    // (so thumb->frame() is the correct rectangle to draw into).
-    virtual void drawThumb(UIContext& context, Widget *thumb) = 0;
 
 private:
     struct Impl;
@@ -83,6 +49,4 @@ private:
 };
 
 }  // namespace uitk
-#endif // UITK_SLIDER_LOGIC_H
-
-
+#endif // UITK_INCDEC_WIDTH_H

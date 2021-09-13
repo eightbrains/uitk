@@ -42,6 +42,11 @@ public:
     const std::string& placeholderText() const;
     StringEdit* setPlaceholderText(const std::string& text);
 
+    int alignment() const;
+    /// Sets the text alignment. Vertical alignment may be ignored for
+    /// single line widgets.
+    StringEdit* setAlignment(int alignment);
+
     Size preferredSize(const LayoutContext& context) const override;
     void layout(const LayoutContext& context) override;
 

@@ -23,6 +23,7 @@
 #include "SliderLogic.h"
 
 #include "Events.h"
+#include "NumericModel.h"
 #include "UIContext.h"
 #include "Window.h"
 
@@ -46,12 +47,7 @@ public:
 
 struct SliderLogic::Impl {
     SliderDir dir;
-    // double can represent up to 24-bit ints, which should be enough for
-    // a slider. (It's good enough for JavaScript...)
-    double value = 0.0;
-    double minValue = 0.0;
-    double maxValue = 100.0;
-    double increment = 1.0;
+    NumericModel model;
     std::function<void(SliderLogic*)> onValueChanged;
 
     SliderThumb *thumb = nullptr;
@@ -80,31 +76,29 @@ struct SliderLogic::Impl {
                 break;
         }
         auto amount = (thumbMid - trackStart) / (trackEnd - trackStart);  // float in [0, 1]
-        return this->minValue + double(amount) * (this->maxValue - this->minValue);
+        return this->model.doubleMinLimit() + double(amount) * (this->model.doubleMaxLimit() - this->model.doubleMinLimit());
     }
 
     Rect calcThumbFrame(const Rect& trackFrame)
     {
         auto &thumbFrame = this->thumb->frame();
+        double amount = (this->model.doubleValue() - this->model.doubleMinLimit()) / (this->model.doubleMaxLimit() - this->model.doubleMinLimit());
         switch (this->dir) {
             case SliderDir::kHoriz: {
                 auto trackStart = trackFrame.x + 0.5f * this->thumb->frame().width;
                 auto trackEnd = trackFrame.maxX() - 0.5f * this->thumb->frame().width;
-                double amount = (this->value - this->minValue) / (this->maxValue - this->minValue);
                 auto x = trackStart + float(amount) * (trackEnd - trackStart);
                 return Rect(x - 0.5f * thumbFrame.width, thumbFrame.y, thumbFrame.width, thumbFrame.height);
             }
             case SliderDir::kVertZeroAtTop: {
                 auto trackStart = trackFrame.y + 0.5f * this->thumb->frame().height;
                 auto trackEnd = trackFrame.maxY() - 0.5f * this->thumb->frame().height;
-                double amount = (this->value - this->minValue) / (this->maxValue - this->minValue);
                 auto y = trackStart + float(amount) * (trackEnd - trackStart);
                 return Rect(thumbFrame.x, y - 0.5f * thumbFrame.height, thumbFrame.width, thumbFrame.height);
             }
             case SliderDir::kVertZeroAtBottom: {
                 auto trackEnd = trackFrame.y + 0.5f * this->thumb->frame().height;
                 auto trackStart = trackFrame.maxY() - 0.5f * this->thumb->frame().height;
-                double amount = (this->value - this->minValue) / (this->maxValue - this->minValue);
                 auto y = trackStart + float(amount) * (trackEnd - trackStart);
                 return Rect(thumbFrame.x, y - 0.5f * thumbFrame.height, thumbFrame.width, thumbFrame.height);
             }
@@ -130,20 +124,18 @@ SliderLogic::~SliderLogic()
 
 SliderDir SliderLogic::direction() const { return mImpl->dir; }
 
-int SliderLogic::intValue() const { return int(mImpl->value); }
+int SliderLogic::intValue() const { return mImpl->model.intValue(); }
 
 SliderLogic* SliderLogic::setValue(int val) {
     setValue(double(val));
     return this;
 }
 
-double SliderLogic::doubleValue() const { return mImpl->value; }
+double SliderLogic::doubleValue() const { return mImpl->model.doubleValue(); }
 
 SliderLogic* SliderLogic::setValue(double val)
 {
-    val = mImpl->increment * std::floor(val / mImpl->increment);
-    val = std::min(mImpl->maxValue, std::max(mImpl->minValue, val));
-    mImpl->value = val;
+    mImpl->model.setValue(val);
     mImpl->thumb->setFrame(mImpl->calcThumbFrame(bounds()));
     setNeedsDraw();
     return this;
@@ -151,26 +143,29 @@ SliderLogic* SliderLogic::setValue(double val)
 
 void SliderLogic::setLimits(int minVal, int maxVal, int inc /*= 1*/)
 {
-    setLimits(double(minVal), double(maxVal), double(std::max(1, inc)));
+    setLimits(double(minVal), double(maxVal), double(inc));
 }
 
 void SliderLogic::setLimits(double minVal, double maxVal, double inc /*= 1.0*/)
 {
-    if (minVal < maxVal - inc) {
-        mImpl->minValue = minVal;
-        mImpl->maxValue = maxVal;
-        mImpl->increment = std::max(0.0001, inc);
-        setValue(mImpl->value);
+    double oldValue = mImpl->model.doubleValue();
+    if (mImpl->model.setLimits(minVal, maxVal, inc)) {
+        mImpl->thumb->setFrame(mImpl->calcThumbFrame(bounds()));
+        setNeedsDraw();
     }
 }
 
-int SliderLogic::intMinLimit() const { return int(mImpl->minValue); }
+int SliderLogic::intMinLimit() const { return mImpl->model.intMinLimit(); }
 
-int SliderLogic::intMaxLimit() const { return int(mImpl->maxValue); }
+int SliderLogic::intMaxLimit() const { return mImpl->model.intMaxLimit(); }
 
-double SliderLogic::doubleMinLimit() const { return mImpl->minValue; }
+int SliderLogic::intIncrement() const { return mImpl->model.intIncrement(); }
 
-double SliderLogic::doubleMaxLimit() const { return mImpl->maxValue; }
+double SliderLogic::doubleMinLimit() const { return mImpl->model.doubleMinLimit(); }
+
+double SliderLogic::doubleMaxLimit() const { return mImpl->model.doubleMaxLimit(); }
+
+double SliderLogic::doubleIncrement() const { return mImpl->model.doubleIncrement(); }
 
 SliderLogic* SliderLogic::setOnValueChanged(std::function<void(SliderLogic*)> onChanged)
 {
@@ -238,9 +233,9 @@ Widget::EventResult SliderLogic::mouse(const MouseEvent &e)
                                         y - 0.5f * mImpl->thumb->frame().height,
                                         mImpl->thumb->frame().width, mImpl->thumb->frame().height));
         }
-        auto lastValue = mImpl->value;
+        auto lastValue = mImpl->model.doubleValue();
         setValue(mImpl->calcValue(bounds()));
-        if (lastValue != mImpl->value && mImpl->onValueChanged) {
+        if (lastValue != mImpl->model.doubleValue() && mImpl->onValueChanged) {
             mImpl->onValueChanged(this);
         }
     }

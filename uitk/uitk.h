@@ -36,6 +36,7 @@
 #include "Events.h"
 #include "Label.h"
 #include "ListView.h"
+#include "NumberEdit.h"
 #include "ProgressBar.h"
 #include "ScrollView.h"
 #include "SegmentedControl.h"

@@ -385,6 +385,12 @@ Rect VectorBaseTheme::calcTextEditRectForFrame(const Rect& frame, const DrawCont
                 fm.ascent + fm.descent);
 }
 
+Size VectorBaseTheme::calcPreferredIncDecSize(const DrawContext& dc) const
+{
+    auto buttonHeight = calcPreferredButtonSize(dc, mParams.labelFont, "Ag").height;
+    return Size(0.5f * buttonHeight, buttonHeight);
+}
+
 PicaPt VectorBaseTheme::calcPreferredScrollbarThickness(const DrawContext& dc) const
 {
     auto fm = dc.fontMetrics(mParams.labelFont);
@@ -789,6 +795,44 @@ void VectorBaseTheme::drawProgressBar(UIContext& ui, const Rect& frame, float va
                     mProgressBarStyles[int(state)].merge(style), state);
 }
 
+void VectorBaseTheme::drawIncDec(UIContext& ui, const Rect& frame,
+                                 WidgetState incState, WidgetState decState) const
+{
+    auto incRect = frame;
+    incRect.height = 0.5f * frame.height;
+    auto decRect = frame;
+    decRect.height = 0.5f * frame.height;
+    decRect.y = decRect.y + decRect.height;
+
+    ui.dc.save();
+    ui.dc.clipToRect(incRect);
+    drawFrame(ui, frame, mButtonStyles[int(incState)]);
+    ui.dc.restore();
+
+    ui.dc.save();
+    ui.dc.clipToRect(decRect);
+    drawFrame(ui, frame, mButtonStyles[int(decState)]);
+    ui.dc.restore();
+
+    ui.dc.save();  // so line style changes get cleaned up
+    ui.dc.setStrokeWidth(PicaPt(1.5));
+    ui.dc.setStrokeEndCap(kEndCapRound);
+    ui.dc.setStrokeJoinStyle(kJoinRound);
+    auto w = 0.125f * frame.height;
+    auto h = 0.2f * frame.height;
+    ui.dc.setStrokeColor(mButtonStyles[int(incState)].fgColor);
+    auto top = frame.midY() - 0.2f * frame.height;
+    ui.dc.drawLines({ Point(frame.midX() - w, top),
+                      Point(frame.midX(), top - w),
+                      Point(frame.midX() + w, top) });
+    ui.dc.setStrokeColor(mButtonStyles[int(decState)].fgColor);
+    auto bottom = frame.midY() + 0.2f * frame.height + w;
+    ui.dc.drawLines({ Point(frame.midX() - w, bottom - w),
+                      Point(frame.midX(), bottom),
+                      Point(frame.midX() + w, bottom - w) });
+    ui.dc.restore();
+}
+
 Theme::WidgetStyle VectorBaseTheme::textEditStyle(const WidgetStyle& style, WidgetState state) const
 {
     return mTextEditStyles[int(state)].merge(style);
@@ -796,8 +840,11 @@ Theme::WidgetStyle VectorBaseTheme::textEditStyle(const WidgetStyle& style, Widg
 
 void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaPt& scrollOffset,
                                    const std::string& placeholder, TextEditorLogic& editor,
-                                   const WidgetStyle& style, WidgetState state, bool hasFocus) const
+                                   int horizAlign, const WidgetStyle& style, WidgetState state,
+                                   bool hasFocus) const
 {
+    horizAlign = horizAlign & Alignment::kHorizMask;
+
     auto s = textEditStyle(style, state);
     drawFrame(ui, frame, s);
 
@@ -834,14 +881,14 @@ void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaP
     if (editor.isEmpty()) {
         if (!placeholder.empty()) {
             ui.dc.setFillColor(mTextEditStyles[int(WidgetState::kDisabled)].fgColor);
-            ui.dc.drawText(placeholder.c_str(), textRect, Alignment::kLeft | Alignment::kVCenter,
+            ui.dc.drawText(placeholder.c_str(), textRect, horizAlign | Alignment::kVCenter,
                            mParams.labelFont, kPaintFill);
         }
     } else {
         // The layout incorporates the color, so we cannot set it.
-        auto offset = calcTextEditRectForFrame(frame, ui.dc, font).upperLeft();
+        auto textRect = calcTextEditRectForFrame(frame, ui.dc, font);
         if (editor.layout()) {
-            ui.dc.drawText(*editor.layout(), offset + Point(scrollOffset, PicaPt::kZero));
+            ui.dc.drawText(*editor.layout(), textRect.upperLeft() + Point(scrollOffset, PicaPt::kZero));
         }
     }
 
