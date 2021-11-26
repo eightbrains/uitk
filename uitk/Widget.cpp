@@ -266,6 +266,9 @@ void Widget::setWindow(Window *window) { mImpl->window = window; }
 Point Widget::convertToLocalFromWindow(const Point& windowPt) const
 {
     Point localPt = windowPt;
+    if (Window *win = window()) {
+        localPt -= win->contentRect().upperLeft();
+    }
     const Widget *w = this;
     while (w->mImpl->parent) {
         localPt -= w->frame().upperLeft();
@@ -277,6 +280,9 @@ Point Widget::convertToLocalFromWindow(const Point& windowPt) const
 Point Widget::convertToWindowFromLocal(const Point& localPt) const
 {
     Point windowPt = localPt;
+    if (Window *win = window()) {
+        windowPt += win->contentRect().upperLeft();
+    }
     const Widget *w = this;
     while (w->mImpl->parent) {
         windowPt += w->frame().upperLeft();
@@ -312,6 +318,13 @@ Theme::WidgetState Widget::state() const { return mImpl->state; }
 
 void Widget::setState(Theme::WidgetState state)
 {
+    if (!mImpl->enabled) {
+        // Need to specifically set in case setEnabled(false) calls setState() after
+        // setting mImpl->enabled = false.
+        mImpl->state = Theme::WidgetState::kDisabled;
+        return;
+    }
+    
     if (mImpl->state == Theme::WidgetState::kNormal && state == Theme::WidgetState::kMouseDown) {
         state = state;
     }

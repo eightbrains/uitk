@@ -94,6 +94,7 @@ struct ListView::Impl
     SelectionMode selectionMode = SelectionMode::kSingleItem;
     std::unordered_set<int> selectedIndices;
     std::function<void(ListView*)> onChanged;
+    int mouseOverIndex = -1;
     int lastClickedRow = 0;
 };
 
@@ -134,6 +135,7 @@ void ListView::clearCells()
 {
     clearSelection();
     mImpl->content->clearAllChildren();
+    mImpl->mouseOverIndex = -1;
 }
 
 ListView* ListView::addCell(Widget *cell)
@@ -240,7 +242,9 @@ Widget::EventResult ListView::mouse(const MouseEvent& e)
 {
     if (e.type == MouseEvent::Type::kButtonUp && e.button.button == MouseButton::kLeft) {
         int idx = calcRowIndex(e.pos);
-        if (idx >= 0) {
+        bool isEnabled = (mImpl->content && size_t(idx) < mImpl->content->children().size() &&
+                          mImpl->content->children()[idx]->enabled());
+        if (idx >= 0 && isEnabled) {
             bool selectionChanged = false;
             if (mImpl->selectionMode == SelectionMode::kSingleItem) {
                 setSelectedIndex(idx);
@@ -273,9 +277,16 @@ Widget::EventResult ListView::mouse(const MouseEvent& e)
                 mImpl->onChanged(this);
             }
         }
+    } else if (e.type == MouseEvent::Type::kMove || e.type == MouseEvent::Type::kDrag) {
+        mImpl->mouseOverIndex = calcRowIndex(e.pos);
     }
 
     return Super::mouse(e);
+}
+
+void ListView::mouseExited()
+{
+    mImpl->mouseOverIndex = -1;
 }
 
 int ListView::calcRowIndex(const Point& p) const
@@ -291,6 +302,79 @@ int ListView::calcRowIndex(const Point& p) const
     return -1;
 }
 
+void ListView::key(const KeyEvent& e)
+{
+    Super::key(e);
+    if (mImpl->selectionMode == SelectionMode::kNoItems || e.type == KeyEvent::Type::kKeyUp) {
+        return;
+    }
+
+    switch (e.key) {
+        case Key::kDown: {
+            int idx = std::max(-1, mImpl->mouseOverIndex) + 1;
+            auto items = mImpl->content->children();
+            int nItems = int(items.size());
+            while (idx < nItems && !items[idx]->enabled()) {
+                idx++;
+            }
+            if (idx < nItems) {
+                mImpl->mouseOverIndex = idx;
+                setNeedsDraw();
+            }
+            break;
+        }
+        case Key::kUp: {
+            auto items = mImpl->content->children();
+            int nItems = int(items.size());
+            int idx = mImpl->mouseOverIndex - 1;
+            if (idx < 0) {
+                idx = nItems - 1;
+            }
+            while (idx >= 0 && !items[idx]->enabled()) {
+                idx--;
+            }
+            if (idx >= 0) {
+                mImpl->mouseOverIndex = idx;
+                setNeedsDraw();
+            }
+            break;
+        }
+        case Key::kEnter:
+        case Key::kReturn:
+        case Key::kSpace:
+            if (mImpl->mouseOverIndex >= 0) {
+                bool changed = false;
+                bool thisIndexIsSelected = (mImpl->selectedIndices.find(mImpl->mouseOverIndex) != mImpl->selectedIndices.end());
+                if (thisIndexIsSelected) {
+                    if (mImpl->selectionMode == SelectionMode::kSingleItem) {
+                        // do nothing
+                    } else {
+                        auto selected = selectedIndices();
+                        auto newSet = std::unordered_set<int>(selected.begin(), selected.end());
+                        newSet.erase(mImpl->mouseOverIndex);
+                        setSelectedIndices(newSet);
+                        changed = true;
+                    }
+                } else {
+                    if (mImpl->selectionMode == SelectionMode::kSingleItem) {
+                        setSelectedIndex(mImpl->mouseOverIndex);
+                    } else {
+                        auto newSet = selectedIndices();
+                        newSet.push_back(mImpl->mouseOverIndex);
+                        setSelectedIndices(std::unordered_set<int>(newSet.begin(), newSet.end()));
+                    }
+                    changed = true;
+                }
+                if (changed && mImpl->onChanged) {
+                    mImpl->onChanged(this);
+                }
+            }
+            break;
+        default:
+            break;
+    }
+}
+
 void ListView::draw(UIContext& context)
 {
     Rect r(PicaPt::kZero, PicaPt::kZero, frame().width, frame().height);
@@ -302,11 +386,30 @@ void ListView::draw(UIContext& context)
     Theme::WidgetStyle s;
     auto parentState = state();
     auto width = frame().width;
+    // The mouseOverIndex can also be set by keyboard navigation, so don't
+    // require the state to be mouseover in order to display it.
+    // (mouseExited() will set it -1, so mousing will still work correctly)
+    if (mImpl->mouseOverIndex >= 0) {
+        if (mImpl->selectionMode != SelectionMode::kNoItems
+            && mImpl->mouseOverIndex < mImpl->content->children().size()) {
+            auto *item = mImpl->content->children()[mImpl->mouseOverIndex];
+            auto r = item->frame();
+            r.x = PicaPt::kZero;
+            r.width = width;
+            auto rowState = parentState;
+            if (item->enabled()) {
+                context.theme.drawListViewSpecialRow(context, r, style(state()), parentState);
+            }
+        }
+    }
+    auto stateForSelection = (parentState == Theme::WidgetState::kDisabled
+                                ? parentState
+                                : Theme::WidgetState::kNormal);
     for (auto idx : mImpl->selectedIndices) {
         auto r = mImpl->content->children()[idx]->frame();
         r.x = PicaPt::kZero;
         r.width = width;
-        context.theme.drawListViewSelectedRow(context, r, s, parentState);
+        context.theme.drawListViewSpecialRow(context, r, s, stateForSelection);
     }
     context.dc.translate(-bounds().x, -bounds().y);
     context.dc.restore();

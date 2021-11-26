@@ -25,8 +25,10 @@
 #include "Events.h"
 #include "Label.h"
 #include "ListView.h"
-#include "PopupMenu.h"
+#include "MenuUITK.h"
+#include "ShortcutKey.h"
 #include "UIContext.h"
+#include "Window.h"
 #include "themes/Theme.h"
 
 namespace uitk {
@@ -39,7 +41,7 @@ struct ComboBox::Impl
     };
     std::vector<Item> items;
     int selectedIndex = -1;
-    PopupMenu *menu = nullptr; // we own this
+    MenuUITK *menu = nullptr; // we own this
     std::function<void(ComboBox*)> onSelectionChanged;
     PicaPt itemDrawOffset;
 
@@ -49,7 +51,7 @@ struct ComboBox::Impl
 ComboBox::ComboBox()
     : mImpl(new Impl())
 {
-    mImpl->menu = new PopupMenu();
+    mImpl->menu = new MenuUITK();
 }
 
 ComboBox::~ComboBox()
@@ -183,7 +185,8 @@ void ComboBox::layout(const LayoutContext& context)
     auto xMargin = context.theme.calcPreferredTextMargins(context.dc,
                                                           context.theme.params().labelFont).width;
     Rect textRectMenuCoord;
-    context.theme.calcMenuItemFrames(context.dc, bounds(), nullptr, &textRectMenuCoord);
+    context.theme.calcMenuItemFrames(context.dc, bounds(), PicaPt::kZero, nullptr, &textRectMenuCoord,
+                                     nullptr);
     mImpl->itemDrawOffset = textRectMenuCoord.x - xMargin;
 
     Super::layout(context);
@@ -196,7 +199,7 @@ Widget::EventResult ComboBox::mouse(const MouseEvent& e)
             // Don't Super::mouse() here, because we do not want to be set as the grab widget,
             // since we are opening a popup menu.
 
-            int id = PopupMenu::kInvalidId;
+            int id = OSMenu::kInvalidId;
             if (mImpl->selectedIndex >= 0) {
                 id = mImpl->items[mImpl->selectedIndex].id;
             }
@@ -207,6 +210,15 @@ Widget::EventResult ComboBox::mouse(const MouseEvent& e)
             auto menuUL = frame().upperLeft();
             menuUL.x -= mImpl->itemDrawOffset;
             mImpl->menu->show(window(), convertToWindowFromLocal(menuUL), id);
+#ifdef __APPLE__
+            // macOS draws the window border inside the window, instead of decorating
+            // the exterior of the window like Win32 and Xlib. show() outsets for this,
+            // but since we are aligned with the frame of the control, we need to undo that.
+            if (auto *menuWin = mImpl->menu->window()) {
+                auto border = menuWin->borderWidth();
+                menuWin->move(border, border);
+            }
+#endif // __APPLE__
 
             return EventResult::kConsumed;
         }

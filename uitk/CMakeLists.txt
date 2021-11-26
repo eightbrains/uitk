@@ -11,15 +11,18 @@ set(UITK_HEADERS Application.h
                  Label.h
                  ListView.h
                  Menu.h
+                 Menubar.h
+                 MenuUITK.h
                  NumberEdit.h
                  NumericModel.h
                  OSApplication.h
+                 OSMenu.h
                  OSWindow.h
-                 PopupMenu.h
                  ProgressBar.h
                  ScrollBar.h
                  ScrollView.h
                  SegmentedControl.h
+                 ShortcutKey.h
                  Slider.h
                  SliderLogic.h
                  StringEdit.h
@@ -40,13 +43,15 @@ set(UITK_SOURCES Application.cpp
                  Label.cpp
                  ListView.cpp
                  Menu.cpp
+                 Menubar.cpp
+                 MenuUITK.cpp
                  NumberEdit.cpp
                  NumericModel.cpp
-                 PopupMenu.cpp
                  ProgressBar.cpp
                  ScrollBar.cpp
                  ScrollView.cpp
                  SegmentedControl.cpp
+                 ShortcutKey.cpp
                  Slider.cpp
                  SliderLogic.cpp
                  StringEdit.cpp
@@ -54,6 +59,7 @@ set(UITK_SOURCES Application.cpp
                  TextEditorLogic.cpp
                  Widget.cpp
                  Window.cpp
+                 themes/Theme.cpp
                  themes/EmpireTheme.cpp
                  themes/VectorBaseTheme.cpp
                  )

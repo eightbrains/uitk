@@ -37,11 +37,15 @@ public:
 
     void setExitWhenLastWindowCloses(bool exits) override;
     int run() override;
+    void exitRun() override;
 
     void scheduleLater(Window* w, std::function<void()> f) override;
 
+    void beep() override;
+
     bool isOriginInUpperLeft() const override;
     bool shouldHideScrollbars() const override;
+    bool platformHasMenubar() const override;
 
     Clipboard& clipboard() const override;
 

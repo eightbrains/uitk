@@ -40,6 +40,13 @@ Color blend(const Color& top, const Color& bottom)
                  1.0f);
 }
 
+bool calcIsDarkMode(const Theme::Params& params)
+{
+    // Check text color to determine dark mode; params.windowBackgroundColor
+    // may be transparent.
+    return (params.textColor.toGrey().red() > 0.5f);
+}
+
 VectorBaseTheme::VectorBaseTheme(const Params& params, const PicaPt& borderWidth,
                                  const PicaPt& borderRadius)
     : mParams(params), mBorderWidth(borderWidth), mBorderRadius(borderRadius)
@@ -65,9 +72,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
         dest[DOWN] = src[DOWN];
     };
 
-    // Check text color to determine dark mode; params.windowBackgroundColor
-    // may be transparent.
-    bool isDarkMode = (params.textColor.toGrey().red() > 0.5f);
+    bool isDarkMode = calcIsDarkMode(params);
     Color borderColor = (isDarkMode ? Color(1.0f, 1.0f, 1.0f, 0.2f)
                                     : Color(0.0f, 0.0f, 0.0f, 0.2f));
 
@@ -280,6 +285,8 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     copyStyles(mScrollViewStyles, mListViewStyles);
     mListViewStyles[NORMAL].fgColor = params.accentColor;
     mListViewStyles[DISABLED].fgColor = Color(0.5f, 0.5f, 0.5f);
+    mListViewStyles[OVER].fgColor = mListViewStyles[OVER].bgColor;  // don't highlight individual row
+    mListViewStyles[DOWN].fgColor = mListViewStyles[DOWN].bgColor;  // don't highlight individual row
 
     // Menu Items
     mMenuItemStyles[NORMAL].bgColor = Color::kTransparent;
@@ -291,7 +298,14 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mMenuItemStyles[DISABLED].fgColor = params.disabledTextColor;
     mMenuItemStyles[OVER] = mMenuItemStyles[NORMAL];
     mMenuItemStyles[OVER].bgColor = params.accentColor;
+    mMenuItemStyles[OVER].fgColor = params.accentedBackgroundTextColor;
     mMenuItemStyles[DOWN] = mMenuItemStyles[OVER];
+
+    // Menubar items
+    copyStyles(mMenuItemStyles, mMenubarItemStyles);
+    mMenuItemStyles[OVER].bgColor = mMenuItemStyles[NORMAL].bgColor;
+    mMenuItemStyles[DOWN].bgColor = params.accentColor;
+    mMenuItemStyles[DOWN].fgColor = params.accentedBackgroundTextColor;
 }
 
 const Theme::Params& VectorBaseTheme::params() const { return mParams; }
@@ -397,16 +411,50 @@ PicaPt VectorBaseTheme::calcPreferredScrollbarThickness(const DrawContext& dc) c
     return dc.ceilToNearestPixel(0.5f * fm.capHeight + fm.descent);
 }
 
-Size VectorBaseTheme::calcPreferredMenuItemSize(const DrawContext& dc, const std::string& text) const
+Size VectorBaseTheme::calcPreferredMenuItemSize(const DrawContext& dc,
+                                                const std::string& text, const std::string& shortcut,
+                                                MenuItemAttribute itemAttr,
+                                                PicaPt *shortcutWidth) const
+{
+    auto height = dc.ceilToNearestPixel(calcPreferredButtonSize(dc, mParams.labelFont, text).height);
+    auto metrics = calcPreferredMenuItemMetrics(dc, height);
+    auto textMetrics = dc.textMetrics(text.c_str(), mParams.labelFont, kPaintFill);
+    auto twidth = dc.ceilToNearestPixel(textMetrics.width);
+
+    PicaPt swidth;
+    if (itemAttr == MenuItemAttribute::kSubmenu) {
+        swidth = metrics.submenuIconSize.width;
+    } else {
+        auto shortcutMetrics = dc.textMetrics(shortcut.c_str(), mParams.labelFont, kPaintFill);
+        swidth = dc.ceilToNearestPixel(shortcutMetrics.width);
+    }
+    if (shortcutWidth) {
+        *shortcutWidth = swidth;
+    }
+
+    return Size(metrics.horizMargin +
+                metrics.checkboxWidth + metrics.afterCheckboxSeparator +
+                twidth + metrics.afterTextSeparator + swidth +
+                metrics.horizMargin,
+                height);
+}
+
+Theme::MenubarMetrics VectorBaseTheme::calcPreferredMenuItemMetrics(const DrawContext& dc, const PicaPt& height) const
 {
     auto fm = dc.fontMetrics(mParams.labelFont);
-    auto tm = dc.textMetrics(text.c_str(), mParams.labelFont, kPaintFill);
-    auto em = fm.capHeight + fm.descent;
-    auto xMargin = dc.ceilToNearestPixel(0.5f * em);
-    auto checkboxWidth = fm.capHeight;
 
-    return Size(dc.ceilToNearestPixel(xMargin + checkboxWidth + xMargin + tm.width + xMargin),
-                calcPreferredButtonSize(dc, mParams.labelFont, text).height);
+    return {
+        dc.ceilToNearestPixel(0.5f * height),  // horizMargin
+        dc.ceilToNearestPixel(height),         // checkboxWidth;
+        dc.ceilToNearestPixel(0.5f * height),  // afterCheckboxSeparator;
+        dc.ceilToNearestPixel(height),         // afterTextSeparator;
+        Size(fm.capHeight, fm.capHeight)       // submenuIconSize;
+    };
+}
+
+PicaPt VectorBaseTheme::calcPreferredMenubarItemHorizMargin(const DrawContext& dc, const PicaPt& height) const
+{
+    return dc.ceilToNearestPixel(0.5f * calcPreferredButtonSize(dc, mParams.labelFont, "Ag").height);
 }
 
 void VectorBaseTheme::drawCheckmark(UIContext& ui, const Rect& r, const WidgetStyle& style) const
@@ -427,6 +475,25 @@ void VectorBaseTheme::drawCheckmark(UIContext& ui, const Rect& r, const WidgetSt
     Point p1(r.x + margin, r.y + margin + 2.0f * thirdH);
     Point p2(r.x + margin + thirdW, r.y + margin + 3.0f * thirdH);
     Point p3(r.x + margin + 3.0f * thirdW, r.y + margin);
+    ui.dc.drawLines({ p1, p2, p3 });
+    ui.dc.restore();
+}
+
+void VectorBaseTheme::drawSubmenuIcon(UIContext& ui, const Rect& frame, const WidgetStyle& style) const
+{
+    const auto strokeWidth = PicaPt(2);
+    const float tan45 = 1.0f;  // angle of arrow is 90 deg
+    auto margin = 0.5f * strokeWidth; // inset a bit because point is in center of stroke
+    auto h = 0.5f * frame.height - margin;
+    auto w = h / tan45;
+    Point p1(frame.midX() - 0.5f * w, frame.midY() - h);
+    Point p2(frame.midX() + 0.5f * w, frame.midY());
+    Point p3(frame.midX() - 0.5f * w, frame.midY() + h);
+    ui.dc.save();
+    ui.dc.setStrokeColor(style.fgColor);
+    ui.dc.setStrokeWidth(strokeWidth);
+    ui.dc.setStrokeEndCap(kEndCapRound);
+    ui.dc.setStrokeJoinStyle(kJoinRound);
     ui.dc.drawLines({ p1, p2, p3 });
     ui.dc.restore();
 }
@@ -929,54 +996,72 @@ void VectorBaseTheme::clipListView(UIContext& ui, const Rect& frame,
     clipFrame(ui, frame, mListViewStyles[int(state)].merge(style));
 }
 
-void VectorBaseTheme::drawListViewSelectedRow(UIContext& ui, const Rect& frame,
-                                              const WidgetStyle& style, WidgetState state) const
+void VectorBaseTheme::drawListViewSpecialRow(UIContext& ui, const Rect& frame,
+                                             const WidgetStyle& style, WidgetState state) const
 {
-    WidgetStyle s = mListViewStyles[int(WidgetState::kNormal)].merge(style);
-    if (state == WidgetState::kDisabled) {
-        s = mListViewStyles[int(WidgetState::kDisabled)].merge(style);
-    }
-
+    WidgetStyle s = mListViewStyles[int(state)].merge(style);
     ui.dc.setFillColor(s.fgColor);
     ui.dc.drawRect(frame, kPaintFill);
 }
 
-void VectorBaseTheme::drawMenuBackground(UIContext& ui, const Rect& frame)
+void VectorBaseTheme::drawMenuBackground(UIContext& ui, const Size& size)
 {
-    drawWindowBackground(ui, frame.size());
+    if (mParams.nonNativeMenuBackgroundColor.alpha() > 0.0f) {
+        ui.dc.fill(mParams.nonNativeMenuBackgroundColor);
+    }
 }
 
 void VectorBaseTheme::calcMenuItemFrames(const DrawContext& dc, const Rect& frame,
-                                         Rect *checkRect, Rect *textRect) const
+                                         const PicaPt& shortcutWidth,
+                                         Rect *checkRect, Rect *textRect, Rect *shortcutRect) const
 {
+    auto metrics = calcPreferredMenuItemMetrics(dc, frame.height);
     auto fm = mParams.labelFont.metrics(dc);
-    auto em = fm.capHeight + fm.descent;
-    auto xMargin = dc.ceilToNearestPixel(0.5f * em);
     // Checkmark should be in the cap-height of the text
-    Rect checkmarkRect(frame.x + xMargin, frame.midY() - 0.5f * fm.capHeight, fm.capHeight, fm.capHeight);
-    auto x = dc.ceilToNearestPixel(checkmarkRect.maxX() + xMargin);
+    Rect checkmarkRect(frame.x + metrics.horizMargin, frame.midY() - 0.5f * fm.capHeight,
+                       fm.capHeight, fm.capHeight);
+    auto x = dc.ceilToNearestPixel(checkmarkRect.maxX() + metrics.afterCheckboxSeparator);
     if (checkRect) {
         *checkRect = checkmarkRect;
     }
+
+    auto shortcutX = frame.width - metrics.horizMargin - shortcutWidth;
+    if (shortcutRect) {
+        *shortcutRect = Rect(shortcutX, frame.y, shortcutWidth, frame.height);
+    }
+
     if (textRect) {
-        *textRect = Rect(x, frame.y, frame.width - x, frame.height);
+        *textRect = Rect(x, frame.y, shortcutX - x, frame.height);
     }
 }
 
-void VectorBaseTheme::drawMenuItem(UIContext& ui, const Rect& frame, const std::string& text,
-                                   const bool isChecked, const WidgetStyle& style, WidgetState state) const
+void VectorBaseTheme::drawMenuItem(UIContext& ui, const Rect& frame, const PicaPt& shortcutWidth,
+                                   const std::string& text, const std::string& shortcutKey,
+                                   MenuItemAttribute itemAttr,
+                                   const WidgetStyle& style, WidgetState state) const
 {
-    Rect checkmarkRect, textRect;
-    calcMenuItemFrames(ui.dc, frame, &checkmarkRect, &textRect);
+    Rect checkmarkRect, textRect, shortcutRect;
+    calcMenuItemFrames(ui.dc, frame, shortcutWidth, &checkmarkRect, &textRect, &shortcutRect);
 
     auto s = mMenuItemStyles[int(state)].merge(style);
     drawFrame(ui, frame, s);
-    if (isChecked) {
+    if (itemAttr == MenuItemAttribute::kChecked) {
         drawCheckmark(ui, checkmarkRect, s);
     }
     ui.dc.setFillColor(s.fgColor);
     ui.dc.drawText(text.c_str(), textRect, Alignment::kLeft | Alignment::kVCenter, mParams.labelFont,
                    kPaintFill);
+    if (itemAttr == MenuItemAttribute::kSubmenu) {
+        auto itemMetrics = calcPreferredMenuItemMetrics(ui.dc, frame.height);
+        Rect r(shortcutRect.maxX() - itemMetrics.submenuIconSize.width,
+               shortcutRect.midY() - 0.5 * itemMetrics.submenuIconSize.height,
+               itemMetrics.submenuIconSize.width,
+               itemMetrics.submenuIconSize.height);
+        drawSubmenuIcon(ui, r, s);
+    } else {
+        ui.dc.drawText(shortcutKey.c_str(), shortcutRect, Alignment::kRight | Alignment::kVCenter,
+                       mParams.labelFont, kPaintFill);
+    }
 }
 
 void VectorBaseTheme::drawMenuSeparatorItem(UIContext& ui, const Rect& frame) const
@@ -989,6 +1074,38 @@ void VectorBaseTheme::drawMenuSeparatorItem(UIContext& ui, const Rect& frame) co
     ui.dc.setStrokeWidth(float(thicknessPx) * ui.dc.onePixel());
     ui.dc.setStrokeEndCap(kEndCapButt);
     ui.dc.drawLines({Point(frame.x, frame.midY()), Point(frame.maxX(), frame.midY()) });
+}
+
+void VectorBaseTheme::drawMenubarBackground(UIContext& ui, const Rect& frame) const
+{
+    Color bgColor(mParams.nonNativeMenubarBackgroundColor);
+    Color borderColor(mParams.textColor, 0.075f);
+    // Make the bottom border 0.5 pt. This will be 1px at 144 dpi, and since it is ceil()
+    // it is also 1px at 72 dpi. But at 216 dpi it will just be 2px. We cannot use
+    // ui.dc.onePixel() because at greater than 2X resolutions it will start getting
+    // practically invisible.
+    auto borderWidth = ui.dc.ceilToNearestPixel(PicaPt(0.5));
+    auto onePx = ui.dc.onePixel();
+
+    ui.dc.save();
+    ui.dc.setFillColor(bgColor);
+    ui.dc.drawRect(frame, kPaintFill);
+    ui.dc.setStrokeColor(borderColor);
+    ui.dc.setStrokeWidth(borderWidth);
+    ui.dc.setStrokeEndCap(kEndCapButt);  // in case this got set previously
+    ui.dc.setStrokeDashes({}, PicaPt::kZero);  // in case this got set previously
+    ui.dc.drawLines({ Point(frame.x, frame.maxY() - 0.5f * onePx),
+                      Point(frame.maxX(), frame.maxY() - 0.5f * onePx) });
+    ui.dc.restore();
+}
+
+void VectorBaseTheme::drawMenubarItem(UIContext& ui, const Rect& frame, const std::string& text,
+                                      WidgetState state) const
+{
+    auto s = mMenubarItemStyles[int(state)];
+    drawFrame(ui, frame, s);
+    ui.dc.setFillColor(s.fgColor);
+    ui.dc.drawText(text.c_str(), frame, Alignment::kCenter, mParams.nonNativeMenubarFont, kPaintFill);
 }
 
 }  // namespace uitk

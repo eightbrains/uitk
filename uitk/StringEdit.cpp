@@ -23,7 +23,7 @@
 #include "StringEdit.h"
 
 #include "Events.h"
-#include "PopupMenu.h"
+#include "MenuUITK.h"
 #include "StringEditorLogic.h"
 #include "UIContext.h"
 #include "Window.h"
@@ -106,7 +106,7 @@ struct StringEdit::Impl
     int alignment = Alignment::kLeft | Alignment::kVCenter;
     Rect editorTextRect;
     PicaPt scrollOffset = PicaPt::kZero;
-    PopupMenu *popup = nullptr;  // we own this
+    MenuUITK *popup = nullptr;  // we own this
     std::function<void(const std::string&)> onTextChanged;
     std::function<void(StringEdit*)> onValueChanged;
     bool textHasChanged = false;
@@ -233,7 +233,7 @@ Widget::EventResult StringEdit::mouse(const MouseEvent& e)
                 mImpl->popup->cancel();
                 delete mImpl->popup;
             }
-            mImpl->popup = new PopupMenu();
+            mImpl->popup = new MenuUITK();
             mImpl->popup->addItem("Cut", 1,
                                   [this]() { mImpl->editor.cutToClipboard(); setNeedsDraw(); });
             mImpl->popup->addItem("Copy", 2, [this]() { mImpl->editor.copyToClipboard(); });

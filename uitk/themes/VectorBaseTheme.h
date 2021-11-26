@@ -52,9 +52,15 @@ public:
     Rect calcTextEditRectForFrame(const Rect& frame, const DrawContext& dc, const Font& font) const override;
     Size calcPreferredIncDecSize(const DrawContext& dc) const override;
     PicaPt calcPreferredScrollbarThickness(const DrawContext& dc) const override;
-    Size calcPreferredMenuItemSize(const DrawContext& dc, const std::string& text) const override;
+    Size calcPreferredMenuItemSize(const DrawContext& dc,
+                                   const std::string& text, const std::string& shortcut,
+                                   MenuItemAttribute itemAttr,
+                                   PicaPt *shortcutWidth) const override;
+    MenubarMetrics calcPreferredMenuItemMetrics(const DrawContext& dc, const PicaPt& height) const override;
+    PicaPt calcPreferredMenubarItemHorizMargin(const DrawContext& dc, const PicaPt& height) const override;
 
     void drawCheckmark(UIContext& ui, const Rect& r, const WidgetStyle& style) const override;
+    void drawSubmenuIcon(UIContext& ui, const Rect& frame, const WidgetStyle& style) const override;
 
     void drawWindowBackground(UIContext& ui, const Size& size) const override;
     void drawFrame(UIContext& ui, const Rect& frame,
@@ -104,14 +110,19 @@ public:
                       const WidgetStyle& style, WidgetState state) const override;
     void clipListView(UIContext& ui, const Rect& frame,
                       const WidgetStyle& style, WidgetState state) const override;
-    void drawListViewSelectedRow(UIContext& ui, const Rect& frame,
-                                 const WidgetStyle& style, WidgetState state) const override;
-    void drawMenuBackground(UIContext& ui, const Rect& frame) override;
-    void calcMenuItemFrames(const DrawContext& dc, const Rect& frame,
-                            Rect *checkRect, Rect *textRect) const override;
-    void drawMenuItem(UIContext& ui, const Rect& frame, const std::string& text,
-                      const bool isChecked, const WidgetStyle& style, WidgetState state) const override;
+    void drawListViewSpecialRow(UIContext& ui, const Rect& frame,
+                                const WidgetStyle& style, WidgetState state) const override;
+    void drawMenuBackground(UIContext& ui, const Size& size) override;
+    void calcMenuItemFrames(const DrawContext& dc, const Rect& frame, const PicaPt& shortcutWidth,
+                            Rect *checkRect, Rect *textRect, Rect *shortcutRect) const override;
+    void drawMenuItem(UIContext& ui, const Rect& frame, const PicaPt& shortcutWidth,
+                      const std::string& text, const std::string& shortcutKey,
+                      MenuItemAttribute itemAttr,
+                      const WidgetStyle& style, WidgetState state) const override;
     void drawMenuSeparatorItem(UIContext& ui, const Rect& frame) const override;
+    void drawMenubarBackground(UIContext& ui, const Rect& frame) const override;
+    void drawMenubarItem(UIContext& ui, const Rect& frame, const std::string& text,
+                         WidgetState state) const override;
 
 protected:
     void setVectorParams(const Params& params);
@@ -140,6 +151,7 @@ protected:
     WidgetStyle mScrollViewStyles[4];
     WidgetStyle mListViewStyles[4];
     WidgetStyle mMenuItemStyles[4];
+    WidgetStyle mMenubarItemStyles[4];
 };
 
 }  // namespace uitk

@@ -42,7 +42,11 @@ Theme::Params EmpireTheme::EmpireTheme::darkModeParams(const Color& accent)
     params.accentColor = accent;
     //params.selectionColor = Color(0.11f, 0.23f, 0.45f);
     params.selectionColor = accent.darker();
+    params.nonNativeMenuBackgroundColor = Color(0.225f, 0.225f, 0.225f);
+    params.nonNativeMenuBorderColor = Color(0.333f, 0.333f, 0.333f);
+    params.nonNativeMenubarBackgroundColor = Color(0.275f, 0.275f, 0.275f);
     params.labelFont = Font("Arial", PicaPt::fromPixels(10.0f, 72.0f));
+    params.nonNativeMenubarFont = params.labelFont;
     return params;
 }
 
@@ -58,7 +62,11 @@ Theme::Params EmpireTheme::lightModeParams(const Color& accent)
     params.disabledTextColor = Color(0.4f, 0.4f, 0.4f);
     params.accentColor = accent;
     params.selectionColor = accent.lighter();
+    params.nonNativeMenuBorderColor = Color(0.666f, 0.666f, 0.666f);
+    params.nonNativeMenuBackgroundColor = Color(0.975f, 0.975f, 0.975f);
+    params.nonNativeMenubarBackgroundColor = Color(1.0f, 1.0f, 1.0f);
     params.labelFont = Font("Arial", PicaPt::fromPixels(10.0f, 72.0f));
+    params.nonNativeMenubarFont = params.labelFont;
     return params;
 }
 

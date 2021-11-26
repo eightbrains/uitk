@@ -273,9 +273,18 @@ void X11Application::setExitWhenLastWindowCloses(bool exits)
     // be no way to open a new window after the last one closes.
 }
 
+void X11Application::beep()
+{
+    if (mImpl->display) {
+        XBell(mImpl->display, 0 /* base volume, ranges [-100, 100]*/);
+    }
+}
+
 bool X11Application::isOriginInUpperLeft() const { return true; }
 
 bool X11Application::shouldHideScrollbars() const { return false; }
+
+bool X11Application::platformHasMenubar() const { return true; }
 
 Clipboard& X11Application::clipboard() const { return *mImpl->clipboard; }
 
@@ -591,6 +600,13 @@ int X11Application::run()
 
     XDestroyIC(xic);
     XCloseIM(xim);
+}
+
+void X11Application::exitRun()
+{
+    // We do not need to do anything here because this should only be called from
+    // Application::quit(), which will have closed all the windows, causing us to
+    // exit.
 }
 
 Theme::Params X11Application::themeParams() const

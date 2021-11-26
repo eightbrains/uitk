@@ -20,48 +20,45 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_WIN32_APPLICATION_H
-#define UITK_WIN32_APPLICATION_H
-
-#include "../OSApplication.h"
-
-#include <memory>
+#include "Theme.h"
 
 namespace uitk {
 
-class Win32Window;
-
-class Win32Application : public OSApplication
+Theme::WidgetStyle Theme::WidgetStyle::merge(const WidgetStyle& s) const
 {
-public:
-    Win32Application();
-    ~Win32Application();
+    WidgetStyle newStyle;
 
-    void setExitWhenLastWindowCloses(bool exits) override;
-    int run() override;
-    void exitRun() override;
+    if (s.flags & kBGColorSet) {
+        newStyle.bgColor = s.bgColor;
+    } else {
+        newStyle.bgColor = this->bgColor;
+    }
 
-    void scheduleLater(Window* w, std::function<void()> f) override;
+    if (s.flags & kFGColorSet) {
+        newStyle.fgColor = s.fgColor;
+    } else {
+        newStyle.fgColor = this->fgColor;
+    }
 
-    void beep() override;
+    if (s.flags & kBorderColorSet) {
+        newStyle.borderColor = s.borderColor;
+    } else {
+        newStyle.borderColor = this->borderColor;
+    }
 
-    bool isOriginInUpperLeft() const override;
-    bool shouldHideScrollbars() const override;
-    bool platformHasMenubar() const override;
+    if (s.flags & kBorderWidthSet) {
+        newStyle.borderWidth = s.borderWidth;
+    } else {
+        newStyle.borderWidth = this->borderWidth;
+    }
 
-    Clipboard& clipboard() const override;
+    if (s.flags & kBorderRadiusSet) {
+        newStyle.borderRadius = s.borderRadius;
+    } else {
+        newStyle.borderRadius = this->borderRadius;
+    }
 
-    Theme::Params themeParams() const override;
-
-public:
-    // HWND is void* to keep Windows headers out
-    void registerWindow(void* hwnd, Win32Window* w);
-    void unregisterWindow(void* hwnd);
-
-private:
-    struct Impl;
-    std::unique_ptr<Impl> mImpl;
-};
+    return newStyle;
+}
 
 } // namespace uitk
-#endif // UITK_WIN32_APPLICATION_H

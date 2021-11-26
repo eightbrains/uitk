@@ -674,6 +674,54 @@ private:
     ListViewTest *mListView;
 };
 
+static const MenuId kMenuIdNew = 1;
+static const MenuId kMenuIdQuit = 2;
+static const MenuId kMenuIdDisabled = 10;
+static const MenuId kMenuIdCheckable = 11;
+static const MenuId kMenuIdAlpha = 30;
+static const MenuId kMenuIdBeta = 31;
+static const MenuId kMenuIdToggleAlpha = 32;
+
+class Document : public Window
+{
+public:
+    static Document* createNewDocument()
+    {
+        return new Document();
+    }
+
+    Document()
+        : Window("UITK test widgets", 1024, 768)
+    {
+        setOnMenuWillShow([this](Menubar& menubar) {
+            menubar.setItemEnabled(kMenuIdDisabled, false);
+            menubar.setItemChecked(kMenuIdCheckable, mModel.testChecked);
+            menubar.setItemChecked(kMenuIdAlpha, mModel.alphaChecked);
+        });
+
+        setOnMenuActivated(kMenuIdNew, [](){ Document::createNewDocument(); });
+        setOnMenuActivated(kMenuIdQuit, [](){ Application::instance().quit(); });
+        setOnMenuActivated(kMenuIdDisabled,
+                           [](){ Application::instance().quit(); /* shouldn't get here b/c disabled */ });
+        setOnMenuActivated(kMenuIdCheckable,
+                           [this](){ mModel.testChecked = !mModel.testChecked; });
+        setOnMenuActivated(kMenuIdToggleAlpha,
+                           [this](){ mModel.alphaChecked = !mModel.alphaChecked; });
+
+        addChild((new AllWidgetsTest())
+                   ->setFrame(Rect(PicaPt(0), PicaPt(0), PicaPt(1024), PicaPt(768))));
+//        addChild((new Label("Egypt"))
+//                 ->setFrame(Rect(PicaPt(0), PicaPt(0), PicaPt(300), PicaPt(600))));
+        show(true);
+    }
+
+private:
+    struct {
+        bool testChecked = true;
+        bool alphaChecked = true;
+    } mModel;
+};
+
 #if defined(_WIN32) || defined(_WIN64)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -685,12 +733,43 @@ int main(int argc, char *argv[])
     Application app;
     app.setExitWhenLastWindowCloses(true);
 
-    Window w("UITK test widgets", 1024, 768);
+    struct {
+    } menuData;
 
-    w.addChild((new AllWidgetsTest())
-               ->setFrame(Rect(PicaPt(0), PicaPt(0), PicaPt(1024), PicaPt(768))));
-//    w.addChild((new Label("Egypt"))
-//               ->setFrame(Rect(PicaPt(0), PicaPt(0), PicaPt(300), PicaPt(600))));
-    w.show(true);
+
+    auto *submenu = new Menu();
+    submenu->addItem("Item 1", 20, ShortcutKey::kNone);
+    submenu->addItem("Item 2", 21, ShortcutKey::kNone);
+    submenu->addItem("Item 3", 22, ShortcutKey::kNone);
+    auto subsubmenu = new Menu();
+    subsubmenu->addItem("Alpha", kMenuIdAlpha, ShortcutKey::kNone);
+    subsubmenu->addItem("Beta", kMenuIdBeta, ShortcutKey::kNone);
+    subsubmenu->addItem("Toggle alpha action", kMenuIdToggleAlpha,
+                        ShortcutKey(KeyModifier::kCtrl, Key::kA));
+    submenu->addMenu("Subsubmenu", subsubmenu);
+    submenu->addItem("Item 4", 23, ShortcutKey::kNone);
+
+    auto *submenu2 = new Menu();
+    submenu2->addItem("First", 40, ShortcutKey::kNone);
+    submenu2->addItem("Second", 41, ShortcutKey::kNone);
+    submenu2->addItem("Third", 42, ShortcutKey::kNone);
+
+    app.menubar().newMenu("File")
+        ->addItem("New", kMenuIdNew, ShortcutKey(KeyModifier::kCtrl, Key::kN))
+        ->addSeparator()
+        ->addItem("Quit", kMenuIdQuit, ShortcutKey(KeyModifier::kCtrl, Key::kQ));
+    //app.menubar().newMenu("Edit");
+    app.menubar().newMenu("_Test")
+        ->addItem("_Disabled", kMenuIdDisabled, ShortcutKey(KeyModifier::kCtrl, Key::kD))
+        ->addItem("_Checkable", kMenuIdCheckable, ShortcutKey::kNone)
+        ->addSeparator()
+        ->addMenu("Submenu", submenu)
+        ->addMenu("Submenu 2", submenu2);
+    app.menubar().newMenu("Empty");
+    //app.menubar().newMenu("Help");
+
+    // TODO: this is a memory leak, figure out a way for UITK to manage these
+    Document::createNewDocument();
+
     return app.run();
 }
