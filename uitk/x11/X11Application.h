@@ -59,6 +59,7 @@ public:
     void* display() const;
 
     void registerWindow(long unsigned int xwindow, X11Window *window);
+    void unregisterWindow(long unsigned int xwindow);
 
     float dpiForScreen(int screen);
 

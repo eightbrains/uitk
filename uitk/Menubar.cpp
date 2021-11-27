@@ -31,6 +31,7 @@
 #include "Window.h"
 #include "themes/Theme.h"
 
+#include <chrono>
 #include <map>
 #include <vector>
 
@@ -52,8 +53,9 @@ struct MenubarModel
     };
     std::vector<MenubarItem> menus;
     int activeIndex = kNoActiveMenu;
-    int transientActivatedIndex = kNoActiveMenu;
+    int transientShortcutActivatedIndex = kNoActiveMenu;
     int justClosedIndex = kNoActiveMenu;
+    std::chrono::steady_clock::time_point transientStartTime;
 
     bool isActive() const { return (this->activeIndex >= 0); }
 };
@@ -89,8 +91,8 @@ public:
             mTextWidthCache.clear();
         }
         mTheme = &context.theme;
-        // Note that we cannot cache the DrawContext, because on some platforms (macOS)
-        // the context is only valid during the draw.
+        // Note that we cannot cache the DrawContext, because on some platforms
+        // (macOS) the context is only valid during the draw.
     }
 
     // It would be convenient to use a Button for the menus, but then we
@@ -109,7 +111,7 @@ public:
         // So Menubar::addMenu() adds an onClosed callback to the menu to
         // set mModel.justClosedIndex, so we can tell what had the menu open.
         // But if the user clicked on the menubar, we will get a mouse up message.
-        // Note that t is important to clear justClosedIndex on any mouse action.
+        // Note that it is important to clear justClosedIndex on any mouse action.
         // Test:
         // - click on menu and then click on it again: menu should close and
         //   menubar item unhighlight.
@@ -134,6 +136,16 @@ public:
                 if (e.pos.y <= h && e.pos.x >= x && e.pos.x <= x + w) {
                     auto *menuUitk = item.menu->menuUitk();
                     if (mModel.activeIndex == i) {
+                        // Set justClosedIndex *before* cancel(), not after.
+                        // Usually cancel() will request a close which will
+                        // eventually call the onClose callback--after this
+                        // function has completed, so that when it sets
+                        // justClosedIndex, everything is fine. But in the case
+                        // of an empty window, cancel() calls onClose
+                        // immediately. setting justClosedIndex after the cancel
+                        // is incorrect behavior, it just happens to usually
+                        // work because of timing.
+                        mModel.justClosedIndex = MenubarModel::kNoActiveMenu;
                         if (isClick /*|| isMoveWithOpenMenu*/) {
                             if (menuUitk) {
                                 menuUitk->cancel();
@@ -148,8 +160,10 @@ public:
                             menuUitk->show(win, Point(frame().x + x, frame().maxY()),
                                            0, Window::Flags::kMenuEdges);
                         }
+                        mModel.justClosedIndex = MenubarModel::kNoActiveMenu;
+                    } else {
+                        mModel.justClosedIndex = MenubarModel::kNoActiveMenu;
                     }
-                    mModel.justClosedIndex = MenubarModel::kNoActiveMenu;
                     changed = true;
                     break;
                 }
@@ -176,7 +190,7 @@ public:
         for (size_t i = 0;  i < mModel.menus.size();  ++i) {
             auto &item = mModel.menus[i];
             auto w = itemWidth(&context.dc, item.name);
-            auto itemState = ((i == mModel.activeIndex || i == mModel.transientActivatedIndex)
+            auto itemState = ((i == mModel.activeIndex || i == mModel.transientShortcutActivatedIndex)
                               && context.isWindowActive
                                 ? Theme::WidgetState::kMouseDown
                                 : Theme::WidgetState::kNormal);
@@ -184,8 +198,12 @@ public:
                                           item.name, itemState);
             x += w;
         }
-        if (mModel.transientActivatedIndex != MenubarModel::kNoActiveMenu) {
-            mModel.transientActivatedIndex = MenubarModel::kNoActiveMenu;
+        if (mModel.transientShortcutActivatedIndex != MenubarModel::kNoActiveMenu) {
+            auto now = std::chrono::steady_clock::now();
+            auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(now - mModel.transientStartTime).count();
+            if (dt >= 67 /* ms */) {
+                mModel.transientShortcutActivatedIndex = MenubarModel::kNoActiveMenu;
+            }
             if (auto *win = window()) {
                 Application::instance().scheduleLater(win, [this]() { setNeedsDraw(); });
             }
@@ -310,7 +328,8 @@ void Menubar::activateItemId(MenuId itemId) const
         for (size_t i = 0;  i < mImpl->model.menus.size();  ++i) {
             auto &item = mImpl->model.menus[i];
             if (item.menu->activateItem(itemId) == OSMenu::ItemFound::kYes) {
-                mImpl->model.transientActivatedIndex = i;
+                mImpl->model.transientShortcutActivatedIndex = i;
+                mImpl->model.transientStartTime = std::chrono::steady_clock::now();
                 // caller needs to call setNeedsDisplay(), since we do not know
                 // which one of our menubars was actually activated.
                 break;

@@ -65,6 +65,11 @@ struct X11Window::Impl {
 
     void destroyWindow()
     {
+        // Unregister the window from the application, because there may
+        // be unprocessed events in the queue for the window.
+        auto& x11app = static_cast<X11Application&>(Application::instance().osApplication());
+        x11app.unregisterWindow(this->xwindow);
+
         this->dc = nullptr;
         XDestroyWindow(this->display, this->xwindow);
         this->xwindow = 0;
@@ -176,6 +181,7 @@ void X11Window::close()
 {
     if (mImpl->xwindow) {
         if (onWindowShouldClose()) {
+            onWindowWillClose();
             mImpl->destroyWindow();
         }
     }

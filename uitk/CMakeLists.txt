@@ -69,6 +69,7 @@ set(LIBNATIVEDRAW_PREFIX "${CMAKE_BINARY_DIR}/libnativedraw")
 ExternalProject_Add(libnativedraw
                     GIT_REPOSITORY "https://github.com/eightbrains/libnativedraw"
                     PREFIX ${LIBNATIVEDRAW_PREFIX}
+                    #UPDATE_DISCONNECTED true # not necessary to check github each build
                     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${LIBNATIVEDRAW_PREFIX} "-DCMAKE_CXX_FLAGS:STRING=-DND_NAMESPACE=${ND_NAMESPACE}"
                    )
 add_library(nativedraw STATIC IMPORTED)

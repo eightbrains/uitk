@@ -160,8 +160,14 @@ bool Window::close(CloseBehavior ask /*= CloseBehavior::kAllowCancel*/)
     if (ask == CloseBehavior::kAllowCancel && !onWindowShouldClose()) {
         return false;
     }
-    mImpl->cancelPopup();
-    mImpl->window->close();
+    if (mImpl->inDraw) {
+        Application::instance().scheduleLater(this, [this](){
+                close(CloseBehavior::kForceClose);
+        });
+    } else {
+        mImpl->cancelPopup();
+        mImpl->window->close();
+    }
     return true;
 }
 
@@ -463,7 +469,7 @@ void Window::onMouse(const MouseEvent& eOrig)
 void Window::onKey(const KeyEvent &e)
 {
     int menuId;
-    if (!mImpl->dialog && Application::instance().keyboardShortcuts().hasShortcut(e, &menuId)) {
+    if (!mImpl->dialog && e.type == KeyEvent::Type::kKeyDown && Application::instance().keyboardShortcuts().hasShortcut(e, &menuId)) {
         Application::instance().menubar().activateItemId(menuId);
         // We need to flash the menu that got activated, but the menubar
         // does not know which menubar widget was actually activated, so we
@@ -609,6 +615,8 @@ void Window::onMenuWillShow()
 
 void Window::onMenuActivated(MenuId id)
 {
+    assert((mImpl->flags & int(Flags::kPopup)) == 0);
+
     // TODO: handle standard menu items here
 
     auto it = mImpl->onMenuActivatedCallbacks.find(id);

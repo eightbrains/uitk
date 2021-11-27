@@ -303,9 +303,9 @@ void VectorBaseTheme::setVectorParams(const Params &params)
 
     // Menubar items
     copyStyles(mMenuItemStyles, mMenubarItemStyles);
-    mMenuItemStyles[OVER].bgColor = mMenuItemStyles[NORMAL].bgColor;
-    mMenuItemStyles[DOWN].bgColor = params.accentColor;
-    mMenuItemStyles[DOWN].fgColor = params.accentedBackgroundTextColor;
+    mMenubarItemStyles[OVER].bgColor = mMenubarItemStyles[NORMAL].bgColor;
+    mMenubarItemStyles[DOWN].bgColor = params.accentColor;
+    mMenubarItemStyles[DOWN].fgColor = params.accentedBackgroundTextColor;
 }
 
 const Theme::Params& VectorBaseTheme::params() const { return mParams; }

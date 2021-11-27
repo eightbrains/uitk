@@ -85,6 +85,7 @@ public:
     void show(Window *w, const Point& upperLeftWindowCoord, MenuId id = OSMenu::kInvalidId,
               int extraWindowFlags = 0);
     void cancel();
+    void cancelHierarchy(); /// Cancels the menu and any parent menus
 
     /// Sets callback function for when the menu closes, which will be called
     /// whether a menu item is selected or the menu is cancelled.

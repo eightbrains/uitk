@@ -218,7 +218,44 @@ class MenuListView : public ListView
     using Super = ListView;
 public:
     MenuListView(MenuUITK *m) : mMenuUitk(m) {}
-    ~MenuListView() {}
+    ~MenuListView()
+    {
+    }
+
+    EventResult mouse(const MouseEvent& e) override
+    {
+        auto retval = Super::mouse(e);
+
+        // Cancel any submenu if we mouseover a disabled item (which does not
+        // get mouseover events itself). For example, when a user opens a
+        // submenu, then mouses over a disabled item (or separator), especially
+        // if they first mouse over the submenu, then return to the parent menu.
+        auto *w = window();
+        if (w && w->popupMenu()) {
+            auto row = calcRowIndex(e.pos);
+            auto *cell = cellAtIndex(row);
+            if (cell && !cell->enabled()) {
+                w->popupMenu()->cancel();
+            }
+        }
+
+        return retval;
+    }
+
+    void mouseExited() override
+    {
+        // Since the appearance of the submenu being selected is done via
+        // the mouseover code, when a submenu is active, we do not want to set
+        // the state away from mouse over if the mouse exits the window,
+        // otherwise the appearance of the submenu item will become unselected,
+        // which looks pretty odd.
+        auto *w = window();
+        if (w && w->popupMenu()) {
+            ;  // don't super
+        } else {
+            Super::mouseExited();
+        }
+    }
 
     void key(const KeyEvent& e) override
     {
@@ -234,9 +271,7 @@ public:
                 Super::key({ KeyEvent::Type::kKeyDown, Key::kEnter, 0, 0, false });
                 handled = true;
             } else if (e.key == Key::kEscape) {
-                // TODO: this should cancel the whole menu train, but we do
-                //       not actually know our parent
-                mMenuUitk->cancel();
+                mMenuUitk->cancelHierarchy();
                 handled = true;
             }
         }
@@ -343,6 +378,7 @@ struct MenuUITK::Impl
     Window *parent = nullptr;  // we don't own this
     MenuListView *listView = nullptr;  // we don't own this
 
+    bool isShowing = false;
     mutable PicaPt shortcutWidth;
 
     ItemData* itemForId(MenuId id)
@@ -595,7 +631,9 @@ Window* MenuUITK::window() { return mImpl->menuWindow; }
 
 bool MenuUITK::isShowing() const
 {
-    return (mImpl->menuWindow != nullptr);
+    // mImpl->menuWindow may not exist if the menu is empty, but if we
+    // asked the menu to show(), then it should be showing.
+    return mImpl->isShowing;
 }
 
 void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= OSMenu::kInvalidId*/,
@@ -603,6 +641,11 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
 {
     if (mImpl->menuWindow) {  // shouldn't happen, but handle it if it does
         cancel();
+    }
+
+    mImpl->isShowing = true;
+    if (mImpl->items.empty()) {
+        return;
     }
 
     // Should we keep another mapping from id -> index? Seems unnecessary
@@ -660,11 +703,11 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
 
             mlv->blinkSelection(idx, [this, idx]() {
                 auto *parent = mImpl->parent;
-                // We do not want to call callback yet, as various operating systems
-                // have different timing about when a redraw initiated by
-                // setNeedsRedraw that the callback is sure to call. If the draw happens
-                // immediately, then the window will not be closed, which may cause
-                // problems (e.g. ComboBox on X11).
+                // We do not want to call callback yet, as various operating
+                // systems have different timing about when a redraw initiated by
+                // setNeedsRedraw that the callback is sure to call. If the draw
+                // happens immediately, then the window will not be closed,
+                // which may cause problems (e.g. ComboBox on X11).
                 parent->setPopupMenu(nullptr);
                 mImpl->menuWindow->close();
 
@@ -674,7 +717,8 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
                             if (kv.second.onSelected) {
                                 kv.second.onSelected();
                             } else {
-                                parent->onMenuActivated(kv.first);
+                                auto *mainWindow = Application::instance().activeWindow();
+                                mainWindow->onMenuActivated(kv.first);
                             }
                             break;
                         }
@@ -739,11 +783,28 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
 
 void MenuUITK::cancel()
 {
-    if (mImpl->menuWindow) {
-        mImpl->menuWindow->close();
+    if (mImpl->isShowing) {
+        if (mImpl->menuWindow) {
+            mImpl->menuWindow->close();
+        } else {
+            // An empty menu will get no window on show(), but we do want
+            // the onClose to run.
+            if (mImpl->onClose) {
+                mImpl->onClose();
+            }
+        }
     }
     if (mImpl->parent) {
         mImpl->parent->setPopupMenu(nullptr);
+    }
+}
+
+void MenuUITK::cancelHierarchy()
+{
+    bool wasShowing = mImpl->isShowing;
+    cancel();
+    if (wasShowing && mImpl->onCancelParentMenu) {
+        mImpl->onCancelParentMenu();
     }
 }
 

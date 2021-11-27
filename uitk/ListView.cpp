@@ -152,7 +152,7 @@ ListView* ListView::addStringCell(const std::string& text)
 
 Widget* ListView::cellAtIndex(int index) const
 {
-    auto &childs = children();
+    auto &childs = mImpl->content->children();
     if (index < 0 || index >= int(childs.size())) {
         return nullptr;
     }
