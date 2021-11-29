@@ -396,15 +396,15 @@ void Window::onMouse(const MouseEvent& eOrig)
 
     if (mImpl->grabbedWidget == nullptr) {
         if (mImpl->menubarWidget && mImpl->menubarWidget->frame().contains(eOrig.pos)) {
-            mImpl->rootWidget->setState(Theme::WidgetState::kNormal);
-            mImpl->menubarWidget->setState(Theme::WidgetState::kMouseOver);
+            mImpl->rootWidget->setState(Widget::MouseState::kNormal);
+            mImpl->menubarWidget->setState(Widget::MouseState::kMouseOver);
             e.pos.y = eOrig.pos.y - mImpl->menubarWidget->frame().y;
             mImpl->menubarWidget->mouse(e);
         } else {
             if (mImpl->menubarWidget) {
-                mImpl->menubarWidget->setState(Theme::WidgetState::kNormal);
+                mImpl->menubarWidget->setState(Widget::MouseState::kNormal);
             }
-            mImpl->rootWidget->setState(Theme::WidgetState::kMouseOver);  // so onDeactivated works
+            mImpl->rootWidget->setState(Widget::MouseState::kMouseOver);  // so onDeactivated works
             mImpl->rootWidget->mouse(e);
         }
     } else {
@@ -440,7 +440,7 @@ void Window::onMouse(const MouseEvent& eOrig)
 
             // Handle the case where the mouse just left the frame
             auto currentState = grabbed->state();
-            auto newState = Theme::WidgetState::kNormal;
+            auto newState = Widget::MouseState::kNormal;
             if (newState != currentState) {
                 Widget *w = grabbed;
                 // Need to also set states of all the parents

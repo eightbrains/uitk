@@ -63,6 +63,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     const int DISABLED = int(WidgetState::kDisabled);
     const int OVER = int(WidgetState::kMouseOver);
     const int DOWN = int(WidgetState::kMouseDown);
+    const int SELECTED = int(WidgetState::kSelected);
 
     auto copyStyles = [NORMAL, DISABLED, OVER, DOWN]
                       (const WidgetStyle src[], WidgetStyle dest[]) {
@@ -70,11 +71,26 @@ void VectorBaseTheme::setVectorParams(const Params &params)
         dest[DISABLED] = src[DISABLED];
         dest[OVER] = src[OVER];
         dest[DOWN] = src[DOWN];
+        dest[SELECTED] = src[SELECTED];
     };
 
     bool isDarkMode = calcIsDarkMode(params);
     Color borderColor = (isDarkMode ? Color(1.0f, 1.0f, 1.0f, 0.2f)
                                     : Color(0.0f, 0.0f, 0.0f, 0.2f));
+
+    // Labels
+    mLabelStyles[NORMAL].bgColor = Color::kTransparent;
+    mLabelStyles[NORMAL].fgColor = params.textColor;
+    mLabelStyles[NORMAL].borderColor = Color::kTransparent;
+    mLabelStyles[NORMAL].borderWidth = PicaPt::kZero;
+    mLabelStyles[NORMAL].borderRadius = PicaPt::kZero;
+    mLabelStyles[DISABLED] = mLabelStyles[NORMAL];
+    mLabelStyles[DISABLED].fgColor = params.disabledTextColor;
+    mLabelStyles[OVER] = mLabelStyles[NORMAL];
+    mLabelStyles[DOWN] = mLabelStyles[NORMAL];
+    mLabelStyles[SELECTED] = mLabelStyles[NORMAL];
+    mLabelStyles[SELECTED].bgColor = Color::kTransparent;  // owner will draw bg; selection area might be larger than label
+    mLabelStyles[SELECTED].fgColor = params.accentedBackgroundTextColor;
 
     // Normal button
     mButtonStyles[NORMAL].bgColor = params.nonEditableBackgroundColor;
@@ -94,6 +110,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mButtonStyles[DOWN] = mButtonStyles[NORMAL];
     mButtonStyles[DOWN].bgColor = params.accentColor;
     mButtonStyles[DOWN].fgColor = params.accentedBackgroundTextColor;
+    mButtonStyles[SELECTED] = mButtonStyles[DOWN];  // not applicable, but mButtonStyles is copied for many styles
 
     // Button that is ON
     copyStyles(mButtonStyles, mButtonOnStyles);
@@ -105,6 +122,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mButtonOnStyles[OVER].fgColor = params.accentedBackgroundTextColor;
     mButtonOnStyles[DOWN].bgColor = params.accentColor.lighter();
     mButtonOnStyles[DOWN].fgColor = params.accentedBackgroundTextColor;
+    mButtonOnStyles[SELECTED] = mButtonOnStyles[DOWN];
 
     // Checkbox
     copyStyles(mButtonStyles, mCheckboxStyles);
@@ -270,6 +288,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mTextEditStyles[DISABLED].fgColor = params.disabledTextColor;
     mTextEditStyles[OVER] = mTextEditStyles[NORMAL];
     mTextEditStyles[DOWN] = mTextEditStyles[NORMAL];
+    mTextEditStyles[SELECTED] = mTextEditStyles[SELECTED];
 
     // ScrollView
     mScrollViewStyles[NORMAL].bgColor = Color::kTransparent;
@@ -287,6 +306,8 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mListViewStyles[DISABLED].fgColor = Color(0.5f, 0.5f, 0.5f);
     mListViewStyles[OVER].fgColor = mListViewStyles[OVER].bgColor;  // don't highlight individual row
     mListViewStyles[DOWN].fgColor = mListViewStyles[DOWN].bgColor;  // don't highlight individual row
+    mListViewStyles[SELECTED].fgColor = mParams.accentColor;
+    mListViewStyles[SELECTED].bgColor = mParams.accentedBackgroundTextColor;
 
     // Menu Items
     mMenuItemStyles[NORMAL].bgColor = Color::kTransparent;
@@ -300,6 +321,8 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mMenuItemStyles[OVER].bgColor = params.accentColor;
     mMenuItemStyles[OVER].fgColor = params.accentedBackgroundTextColor;
     mMenuItemStyles[DOWN] = mMenuItemStyles[OVER];
+    mMenuItemStyles[SELECTED].bgColor = params.accentColor;
+    mMenuItemStyles[SELECTED].fgColor = params.accentedBackgroundTextColor;
 
     // Menubar items
     copyStyles(mMenuItemStyles, mMenubarItemStyles);
@@ -452,6 +475,12 @@ Theme::MenubarMetrics VectorBaseTheme::calcPreferredMenuItemMetrics(const DrawCo
     };
 }
 
+PicaPt VectorBaseTheme::calcPreferredMenuVerticalMargin() const
+{
+    auto margin = 0.25f * mParams.nonNativeMenubarFont.pointSize();
+    return PicaPt::fromPixels(std::round(margin.toPixels(72.0f)), 72.0f);
+}
+
 PicaPt VectorBaseTheme::calcPreferredMenubarItemHorizMargin(const DrawContext& dc, const PicaPt& height) const
 {
     return dc.ceilToNearestPixel(0.5f * calcPreferredButtonSize(dc, mParams.labelFont, "Ag").height);
@@ -561,6 +590,11 @@ void VectorBaseTheme::clipFrame(UIContext& ui, const Rect& frame,
         path->addRoundedRect(clipRect, style.borderRadius - 1.414f * borderWidth);
         ui.dc.clipToPath(path);
     }
+}
+
+Theme::WidgetStyle VectorBaseTheme::labelStyle(const WidgetStyle& style, WidgetState state) const
+{
+    return mLabelStyles[int(state)].merge(style);
 }
 
 void VectorBaseTheme::drawButton(UIContext& ui, const Rect& frame,

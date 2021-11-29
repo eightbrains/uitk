@@ -35,6 +35,41 @@
 #include <string>
 #include <unordered_map>
 
+/* Requirements:
+   - Add and insert regular items, separator items, and submenu items
+   - Regular items (and only regular items) can have a shortcut key.
+   - If this is a context menu, can have an action (but no shortcuts for a
+     context menu).
+   - Items should always have space on the left for a checkmark.
+   - Shortcuts should be left-justified in the right column.
+   - Submenus should have a indicator icon right-justified in the right column.
+   - Highlighting a submenu item should open it, preferably after a 200 ms delay
+     so that quickly cutting across the upper right corner of the item below
+     does not cancel the menu open.
+     - the submenu item should remain highlighted while the submenu is open
+       unless the mouse hovers back over the original menu in a different
+       item (including disabled / separator items), in which case the submenu
+       should be canceled.
+   - Clicking on an enabled, regular item should blink quickly, the menu
+     disappear, and the action be taken.
+   - Mousing over an item in the menubar while a menubar menu is open should
+     cancel the current menu and open the item under the cursor. Mousing over
+     empty space (not including item margins) in the menubar should do nothing.
+   - Enter, return, and space are the same as clicking on an item.
+   - Up and down should move the highlight to the next enabled item. If it
+     is a submenu, the menu should not open until left/enter/return/space are
+     pressed. If the mouse moves after highlight was changed, the highlight
+     should change to the item under the mouse.
+   - Left should close a submenu, right should open it. If the item is a
+     regular item (or no items are highlighted), the menu to the left/right
+     in the menubar should open (unless this is a context menu, of course).
+   - Escape should cancel the entire menu hierarchy.
+   - Activating a shortcut should blink the menubar item, then take the
+     action in the corresponding menu. If the menu item is disabled, then do
+     not blink but beep.
+   - On macOS, Ctrl-F2 should enter menubar navigation. On Windows/Linux, pressing
+     and releasing Alt (without any other key) should enter menubar navigation.
+ */
 namespace uitk {
 
 std::string removeUnderscores(const std::string& s)
@@ -131,7 +166,7 @@ public:
     {
         auto attr = (checked() ? Theme::MenuItemAttribute::kChecked
                                : Theme::MenuItemAttribute::kNormal);
-        auto s = state();
+        auto s = themeState();
         context.theme.drawMenuItem(context, bounds(), mShortcutWidth, text(), shortcut(), attr, style(s), s);
     }
 
@@ -207,7 +242,7 @@ public:
 
     void draw(UIContext& context) override
     {
-        auto s = state();
+        auto s = themeState();
         context.theme.drawMenuItem(context, bounds(), mShortcutWidth, text(), shortcut(),
                                    Theme::MenuItemAttribute::kSubmenu, style(s), s);
     }
@@ -239,6 +274,13 @@ public:
             }
         }
 
+        // We should not have a selection while moving the mouse. However, we
+        // might have one if we opened a submenu with Key::kRight, then closed
+        // with kLeft, then moved the mouse.
+        if (selectedIndex() >= 0) {
+            clearSelection();
+        }
+
         return retval;
     }
 
@@ -261,18 +303,43 @@ public:
     {
         bool handled = false;
         if (e.type == KeyEvent::Type::kKeyDown) {
-            if (e.key == Key::kLeft) {
-                if (auto *win = window()) {
-                    mMenuUitk->cancel();
-                }
-                handled = true;
-            } else if (e.key == Key::kRight) {
-                // Opens menu; same as Enter/Return/Space, so transform into that
-                Super::key({ KeyEvent::Type::kKeyDown, Key::kEnter, 0, 0, false });
-                handled = true;
-            } else if (e.key == Key::kEscape) {
-                mMenuUitk->cancelHierarchy();
-                handled = true;
+            switch (e.key) {
+                case Key::kUp:
+                case Key::kDown:
+                    // if opened submenu with right, then closed with left, then move up or down
+                    // we don't want the selection created with right to persist (and show two
+                    // highlighted items), so clear.
+                    clearSelection();
+                    handled = false;  // want to call super!
+                    break;
+                case Key::kLeft:
+                    if (auto *win = window()) {
+                        mMenuUitk->cancel();
+                    }
+                    handled = true;
+                    break;
+                case Key::kRight:
+                    if (auto *item = dynamic_cast<MenuItem*>(cellAtIndex(highlightedIndex()))) {
+                        if (!item->submenu()) {
+                            break;  // not a submenu item, ignore
+                        }
+                    }
+                    // this is a submenu item: fall through
+                case Key::kEnter:
+                case Key::kReturn:
+                case Key::kSpace:
+                    clearSelection();  // in case already selected (right to open menu, left to close, right)
+                    // transform to Enter, in case this was kRight
+                    Super::key({ KeyEvent::Type::kKeyDown, Key::kEnter, 0, 0, false });
+                    handled = false;  // want to call super!
+                    break;
+                case Key::kEscape:
+                    mMenuUitk->cancelHierarchy();
+                    handled = true;
+                    break;
+                default:
+                    handled = false;
+                    break;
             }
         }
         if (!handled) {
@@ -678,7 +745,7 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
 
     mImpl->menuWindow->setOnWindowWillShow([this, list, id](Window& w, const LayoutContext& context) {
         auto contentSize = list->preferredContentSize(context);
-        auto vertMargin = 0.25f * context.theme.params().nonNativeMenubarFont.pointSize();
+        auto vertMargin = context.theme.calcPreferredMenuVerticalMargin();
         list->setFrame(Rect(PicaPt::kZero, vertMargin, contentSize.width, contentSize.height));
         w.resize(Size(contentSize.width, contentSize.height + 2.0f * vertMargin));
 
@@ -710,6 +777,7 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
                 // which may cause problems (e.g. ComboBox on X11).
                 parent->setPopupMenu(nullptr);
                 mImpl->menuWindow->close();
+                mImpl->isShowing = false;
 
                 if (idx >= 0 && idx < int(mImpl->items.size())) {
                     for (auto &kv : mImpl->id2item) {
@@ -733,12 +801,12 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
             // We need to have submenus enabled, but that means clicking on them
             // is possible, and we don't want clicking to select them in the list view,
             // so undo it here.
-            lv->clearSelection();
-            // If the (formerly) selected item was a submenu, either the user clicked
-            // on it or pressed Enter/Return/Space via keyboard navigation. In either
-            // case, toggle the open-ness of the submenu.
             if (idx >= 0 && idx < int(mImpl->items.size())) {
                 auto *submenu = mImpl->items[idx]->submenu();
+
+                // If the selected item was a submenu, either the user clicked
+                // on it or pressed Enter/Return/Space via keyboard navigation. In either
+                // case, toggle the open-ness of the submenu.
                 if (submenu && submenu->menuUitk()) {
                     if (submenu->menuUitk()->isShowing()) {
                         submenu->menuUitk()->cancel();
@@ -749,7 +817,11 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
                         KeyEvent ke{ KeyEvent::Type::kKeyDown, Key::kDown, 0, 0, false };
                         submenu->menuUitk()->mImpl->listView->key(ke);
                     }
+                } else {
+                    lv->clearSelection();
                 }
+            } else {
+                lv->clearSelection();
             }
         }
     });
@@ -757,20 +829,25 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
     mImpl->menuWindow->setOnWindowWillClose([this, list](Window &w) {
         // Remove all the items from popup menu, or they will get deleted,
         // which would be bad.
+        list->clearSelection();
         list->removeAllChildren();
 
         // We want to reset all the item widget states to normal (or disabled).
         // We cannot set directly, a mouseExited event should work. Arguably that
         // is actually correct/necessary, since the window is gone.
-        for (auto *item : mImpl->items) {
-            item->mouseExited();
-        }
-        
+        list->mouseExited();
+
+        mImpl->isShowing = false;  // also here (as well as above), in case cancel() was called
         mImpl->menuWindow->deleteLater();
         mImpl->menuWindow = nullptr;
 
         if (mImpl->onClose) {
             mImpl->onClose();
+        }
+
+        // Menu may have changed something, so redraw the parent
+        if (mImpl->parent) {
+            mImpl->parent->postRedraw();
         }
     });
 
@@ -792,6 +869,7 @@ void MenuUITK::cancel()
             if (mImpl->onClose) {
                 mImpl->onClose();
             }
+            mImpl->isShowing = false;
         }
     }
     if (mImpl->parent) {

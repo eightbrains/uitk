@@ -50,11 +50,6 @@ public:
     Size preferredSize(const LayoutContext& context) const override;
     void draw(UIContext& context) override;
 
-    /// Widgets that use a label as a child can set the label state
-    /// as the parent's state changes so that the colors are correct.
-    /// This should not be called if using a Label as a UI element directly.
-    void setWidgetState(Theme::WidgetState state);
-
 private:
     struct Impl;
     std::unique_ptr<Impl> mImpl;

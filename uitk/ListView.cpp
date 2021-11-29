@@ -96,6 +96,34 @@ struct ListView::Impl
     std::function<void(ListView*)> onChanged;
     int mouseOverIndex = -1;
     int lastClickedRow = 0;
+
+    void setMouseOverIndex(int idx)
+    {
+        auto items = this->content->children();
+        if (this->selectionMode == SelectionMode::kNoItems) {
+            this->mouseOverIndex = -1;
+            return;
+        }
+
+        if (this->mouseOverIndex >= 0 && this->mouseOverIndex < int(items.size())) {
+            if (this->selectedIndices.find(this->mouseOverIndex) != this->selectedIndices.end()) {
+                items[this->mouseOverIndex]->setThemeState(Theme::WidgetState::kSelected);
+            } else {
+                items[this->mouseOverIndex]->setThemeState(Theme::WidgetState::kNormal);
+            }
+        }
+        this->mouseOverIndex = idx;
+        if (idx >= 0 && idx < int(items.size())) {
+            if (this->selectedIndices.find(idx) != this->selectedIndices.end()) {
+                items[idx]->setThemeState(Theme::WidgetState::kSelected);
+            } else {
+                items[idx]->setThemeState(Theme::WidgetState::kMouseOver);
+            }
+        }
+        // We really want the ListView to redraw, but Impl does not know about that.
+        // Conveniently, this will cause the whole chain to be redrawn.
+        this->content->setNeedsDraw();
+    }
 };
 
 ListView::ListView()
@@ -123,8 +151,14 @@ ListView::SelectionMode ListView::selectionMode() const
 ListView* ListView::setSelectionModel(SelectionMode mode)
 {
     mImpl->selectionMode = mode;
-    if (mode == SelectionMode::kNoItems && !mImpl->selectedIndices.empty()) {
+    if (mode == SelectionMode::kNoItems) {
         clearSelection();
+        mImpl->setMouseOverIndex(-1);
+        for (auto *child : mImpl->content->children()) {
+            if (child->state() != MouseState::kNormal && child->state() != MouseState::kDisabled) {
+                child->mouseExited();  // set state to normal
+            }
+        }
     } else if (mode == SelectionMode::kSingleItem && mImpl->selectedIndices.size() > 1) {
         setSelectedIndex(*mImpl->selectedIndices.begin());
     }
@@ -135,7 +169,7 @@ void ListView::clearCells()
 {
     clearSelection();
     mImpl->content->clearAllChildren();
-    mImpl->mouseOverIndex = -1;
+    mImpl->setMouseOverIndex(-1);
 }
 
 ListView* ListView::addCell(Widget *cell)
@@ -177,22 +211,35 @@ std::vector<int> ListView::selectedIndices() const
 
 void ListView::clearSelection()
 {
+    auto items = mImpl->content->children();
+    for (int idx : mImpl->selectedIndices) {
+        if (idx >= 0 && idx < int(items.size())) {
+            items[idx]->resetThemeState();
+        }
+    }
     mImpl->selectedIndices.clear();
     setNeedsDraw();
 }
 
 void ListView::setSelectedIndex(int index)
 {
-    mImpl->selectedIndices.clear();
-    mImpl->selectedIndices.insert(index);
-    setNeedsDraw();
+    clearSelection();
+    setSelectedIndices({index});
 }
 
 void ListView::setSelectedIndices(const std::unordered_set<int> indices)
 {
     mImpl->selectedIndices = indices;
+    auto items = mImpl->content->children();
+    for (int idx : mImpl->selectedIndices) {
+        if (idx >= 0 && idx < int(items.size())) {
+            items[idx]->setThemeState(Theme::WidgetState::kSelected);
+        }
+    }
     setNeedsDraw();
 }
+
+int ListView::highlightedIndex() const { return mImpl->mouseOverIndex; }
 
 Size ListView::contentPadding() const
 {
@@ -240,6 +287,10 @@ void ListView::layout(const LayoutContext& context)
 
 Widget::EventResult ListView::mouse(const MouseEvent& e)
 {
+    if (mImpl->selectionMode == SelectionMode::kNoItems) {
+        return EventResult::kConsumed;
+    }
+
     if (e.type == MouseEvent::Type::kButtonUp && e.button.button == MouseButton::kLeft) {
         int idx = calcRowIndex(e.pos);
         bool isEnabled = (mImpl->content && size_t(idx) < mImpl->content->children().size() &&
@@ -278,7 +329,7 @@ Widget::EventResult ListView::mouse(const MouseEvent& e)
             }
         }
     } else if (e.type == MouseEvent::Type::kMove || e.type == MouseEvent::Type::kDrag) {
-        mImpl->mouseOverIndex = calcRowIndex(e.pos);
+        mImpl->setMouseOverIndex(calcRowIndex(e.pos));
     }
 
     return Super::mouse(e);
@@ -286,7 +337,7 @@ Widget::EventResult ListView::mouse(const MouseEvent& e)
 
 void ListView::mouseExited()
 {
-    mImpl->mouseOverIndex = -1;
+    mImpl->setMouseOverIndex(-1);
 }
 
 int ListView::calcRowIndex(const Point& p) const
@@ -318,8 +369,8 @@ void ListView::key(const KeyEvent& e)
                 idx++;
             }
             if (idx < nItems) {
-                mImpl->mouseOverIndex = idx;
-                setNeedsDraw();
+                mImpl->setMouseOverIndex(idx);
+                //setNeedsDraw();
             }
             break;
         }
@@ -334,8 +385,8 @@ void ListView::key(const KeyEvent& e)
                 idx--;
             }
             if (idx >= 0) {
-                mImpl->mouseOverIndex = idx;
-                setNeedsDraw();
+                mImpl->setMouseOverIndex(idx);
+                //setNeedsDraw();
             }
             break;
         }
@@ -344,8 +395,8 @@ void ListView::key(const KeyEvent& e)
         case Key::kSpace:
             if (mImpl->mouseOverIndex >= 0) {
                 bool changed = false;
-                bool thisIndexIsSelected = (mImpl->selectedIndices.find(mImpl->mouseOverIndex) != mImpl->selectedIndices.end());
-                if (thisIndexIsSelected) {
+                bool thisIndexIsInSelection = (mImpl->selectedIndices.find(mImpl->mouseOverIndex) != mImpl->selectedIndices.end());
+                if (thisIndexIsInSelection) {
                     if (mImpl->selectionMode == SelectionMode::kSingleItem) {
                         // do nothing
                     } else {
@@ -377,28 +428,29 @@ void ListView::key(const KeyEvent& e)
 
 void ListView::draw(UIContext& context)
 {
+    auto items = mImpl->content->children();
+
     Rect r(PicaPt::kZero, PicaPt::kZero, frame().width, frame().height);
-    context.theme.drawListView(context, r, style(state()), state());
+    context.theme.drawListView(context, r, style(themeState()), themeState());
 
     context.dc.save();
-    context.theme.clipListView(context, r, style(state()), state());
+    context.theme.clipListView(context, r, style(themeState()), themeState());
     context.dc.translate(bounds().x, bounds().y);
     Theme::WidgetStyle s;
-    auto parentState = state();
+    auto parentState = themeState();
     auto width = frame().width;
     // The mouseOverIndex can also be set by keyboard navigation, so don't
     // require the state to be mouseover in order to display it.
     // (mouseExited() will set it -1, so mousing will still work correctly)
-    if (mImpl->mouseOverIndex >= 0) {
-        if (mImpl->selectionMode != SelectionMode::kNoItems
-            && mImpl->mouseOverIndex < mImpl->content->children().size()) {
-            auto *item = mImpl->content->children()[mImpl->mouseOverIndex];
+    if (mImpl->mouseOverIndex >= 0 && mImpl->mouseOverIndex < int(items.size())) {
+        if (mImpl->selectionMode != SelectionMode::kNoItems) {
+            auto *item = items[mImpl->mouseOverIndex];
             auto r = item->frame();
             r.x = PicaPt::kZero;
             r.width = width;
             auto rowState = parentState;
             if (item->enabled()) {
-                context.theme.drawListViewSpecialRow(context, r, style(state()), parentState);
+                context.theme.drawListViewSpecialRow(context, r, style(themeState()), parentState);
             }
         }
     }
@@ -406,10 +458,12 @@ void ListView::draw(UIContext& context)
                                 ? parentState
                                 : Theme::WidgetState::kNormal);
     for (auto idx : mImpl->selectedIndices) {
-        auto r = mImpl->content->children()[idx]->frame();
-        r.x = PicaPt::kZero;
-        r.width = width;
-        context.theme.drawListViewSpecialRow(context, r, s, stateForSelection);
+        if (idx >= 0 && idx < int(items.size())) {
+            auto r = items[idx]->frame();
+            r.x = PicaPt::kZero;
+            r.width = width;
+            context.theme.drawListViewSpecialRow(context, r, s, stateForSelection);
+        }
     }
     context.dc.translate(-bounds().x, -bounds().y);
     context.dc.restore();

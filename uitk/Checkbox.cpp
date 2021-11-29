@@ -68,7 +68,7 @@ void Checkbox::draw(UIContext& context)
 {
     auto size = bounds().height;
     Rect r(bounds().x, bounds().y, size, size);
-    context.theme.drawCheckbox(context, r, style(state()), state(), isOn());
+    context.theme.drawCheckbox(context, r, style(themeState()), themeState(), isOn());
 
     // Unsually, we don't want to Super::draw(), because Button changes
     // the text's color. So we're going to skip to Widget::draw().

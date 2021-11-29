@@ -73,8 +73,8 @@ void IncDecWidget::draw(UIContext& context)
 {
     Super::draw(context);
     context.theme.drawIncDec(context, bounds(),
-            mImpl->mouseOverItem == Impl::kMouseOverInc ? state() : Theme::WidgetState::kNormal,
-            mImpl->mouseOverItem == Impl::kMouseOverDec ? state() : Theme::WidgetState::kNormal);
+            mImpl->mouseOverItem == Impl::kMouseOverInc ? themeState() : Theme::WidgetState::kNormal,
+            mImpl->mouseOverItem == Impl::kMouseOverDec ? themeState() : Theme::WidgetState::kNormal);
 }
 
 }  // namespace uitk

@@ -288,7 +288,7 @@ void StringEdit::draw(UIContext& context)
     // mouse() and key() do not have access to the DrawContext, so we need to postpone
     // layout until the draw.
     if (mImpl->editor.needsLayout() || mImpl->editor.layoutDPI() != context.dc.dpi()) {
-        auto s = context.theme.textEditStyle(style(state()), state());
+        auto s = context.theme.textEditStyle(style(themeState()), themeState());
         mImpl->editor.layoutText(context.dc, context.theme.params().labelFont, s.fgColor, PicaPt(1e6));
     }
     // mouse() and key() will change the selection (since the caret is a selection)
@@ -304,7 +304,7 @@ void StringEdit::draw(UIContext& context)
     auto alignOffset = calcAlignmentOffset(mImpl->editor, mImpl->editorTextRect, mImpl->alignment).x;
     context.theme.drawTextEdit(context, bounds(), alignOffset + mImpl->scrollOffset,
                                mImpl->placeholder, mImpl->editor, mImpl->alignment,
-                               style(state()), state(), focused());
+                               style(themeState()), themeState(), focused());
     Super::draw(context);
 }
 

@@ -31,7 +31,8 @@
 
 namespace uitk {
 
-class ListView : public ScrollView {
+class ListView : public ScrollView
+{
     using Super = ScrollView;
 public:
     ListView();
@@ -86,6 +87,7 @@ public:
 
 protected:
     int calcRowIndex(const Point& p) const;  // p is ListView widget coords
+    int highlightedIndex() const;
 
 private:
     struct Impl;

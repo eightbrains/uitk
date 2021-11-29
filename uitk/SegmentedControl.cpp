@@ -168,9 +168,9 @@ void SegmentedControl::layout(const LayoutContext& context)
 
 Widget::EventResult SegmentedControl::mouse(const MouseEvent& e)
 {
-    auto oldState = state();
+    auto oldState = themeState();
     auto result = Super::mouse(e);
-    auto newState = state();
+    auto newState = themeState();
 
     if (e.type == MouseEvent::Type::kButtonDown) {
         // Like Button, we don't do anything for mouse down, but it *does*

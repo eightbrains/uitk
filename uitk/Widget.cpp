@@ -27,9 +27,13 @@
 #include "Window.h"
 #include <nativedraw.h>
 
+#include <optional>
+
 namespace uitk {
 
-static const int kNStyles = 4;
+static const int kNStyles = 5;
+
+static const std::optional<Theme::WidgetState> kUnsetThemeState = std::nullopt;
 
 struct Widget::Impl {
     Window* window = nullptr;  // we do not own this
@@ -38,7 +42,8 @@ struct Widget::Impl {
     Rect frame;
     Rect bounds;
     Theme::WidgetStyle styles[kNStyles];
-    Theme::WidgetState state = Theme::WidgetState::kNormal;
+    MouseState state = MouseState::kNormal;
+    std::optional<Theme::WidgetState> forcedThemeState = kUnsetThemeState;
     bool drawsFrame = false;
     bool visible = true;
     bool enabled = true;
@@ -134,7 +139,7 @@ bool Widget::enabled() const { return mImpl->enabled; }
 Widget* Widget::setEnabled(bool enabled)
 {
     mImpl->enabled = enabled;
-    setState(enabled ? Theme::WidgetState::kNormal : Theme::WidgetState::kDisabled);
+    setState(enabled ? MouseState::kNormal : MouseState::kDisabled);
     // Recursively disable, so that children's state is also kDisabled, so that
     // they draw correctly.
     for (auto *child : mImpl->children) {
@@ -227,6 +232,13 @@ Widget* Widget::removeChild(Widget *w)
 
 void Widget::removeAllChildren()
 {
+    // Since we are returning these widgets to ownership of the caller,
+    // clear their state, in case the mouse was over one. (For instance,
+    // selecting an item in a combobox.)
+    for (auto *child : mImpl->children) {
+        child->setState(MouseState::kNormal);
+        child->resetThemeState();
+    }
     mImpl->children.clear();
 }
 
@@ -237,7 +249,7 @@ void Widget::clearAllChildren()
     }
 }
 
-const std::vector<Widget*> Widget::children() const
+const std::vector<Widget*>& Widget::children() const
 {
     return mImpl->children;
 }
@@ -314,32 +326,55 @@ void Widget::resignKeyFocus() const
     }
 }
 
-Theme::WidgetState Widget::state() const { return mImpl->state; }
+Widget::MouseState Widget::state() const { return mImpl->state; }
 
-void Widget::setState(Theme::WidgetState state)
+void Widget::setState(MouseState state)
 {
     if (!mImpl->enabled) {
         // Need to specifically set in case setEnabled(false) calls setState() after
         // setting mImpl->enabled = false.
-        mImpl->state = Theme::WidgetState::kDisabled;
+        mImpl->state = MouseState::kDisabled;
         return;
     }
     
-    if (mImpl->state == Theme::WidgetState::kNormal && state == Theme::WidgetState::kMouseDown) {
+    if (mImpl->state == MouseState::kNormal && state == MouseState::kMouseDown) {
         state = state;
     }
     
     auto oldState = mImpl->state;
     mImpl->state = state;
 
-    if (oldState == Theme::WidgetState::kNormal && state != Theme::WidgetState::kNormal) {
+    if (oldState == MouseState::kNormal && state != MouseState::kNormal) {
         mouseEntered();
-    } else if (oldState != Theme::WidgetState::kNormal && state == Theme::WidgetState::kNormal) {
+    } else if (oldState != MouseState::kNormal && state == MouseState::kNormal) {
         mouseExited();
     }
 
     if (oldState != state) {
         setNeedsDraw();
+    }
+}
+
+void Widget::setThemeState(Theme::WidgetState state)
+{
+    mImpl->forcedThemeState = state;
+}
+
+void Widget::resetThemeState()
+{
+    mImpl->forcedThemeState = kUnsetThemeState;
+}
+
+Theme::WidgetState Widget::themeState() const
+{
+    if (mImpl->enabled) {
+        if (mImpl->forcedThemeState.has_value()) {
+            return mImpl->forcedThemeState.value();
+        } else {
+            return (Theme::WidgetState)mImpl->state;
+        }
+    } else {
+        return Theme::WidgetState::kDisabled;
     }
 }
 
@@ -387,14 +422,14 @@ Widget::EventResult Widget::mouseChild(const MouseEvent& e, Widget *child, Event
         switch (e.type) {
             case MouseEvent::Type::kMove:
             case MouseEvent::Type::kScroll:
-                child->setState(Theme::WidgetState::kMouseOver);
+                child->setState(MouseState::kMouseOver);
                 break;
             case MouseEvent::Type::kButtonDown:
             case MouseEvent::Type::kDrag:
-                child->setState(Theme::WidgetState::kMouseDown);
+                child->setState(MouseState::kMouseDown);
                 break;
             case MouseEvent::Type::kButtonUp:
-                child->setState(Theme::WidgetState::kMouseOver);
+                child->setState(MouseState::kMouseOver);
                 break;
         }
         // Send the event to the child if an earlier widget has not already
@@ -420,7 +455,7 @@ Widget::EventResult Widget::mouseChild(const MouseEvent& e, Widget *child, Event
         }
     } else {
         // Mouse not in child, check if it exited the widget
-        child->setState(Theme::WidgetState::kNormal);
+        child->setState(MouseState::kNormal);
     }
 
     return result;
@@ -436,13 +471,13 @@ void Widget::mouseExited()
     // event handler will take care of this. However, if the application loses focus
     // be a key event, this event will be generated but obviously the mouse will not
     // have moved.
-    if (state() != Theme::WidgetState::kNormal) {
-        setState(Theme::WidgetState::kNormal);
+    if (state() != MouseState::kNormal) {
+        setState(MouseState::kNormal);
     }
 
     for (auto *child : mImpl->children) {
-        if (child->state() == Theme::WidgetState::kMouseOver
-            || child->state() == Theme::WidgetState::kMouseDown) {
+        if (child->state() == MouseState::kMouseOver
+            || child->state() == MouseState::kMouseDown) {
             child->mouseExited();
         }
     }

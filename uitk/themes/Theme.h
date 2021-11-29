@@ -35,7 +35,13 @@ struct UIContext;
 
 class Theme {
 public:
-    enum class WidgetState { kNormal = 0, kDisabled, kMouseOver, kMouseDown };
+    enum class WidgetState {
+        kNormal = 0, // normal state (mouse not in widget)
+        kDisabled,   // widget is disabled
+        kMouseOver,  // mouse is over widget (widget is highlighted)
+        kMouseDown,  // mouse is clicking on widget
+        kSelected    // widget is drawn selected (e.g. in list view)
+    };
 
     struct WidgetStyle {
         enum Flags { kNoneSet = 0,
@@ -114,6 +120,7 @@ public:
         Size submenuIconSize;
     };
     virtual MenubarMetrics calcPreferredMenuItemMetrics(const DrawContext& dc, const PicaPt& height) const = 0;
+    virtual PicaPt calcPreferredMenuVerticalMargin() const = 0;
     virtual PicaPt calcPreferredMenubarItemHorizMargin(const DrawContext& dc, const PicaPt& height) const = 0;
 
     virtual void drawCheckmark(UIContext& ui, const Rect& r, const WidgetStyle& style) const = 0;
@@ -124,6 +131,7 @@ public:
                            const WidgetStyle& style) const = 0;
     virtual void clipFrame(UIContext& ui, const Rect& frame,
                            const WidgetStyle& style) const = 0;
+    virtual WidgetStyle labelStyle(const WidgetStyle& style, WidgetState state) const = 0;
     virtual void drawButton(UIContext& ui, const Rect& frame,
                             const WidgetStyle& style, WidgetState state,
                             bool isOn) const = 0;

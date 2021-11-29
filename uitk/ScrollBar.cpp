@@ -91,7 +91,8 @@ Size ScrollBar::preferredThumbSize(const LayoutContext& context) const
 
 void ScrollBar::drawTrack(UIContext& context, const Point& thumbMid)
 {
-    context.theme.drawScrollbarTrack(context, direction(), bounds(), thumbMid, style(state()), state());
+    context.theme.drawScrollbarTrack(context, direction(), bounds(), thumbMid,
+                                     style(themeState()), themeState());
 }
 
 void ScrollBar::drawThumb(UIContext& context, Widget *thumb)
@@ -119,7 +120,7 @@ void ScrollBar::drawThumb(UIContext& context, Widget *thumb)
         mImpl->thumbNeedsResize = false;
     }
 
-    context.theme.drawScrollbarThumb(context, thumb->frame(), style(state()), state());
+    context.theme.drawScrollbarThumb(context, thumb->frame(), style(themeState()), themeState());
 }
 
 }  // namespace uitk

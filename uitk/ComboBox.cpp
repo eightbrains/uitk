@@ -44,6 +44,7 @@ struct ComboBox::Impl
     MenuUITK *menu = nullptr; // we own this
     std::function<void(ComboBox*)> onSelectionChanged;
     PicaPt itemDrawOffset;
+    PicaPt popupOffsetY;
 
     int nextId = 1;
 };
@@ -188,6 +189,7 @@ void ComboBox::layout(const LayoutContext& context)
     context.theme.calcMenuItemFrames(context.dc, bounds(), PicaPt::kZero, nullptr, &textRectMenuCoord,
                                      nullptr);
     mImpl->itemDrawOffset = textRectMenuCoord.x - xMargin;
+    mImpl->popupOffsetY = context.theme.calcPreferredMenuVerticalMargin();
 
     Super::layout(context);
 }
@@ -209,6 +211,7 @@ Widget::EventResult ComboBox::mouse(const MouseEvent& e)
             // we also need to offset the menu similarly. This is Mac behavior.
             auto menuUL = frame().upperLeft();
             menuUL.x -= mImpl->itemDrawOffset;
+            menuUL.y -= mImpl->popupOffsetY;
             mImpl->menu->show(window(), convertToWindowFromLocal(menuUL), id);
 #ifdef __APPLE__
             // macOS draws the window border inside the window, instead of decorating
@@ -230,9 +233,9 @@ Widget::EventResult ComboBox::mouse(const MouseEvent& e)
 void ComboBox::draw(UIContext& context)
 {
     context.dc.save();
-    context.theme.drawComboBoxAndClip(context, bounds(), style(state()), state());
+    context.theme.drawComboBoxAndClip(context, bounds(), style(themeState()), themeState());
     if (mImpl->selectedIndex >= 0 && (!mImpl->menu || !mImpl->menu->isShowing())) {
-        auto itemState = (state() == Theme::WidgetState::kDisabled
+        auto itemState = (themeState() == Theme::WidgetState::kDisabled
                           ? Theme::WidgetState::kDisabled
                           : Theme::WidgetState::kNormal);
         int id = mImpl->items[mImpl->selectedIndex].id;

@@ -57,6 +57,7 @@ public:
                                    MenuItemAttribute itemAttr,
                                    PicaPt *shortcutWidth) const override;
     MenubarMetrics calcPreferredMenuItemMetrics(const DrawContext& dc, const PicaPt& height) const override;
+    PicaPt calcPreferredMenuVerticalMargin() const override;
     PicaPt calcPreferredMenubarItemHorizMargin(const DrawContext& dc, const PicaPt& height) const override;
 
     void drawCheckmark(UIContext& ui, const Rect& r, const WidgetStyle& style) const override;
@@ -67,6 +68,7 @@ public:
                    const WidgetStyle& style) const override;
     void clipFrame(UIContext& ui, const Rect& frame,
                    const WidgetStyle& style) const override;
+    WidgetStyle labelStyle(const WidgetStyle& style, WidgetState state) const override;
     void drawButton(UIContext& ui, const Rect& frame,
                     const WidgetStyle& style, WidgetState state,
                     bool isOn) const override;
@@ -132,26 +134,27 @@ protected:
     PicaPt mBorderWidth;
     PicaPt mBorderRadius;
 
-    WidgetStyle mButtonStyles[4];
-    WidgetStyle mButtonOnStyles[4];
-    WidgetStyle mCheckboxStyles[4];
-    WidgetStyle mCheckboxOnStyles[4];
-    WidgetStyle mSegmentedControlStyles[4];  // style for the background
-    WidgetStyle mSegmentStyles[4];  // style for individual segment (button-style)
-    WidgetStyle mSegmentOffStyles[4];  // style for individual segment (off)
-    WidgetStyle mSegmentOnStyles[4];  // style for individual segment (on)
-    WidgetStyle mComboBoxStyles[4];
-    WidgetStyle mComboBoxIconAreaStyles[4];
-    WidgetStyle mSliderTrackStyles[4];
-    WidgetStyle mSliderThumbStyles[4];
-    WidgetStyle mScrollbarTrackStyles[4];
-    WidgetStyle mScrollbarThumbStyles[4];
-    WidgetStyle mProgressBarStyles[4];
-    WidgetStyle mTextEditStyles[4];
-    WidgetStyle mScrollViewStyles[4];
-    WidgetStyle mListViewStyles[4];
-    WidgetStyle mMenuItemStyles[4];
-    WidgetStyle mMenubarItemStyles[4];
+    WidgetStyle mLabelStyles[5];
+    WidgetStyle mButtonStyles[5];
+    WidgetStyle mButtonOnStyles[5];
+    WidgetStyle mCheckboxStyles[5];
+    WidgetStyle mCheckboxOnStyles[5];
+    WidgetStyle mSegmentedControlStyles[5];  // style for the background
+    WidgetStyle mSegmentStyles[5];  // style for individual segment (button-style)
+    WidgetStyle mSegmentOffStyles[5];  // style for individual segment (off)
+    WidgetStyle mSegmentOnStyles[5];  // style for individual segment (on)
+    WidgetStyle mComboBoxStyles[5];
+    WidgetStyle mComboBoxIconAreaStyles[5];
+    WidgetStyle mSliderTrackStyles[5];
+    WidgetStyle mSliderThumbStyles[5];
+    WidgetStyle mScrollbarTrackStyles[5];
+    WidgetStyle mScrollbarThumbStyles[5];
+    WidgetStyle mProgressBarStyles[5];
+    WidgetStyle mTextEditStyles[5];
+    WidgetStyle mScrollViewStyles[5];
+    WidgetStyle mListViewStyles[5];
+    WidgetStyle mMenuItemStyles[5];
+    WidgetStyle mMenubarItemStyles[5];
 };
 
 }  // namespace uitk

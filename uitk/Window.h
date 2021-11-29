@@ -43,6 +43,8 @@ class Widget;
 
 class Window : public IWindowCallbacks
 {
+    friend class MenuUITK;
+    
     // Design notes:
     // Q: Why not make creation a factory function on Application?
     // A: That would prevent users from inheriting from Window, which is
