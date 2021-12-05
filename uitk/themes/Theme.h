@@ -74,7 +74,6 @@ public:
         Color accentColor;
         Color selectionColor;
         Color nonNativeMenuBackgroundColor;
-        Color nonNativeMenuBorderColor;
         Color nonNativeMenubarBackgroundColor;
         Font labelFont;
         Font nonNativeMenubarFont;

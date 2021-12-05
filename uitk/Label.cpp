@@ -70,9 +70,14 @@ const Color& Label::textColor() const { return mImpl->textColor; }
 
 Label* Label::setTextColor(const Color& c)
 {
-    mImpl->textColor = c;
+    setTextColorNoRedraw(c);
     setNeedsDraw();
     return this;
+}
+
+void Label::setTextColorNoRedraw(const Color& c)
+{
+    mImpl->textColor = c;
 }
 
 Size Label::preferredSize(const LayoutContext& context) const

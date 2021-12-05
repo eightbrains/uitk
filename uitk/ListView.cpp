@@ -105,7 +105,9 @@ struct ListView::Impl
             return;
         }
 
-        if (this->mouseOverIndex >= 0 && this->mouseOverIndex < int(items.size())) {
+        bool idxChanged = (idx != this->mouseOverIndex);
+        bool stateChanged = false;
+        if (idxChanged && this->mouseOverIndex >= 0 && this->mouseOverIndex < int(items.size())) {
             if (this->selectedIndices.find(this->mouseOverIndex) != this->selectedIndices.end()) {
                 items[this->mouseOverIndex]->setThemeState(Theme::WidgetState::kSelected);
             } else {
@@ -115,14 +117,18 @@ struct ListView::Impl
         this->mouseOverIndex = idx;
         if (idx >= 0 && idx < int(items.size())) {
             if (this->selectedIndices.find(idx) != this->selectedIndices.end()) {
+                stateChanged |= (items[idx]->themeState() == Theme::WidgetState::kSelected);
                 items[idx]->setThemeState(Theme::WidgetState::kSelected);
             } else {
+                stateChanged |= (items[idx]->themeState() == Theme::WidgetState::kMouseOver);
                 items[idx]->setThemeState(Theme::WidgetState::kMouseOver);
             }
         }
-        // We really want the ListView to redraw, but Impl does not know about that.
+        // We really want the ListView to redraw, but Impl does not know to do that.
         // Conveniently, this will cause the whole chain to be redrawn.
-        this->content->setNeedsDraw();
+        if (idxChanged || stateChanged) {
+            this->content->setNeedsDraw();
+        }
     }
 };
 

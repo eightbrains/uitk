@@ -204,7 +204,7 @@ Theme::Params Win32Application::themeParams() const
         params = EmpireTheme::lightModeParams(accent);
     }
     params.labelFont = Font(fontFamily, fontSize);
-    params.menubarFont = params.labelFont;
+    params.nonNativeMenubarFont = params.labelFont;
 
     return params;
 }

@@ -247,7 +247,7 @@ void SegmentedControl::draw(UIContext& context)
                                       item.isOn, i, nItems);
         }
         auto ws = context.theme.segmentTextStyle(item.state, item.isOn);
-        static_cast<Label*>(children()[i])->setTextColor(ws.fgColor);
+        static_cast<Label*>(children()[i])->setTextColorNoRedraw(ws.fgColor);
     }
 
     const auto &childs = children();

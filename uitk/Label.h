@@ -46,6 +46,11 @@ public:
     /// will be automatically chosen. (Use show(false) if you wish to hide
     /// the label.)
     Label* setTextColor(const Color& c);
+    /// Same as setTextColor(), but does not call setNeedsDraw(). If you need
+    /// to set the text color within a draw (for a child element), use this.
+    /// (Since this is not intended for label configuration it does not return
+    /// a pointer itself.)
+    void setTextColorNoRedraw(const Color& c);
 
     Size preferredSize(const LayoutContext& context) const override;
     void draw(UIContext& context) override;

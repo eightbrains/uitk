@@ -65,7 +65,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     const int DOWN = int(WidgetState::kMouseDown);
     const int SELECTED = int(WidgetState::kSelected);
 
-    auto copyStyles = [NORMAL, DISABLED, OVER, DOWN]
+    auto copyStyles = [NORMAL, DISABLED, OVER, DOWN, SELECTED]
                       (const WidgetStyle src[], WidgetStyle dest[]) {
         dest[NORMAL] = src[NORMAL];
         dest[DISABLED] = src[DISABLED];

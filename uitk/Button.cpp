@@ -125,7 +125,7 @@ void Button::draw(UIContext& context)
     context.theme.drawButton(context, bounds(), style(themeState), themeState, isOn());
     mImpl->label->setThemeState(themeState);
     auto ws = context.theme.buttonTextStyle(themeState, mImpl->isOn);
-    mImpl->label->setTextColor(ws.fgColor);
+    mImpl->label->setTextColorNoRedraw(ws.fgColor);
 
     Super::draw(context);
 }

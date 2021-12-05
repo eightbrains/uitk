@@ -124,10 +124,9 @@ public:
         //   be same as previous.
         bool changed = false;
         const bool isClick = (e.type == MouseEvent::Type::kButtonDown);
-        const bool isRelease = (e.type == MouseEvent::Type::kButtonUp);
         const bool isMove = (e.type == MouseEvent::Type::kDrag || e.type == MouseEvent::Type::kMove);
-        //const bool isMoveWithOpenMenu = (isMove && mModel.activeIndex >= 0);
-        if (isClick || isRelease /*|| isMoveWithOpenMenu*/) {
+        const bool isMoveWithOpenMenu = (isMove && mModel.activeIndex >= 0);
+        if (isClick || isMoveWithOpenMenu) {
             auto h = bounds().height;
             PicaPt x = PicaPt::kZero;
             for (size_t i = 0;  i < mModel.menus.size();  ++i) {
@@ -146,16 +145,19 @@ public:
                         // is incorrect behavior, it just happens to usually
                         // work because of timing.
                         mModel.justClosedIndex = MenubarModel::kNoActiveMenu;
-                        if (isClick /*|| isMoveWithOpenMenu*/) {
+                        if (isClick) {
                             if (menuUitk) {
                                 menuUitk->cancel();
                             }
                             mModel.activeIndex = MenubarModel::kNoActiveMenu;
                         }
-                    } else if (mModel.justClosedIndex != i) {
+                    } else if (mModel.justClosedIndex != i || isMoveWithOpenMenu) {
+                        auto* win = window();
+                        if (win->popupMenu()) {
+                            win->popupMenu()->cancel();
+                        }
                         mModel.activeIndex = i;
                         if (menuUitk) {
-                            auto *win = window();
                             win->onMenuWillShow();
                             menuUitk->show(win, Point(frame().x + x, frame().maxY()),
                                            0, Window::Flags::kMenuEdges);

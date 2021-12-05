@@ -539,7 +539,7 @@ void MenuUITK::addItem(const std::string& text, MenuId id, std::function<void()>
 
 void MenuUITK::addMenu(const std::string& text, Menu *menu)
 {
-    insertMenu(mImpl->items.size(), text, menu);
+    insertMenu(int(mImpl->items.size()), text, menu);
 }
 
 void MenuUITK::addSeparator()
@@ -720,7 +720,7 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
     // presumably menus are going to be reasonably sized.
 
     auto osUL = w->convertWindowToOSPoint(upperLeftWindowCoord);
-    mImpl->menuWindow = new Window("", osUL.x, osUL.y, 0, 0,
+    mImpl->menuWindow = new Window("", int(osUL.x), int(osUL.y), 0, 0,
                                    (Window::Flags::Value)(Window::Flags::kPopup | extraWindowFlags));
 #if __APPLE__
     // The window border is inside the window area on macOS

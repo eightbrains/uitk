@@ -352,8 +352,13 @@ void Window::onMouse(const MouseEvent& eOrig)
         }
         // Some systems (at least macOS) send mouse events outside the window to
         // the parent window of a borderless window. If this happens, convert
-        // move/drag events to the popup and send them on.
+        // move/drag events to the popup and send them on. Unless we are in the menubar,
+        // in which case we need to pass the events in case the user mouses over a
+        // different menu and we need to change the open menu.
+        bool isMouseMoveOverMenubar = false;
         if (eOrig.type == MouseEvent::Type::kMove || eOrig.type == MouseEvent::Type::kDrag) {
+            isMouseMoveOverMenubar = (mImpl->menubarWidget
+                                      && mImpl->menubarWidget->frame().contains(eOrig.pos));
             auto *w = mImpl->activePopup->window();
             if (w) {
                 auto thisWindowULinRoot = mImpl->rootWidget->frame().upperLeft();
@@ -374,7 +379,7 @@ void Window::onMouse(const MouseEvent& eOrig)
         // If we are a normal window we should not get the mouse event,
         // but if we are a menu displaying we should also get the event
         // so that we show/hide submenus, etc.
-        if (!(mImpl->flags & Window::Flags::kPopup)) {
+        if (!(mImpl->flags & Window::Flags::kPopup) && !isMouseMoveOverMenubar) {
             return;
         }
     }

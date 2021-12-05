@@ -733,10 +733,6 @@ int main(int argc, char *argv[])
     Application app;
     app.setExitWhenLastWindowCloses(true);
 
-    struct {
-    } menuData;
-
-
     auto *submenu = new Menu();
     submenu->addItem("Item 1", 20, ShortcutKey::kNone);
     submenu->addItem("Item 2", 21, ShortcutKey::kNone);
