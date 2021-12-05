@@ -168,9 +168,9 @@ void SegmentedControl::layout(const LayoutContext& context)
 
 Widget::EventResult SegmentedControl::mouse(const MouseEvent& e)
 {
-    auto oldState = state();
+    auto oldState = themeState();
     auto result = Super::mouse(e);
-    auto newState = state();
+    auto newState = themeState();
 
     if (e.type == MouseEvent::Type::kButtonDown) {
         // Like Button, we don't do anything for mouse down, but it *does*
@@ -247,7 +247,7 @@ void SegmentedControl::draw(UIContext& context)
                                       item.isOn, i, nItems);
         }
         auto ws = context.theme.segmentTextStyle(item.state, item.isOn);
-        static_cast<Label*>(children()[i])->setTextColor(ws.fgColor);
+        static_cast<Label*>(children()[i])->setTextColorNoRedraw(ws.fgColor);
     }
 
     const auto &childs = children();

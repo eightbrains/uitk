@@ -39,11 +39,15 @@ public:
 
     virtual void setExitWhenLastWindowCloses(bool exits) = 0;
     virtual int run() = 0;
+    virtual void exitRun() = 0;
 
     virtual void scheduleLater(Window* w, std::function<void()> f) = 0;
 
+    virtual void beep() = 0;
+
     virtual bool isOriginInUpperLeft() const = 0;
     virtual bool shouldHideScrollbars() const = 0;
+    virtual bool platformHasMenubar() const = 0;
 
     virtual Clipboard& clipboard() const = 0;
 

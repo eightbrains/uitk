@@ -65,6 +65,11 @@ struct X11Window::Impl {
 
     void destroyWindow()
     {
+        // Unregister the window from the application, because there may
+        // be unprocessed events in the queue for the window.
+        auto& x11app = static_cast<X11Application&>(Application::instance().osApplication());
+        x11app.unregisterWindow(this->xwindow);
+
         this->dc = nullptr;
         XDestroyWindow(this->display, this->xwindow);
         this->xwindow = 0;
@@ -176,6 +181,7 @@ void X11Window::close()
 {
     if (mImpl->xwindow) {
         if (onWindowShouldClose()) {
+            onWindowWillClose();
             mImpl->destroyWindow();
         }
     }
@@ -339,7 +345,7 @@ void X11Window::onMouse(MouseEvent& e, int x, int y)
     // requires the window only for popup windows, we just keep track of the
     // active window and use that in show(). There is not a good way to check
     // what the window stacking order is (and if there were, what do you do
-    // for multiple montiors?), but it seems like a mouse click is a reasonable
+    // for multiple monitors?), but it seems like a mouse click is a reasonable
     // proxy. This will certainly work for popup menus (you have to click to
     // trigger the menu), although it would fail for dialog boxes that appear
     // not as a result of user interaction (such as an error for a long-running

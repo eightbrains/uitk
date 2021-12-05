@@ -46,14 +46,14 @@ public:
     /// will be automatically chosen. (Use show(false) if you wish to hide
     /// the label.)
     Label* setTextColor(const Color& c);
+    /// Same as setTextColor(), but does not call setNeedsDraw(). If you need
+    /// to set the text color within a draw (for a child element), use this.
+    /// (Since this is not intended for label configuration it does not return
+    /// a pointer itself.)
+    void setTextColorNoRedraw(const Color& c);
 
     Size preferredSize(const LayoutContext& context) const override;
     void draw(UIContext& context) override;
-
-    /// Widgets that use a label as a child can set the label state
-    /// as the parent's state changes so that the colors are correct.
-    /// This should not be called if using a Label as a UI element directly.
-    void setWidgetState(Theme::WidgetState state);
 
 private:
     struct Impl;

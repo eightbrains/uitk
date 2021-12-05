@@ -24,6 +24,7 @@
 #define UITK_NUMERIC_MODEL_H
 
 #include <functional>
+#include <memory>
 
 namespace uitk {
 
@@ -39,9 +40,9 @@ public:
     double doubleValue() const;
     NumericModel* setValue(double val);
 
-    /// Sets the upper, lower, and increment values. Increment must be 1 or larger
-    /// for integer sliders. Returns true if min/max changes resulted in changes
-    /// to value, false otherwise.
+    /// Sets the upper, lower, and increment values. Increment must be 1 or
+    /// larger for integer sliders. Returns true if min/max changes resulted in
+    /// changes to value, false otherwise.
     bool setLimits(int minVal, int maxVal, int inc = 1);
 
     /// Sets the upper, lower, and increment values. Increment of 0

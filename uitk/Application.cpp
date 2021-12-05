@@ -22,7 +22,10 @@
 
 #include "Application.h"
 
+#include "Menubar.h"
 #include "OSApplication.h"
+#include "ShortcutKey.h"
+#include "Window.h"
 #include "themes/EmpireTheme.h"
 
 #if defined(__APPLE__)
@@ -43,6 +46,10 @@ struct Application::Impl
 
     std::unique_ptr<OSApplication> osApp;
     std::shared_ptr<Theme> theme;
+    std::unique_ptr<Menubar> menubar;
+    std::unique_ptr<Shortcuts> shortcuts;
+    std::set<Window*> windows;  // we do not own these
+    Window* activeWindow = nullptr;  // we do not own this
 };
 Application* Application::Impl::instance = nullptr;
 
@@ -62,6 +69,10 @@ Application::Application()
 #else
     mImpl->osApp = std::make_unique<X11Application>();
 #endif
+
+    // Application is a friend, but std::make_unique<>() is not
+    mImpl->menubar = std::unique_ptr<Menubar>(new Menubar());
+    mImpl->shortcuts = std::make_unique<Shortcuts>();
 
     assert(!Application::Impl::instance);
     Application::Impl::instance = this;
@@ -84,9 +95,30 @@ int Application::run()
     return mImpl->osApp->run();
 }
 
+bool Application::quit()
+{
+    // Closing a window will cause it to remove itself from the set,
+    // but we do not know exactly when that will happen, so to be
+    // safe, make a copy and iterate over that.
+    auto windows = mImpl->windows; // copy
+
+    for (Window *w : windows) {
+        if (!w->close(Window::CloseBehavior::kAllowCancel)) {
+            return false;
+        }
+    }
+    mImpl->osApp->exitRun();
+    return true;
+}
+
 void Application::scheduleLater(Window* w, std::function<void()> f)
 {
     return mImpl->osApp->scheduleLater(w, f);
+}
+
+void Application::beep()
+{
+    mImpl->osApp->beep();
 }
 
 bool Application::isOriginInUpperLeft() const
@@ -97,6 +129,11 @@ bool Application::isOriginInUpperLeft() const
 bool Application::shouldHideScrollbars() const
 {
     return mImpl->osApp->shouldHideScrollbars();
+}
+
+bool Application::platformHasMenubar() const
+{
+    return mImpl->osApp->platformHasMenubar();
 }
 
 std::shared_ptr<Theme> Application::theme() const
@@ -119,12 +156,34 @@ Clipboard& Application::clipboard() const
     return mImpl->osApp->clipboard();
 }
 
+Menubar& Application::menubar() const
+{
+    return *mImpl->menubar;
+}
+
+Shortcuts& Application::keyboardShortcuts() const
+{
+    return *mImpl->shortcuts;
+}
+
 void Application::onSystemThemeChanged()
 {
     if (mImpl->theme) {
         mImpl->theme->setParams(mImpl->osApp->themeParams());
         // OS should invalidate windows
     }
+}
+
+std::set<Window*>& Application::windowSet() const
+{
+    return mImpl->windows;
+}
+
+Window* Application::activeWindow() const { return mImpl->activeWindow; }
+
+void Application::setActiveWindow(Window *w)
+{
+    mImpl->activeWindow = w;
 }
 
 } // namespace uitk

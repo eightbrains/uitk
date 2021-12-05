@@ -35,7 +35,13 @@ struct UIContext;
 
 class Theme {
 public:
-    enum class WidgetState { kNormal = 0, kDisabled, kMouseOver, kMouseDown };
+    enum class WidgetState {
+        kNormal = 0, // normal state (mouse not in widget)
+        kDisabled,   // widget is disabled
+        kMouseOver,  // mouse is over widget (widget is highlighted)
+        kMouseDown,  // mouse is clicking on widget
+        kSelected    // widget is drawn selected (e.g. in list view)
+    };
 
     struct WidgetStyle {
         enum Flags { kNoneSet = 0,
@@ -53,42 +59,7 @@ public:
         PicaPt borderWidth = PicaPt(0);
         PicaPt borderRadius = PicaPt(0);
 
-        WidgetStyle merge(const WidgetStyle& s) const
-        {
-            WidgetStyle newStyle;
-
-            if (s.flags & kBGColorSet) {
-                newStyle.bgColor = s.bgColor;
-            } else {
-                newStyle.bgColor = this->bgColor;
-            }
-
-            if (s.flags & kFGColorSet) {
-                newStyle.fgColor = s.fgColor;
-            } else {
-                newStyle.fgColor = this->fgColor;
-            }
-
-            if (s.flags & kBorderColorSet) {
-                newStyle.borderColor = s.borderColor;
-            } else {
-                newStyle.borderColor = this->borderColor;
-            }
-
-            if (s.flags & kBorderWidthSet) {
-                newStyle.borderWidth = s.borderWidth;
-            } else {
-                newStyle.borderWidth = this->borderWidth;
-            }
-            
-            if (s.flags & kBorderRadiusSet) {
-                newStyle.borderRadius = s.borderRadius;
-            } else {
-                newStyle.borderRadius = this->borderRadius;
-            }
-
-            return newStyle;
-        }
+        WidgetStyle merge(const WidgetStyle& s) const;
     };
 
     struct Params
@@ -102,7 +73,10 @@ public:
         Color accentedBackgroundTextColor;  // for when accentColor is bg of text
         Color accentColor;
         Color selectionColor;
+        Color nonNativeMenuBackgroundColor;
+        Color nonNativeMenubarBackgroundColor;
         Font labelFont;
+        Font nonNativeMenubarFont;
     };
 
 public:
@@ -132,15 +106,31 @@ public:
                                           const Font& font) const = 0;
     virtual Size calcPreferredIncDecSize(const DrawContext& dc) const = 0;
     virtual PicaPt calcPreferredScrollbarThickness(const DrawContext& dc) const = 0;
-    virtual Size calcPreferredMenuItemSize(const DrawContext& dc, const std::string& text) const = 0;
+    enum class MenuItemAttribute { kNormal, kChecked, kSubmenu };
+    virtual Size calcPreferredMenuItemSize(const DrawContext& dc,
+                                           const std::string& text, const std::string& shortcut,
+                                           MenuItemAttribute itemAttr,
+                                           PicaPt *shortcutWidth) const = 0;
+    struct MenubarMetrics {
+        PicaPt horizMargin;
+        PicaPt checkboxWidth;
+        PicaPt afterCheckboxSeparator;
+        PicaPt afterTextSeparator;
+        Size submenuIconSize;
+    };
+    virtual MenubarMetrics calcPreferredMenuItemMetrics(const DrawContext& dc, const PicaPt& height) const = 0;
+    virtual PicaPt calcPreferredMenuVerticalMargin() const = 0;
+    virtual PicaPt calcPreferredMenubarItemHorizMargin(const DrawContext& dc, const PicaPt& height) const = 0;
 
     virtual void drawCheckmark(UIContext& ui, const Rect& r, const WidgetStyle& style) const = 0;
+    virtual void drawSubmenuIcon(UIContext& ui, const Rect& frame, const WidgetStyle& style) const = 0;
 
     virtual void drawWindowBackground(UIContext& ui, const Size& size) const = 0;
     virtual void drawFrame(UIContext& ui, const Rect& frame,
                            const WidgetStyle& style) const = 0;
     virtual void clipFrame(UIContext& ui, const Rect& frame,
                            const WidgetStyle& style) const = 0;
+    virtual WidgetStyle labelStyle(const WidgetStyle& style, WidgetState state) const = 0;
     virtual void drawButton(UIContext& ui, const Rect& frame,
                             const WidgetStyle& style, WidgetState state,
                             bool isOn) const = 0;
@@ -183,14 +173,19 @@ public:
                               const WidgetStyle& style, WidgetState state) const = 0;
     virtual void clipListView(UIContext& ui, const Rect& frame,
                               const WidgetStyle& style, WidgetState state) const = 0;
-    virtual void drawListViewSelectedRow(UIContext& ui, const Rect& frame,
-                                         const WidgetStyle& style, WidgetState state) const = 0;
-    virtual void drawMenuBackground(UIContext& ui, const Rect& frame) = 0;
-    virtual void calcMenuItemFrames(const DrawContext& dc, const Rect& frame,
-                                    Rect *checkRect, Rect *textRect) const = 0;
-    virtual void drawMenuItem(UIContext& ui, const Rect& frame, const std::string& text,
-                              const bool isChecked, const WidgetStyle& style, WidgetState state) const = 0;
+    virtual void drawListViewSpecialRow(UIContext& ui, const Rect& frame,
+                                        const WidgetStyle& style, WidgetState state) const = 0;
+    virtual void drawMenuBackground(UIContext& ui, const Size& size) = 0;
+    virtual void calcMenuItemFrames(const DrawContext& dc, const Rect& frame, const PicaPt& shortcutWidth,
+                                    Rect *checkRect, Rect *textRect, Rect *shortcutRect) const = 0;
+    virtual void drawMenuItem(UIContext& ui, const Rect& frame, const PicaPt& shortcutWidth,
+                              const std::string& text, const std::string& shortcutKey,
+                              MenuItemAttribute itemAttr,
+                              const WidgetStyle& style, WidgetState state) const = 0;
     virtual void drawMenuSeparatorItem(UIContext& ui, const Rect& frame) const = 0;
+    virtual void drawMenubarBackground(UIContext& ui, const Rect& frame) const = 0;
+    virtual void drawMenubarItem(UIContext& ui, const Rect& frame, const std::string& text,
+                                 WidgetState state) const = 0;
 };
 
 }  // namespace uitk

@@ -25,16 +25,20 @@
 
 #include <functional>
 #include <memory>
+#include <set>
 
 namespace uitk {
 
 class Clipboard;
+class Menubar;
 class OSApplication;
+class Shortcuts;
 class Theme;
 class Window;
 
 class Application
 {
+    friend class Window;
 public:
     /// The Application constructor will set the instance, so that you can
     /// inherit from Application if you want.
@@ -61,9 +65,18 @@ public:
     /// Runs the event loop
     int run();
 
+    /// Closes all windows and quits the event loop. Returns true unless one
+    /// of the windows canceled the close.
+    bool quit();
+
     /// Posts a function that will be called on the main thread later.
     /// This function is safe to call on either the main thread or another thread.
     void scheduleLater(Window* w, std::function<void()> f);
+
+    /// Plays a beep, usually when a keypress is rejected. (This is used
+    /// to produce the beep when a pressing a keyboard shortcut for a menu
+    /// item, and we are not using native OS menus.)
+    void beep();
 
     /// Returns true if the operating system's coordinate system has the
     /// origin in the upper left (Linux, Windows), otherwise false (macOS,
@@ -74,8 +87,24 @@ public:
     /// scrolling (e.g. macOS), false otherwise.
     bool shouldHideScrollbars() const;
 
+    /// Returns true if the platform uses a menubar, false otherwise.
+    /// For instance, desktop platforms (macOS, Windows, Linux) will return
+    /// true, and mobile platorms (Android, iOS) will return false;
+    bool platformHasMenubar() const;
+
+    /// Returns the active window, or nullptr if no windows are active.
+    Window* activeWindow() const;
+
     /// Gets the application's clipboard
     Clipboard& clipboard() const;
+
+    /// Gets the applications menubar
+    Menubar& menubar() const;
+
+    /// Gets the applications keyboard shortcuts manager. Note that if native
+    /// menus are enabled the keyboard shorts in menus will be processed by
+    /// the native code path and will not be in the shortcuts manager.
+    Shortcuts& keyboardShortcuts() const;
 
     /// Gets the application's theme.
     std::shared_ptr<Theme> theme() const;
@@ -83,6 +112,12 @@ public:
     void onSystemThemeChanged();
 
     OSApplication& osApplication();  // for internal use
+
+private:
+    // The list of windows; this is a reference so that Window can add
+    // and remove windows.
+    std::set<Window*>& windowSet() const;
+    void setActiveWindow(Window *w);  // does NOT take ownership
 
 private:
     struct Impl;

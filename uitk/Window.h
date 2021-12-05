@@ -27,6 +27,7 @@
 #include <string>
 
 #include "OSWindow.h"
+#include "OSMenu.h"
 
 namespace uitk {
 
@@ -35,12 +36,15 @@ struct Point;
 
 struct KeyEvent;
 struct MouseEvent;
-class Widget;
 struct LayoutContext;
-class PopupMenu;
+class Menubar;
+class MenuUITK;
+class Widget;
 
 class Window : public IWindowCallbacks
 {
+    friend class MenuUITK;
+    
     // Design notes:
     // Q: Why not make creation a factory function on Application?
     // A: That would prevent users from inheriting from Window, which is
@@ -52,7 +56,8 @@ public:
     struct Flags {  // the struct provides scoping like enum class
         enum Value {
             kNormal = 0,
-            kPopup = (1 << 0)
+            kPopup = (1 << 0),
+            kMenuEdges = (1 << 1),  // used internally for menus: makes the top corners square
         };
     };
 
@@ -70,7 +75,14 @@ public:
     bool isShowing() const;
     Window* show(bool show);
 
-    void close();
+    bool isActive() const;
+
+    enum class CloseBehavior { kAllowCancel, /// (default) allows onWindowShouldClose to return false
+                               kForceClose   /// forces the window to close
+    };
+    /// Returns true if the window will close, false if onWindowShouldClose
+    /// or the setOnWindowShouldClose callback returned false.
+    bool close(CloseBehavior ask = CloseBehavior::kAllowCancel);
 
     /// Schedules the window for deletion at a point in the event loop where
     /// it is safe. This function is safe to call in the setOnWindowWillClose
@@ -101,6 +113,11 @@ public:
     /// point passed it. This is useful for positioning popup windows.
     OSWindow::OSPoint convertWindowToOSPoint(const Point& windowPt) const;
 
+    /// Returns the content rect of the window, relative to the upper left of the
+    /// drawable area. Usually this is the drawable area of the window, but on
+    /// platforms where UITK draws the menus it is offset by the size of the menu.
+    const Rect& contentRect() const;
+
     /// Adds the child to the Window. Returns pointer this window.
     Window* addChild(Widget *child);
 
@@ -112,6 +129,17 @@ public:
     PicaPt borderWidth() const;
     
     void* nativeHandle();
+
+    /// Sets a callback that will be called whenever a menu is about to show.
+    /// This is where menu items should be enabled and disabled. This is called
+    /// after onMenuItemsWillShow(), which sets the standard menu items (if any
+    /// are included).
+    void setOnMenuWillShow(std::function<void(Menubar&)> onWillShow);
+
+    /// Sets the callback when a menu item is activated/selected.
+    /// This is a convenience instead of overriding onMenuActivated and putting
+    /// in a big switch statement.
+    void setOnMenuActivated(MenuId id, std::function<void()> onActivated);
 
     void setOnWindowWillShow(std::function<void(Window& w, const LayoutContext& context)> onWillShow);
     void setOnWindowDidDeactivate(std::function<void(Window& w)> onDidDeactivate);
@@ -131,7 +159,9 @@ public:
 
     // On macOS windows without a titlebar do not get activated/deactivated
     // messages, so we need to register the popup menu
-    void setPopupMenu(PopupMenu *menu);
+    void setPopupMenu(MenuUITK *menu);
+    /// Returns the active popup menu, or nullptr
+    MenuUITK* popupMenu() const;
 
     void onResize(const DrawContext& dc) override;
     void onLayout(const DrawContext& dc) override;
@@ -143,6 +173,9 @@ public:
     void onDeactivated() override;
     bool onWindowShouldClose() override;
     void onWindowWillClose() override;
+
+    virtual void onMenuWillShow();
+    virtual void onMenuActivated(MenuId id);
 
 protected:
     /// Posts a redraw message to the event loop scheduling a redraw.

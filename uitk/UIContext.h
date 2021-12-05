@@ -41,6 +41,7 @@ struct UIContext
 {
     const Theme& theme;
     DrawContext& dc;
+    bool isWindowActive;
 };
 
 }  // namespace uitk

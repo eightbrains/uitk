@@ -196,7 +196,7 @@ Win32Window::Win32Window(IWindowCallbacks& callbacks,
 
     DWORD style = 0;
     if (flags & Window::Flags::kPopup) {
-        style |= WS_POPUPWINDOW;
+        style |= WS_POPUP | WS_BORDER;
     } else {
         style |= WS_OVERLAPPEDWINDOW;
         // CW_USEDEFAULT is only valid with WS_OVERLAPPEDWINDOW
@@ -231,7 +231,6 @@ Win32Window::~Win32Window()
 
 bool Win32Window::isShowing() const
 {
-    bool dbg = IsWindowVisible(mImpl->hwnd); // debugging; remove
     return IsWindowVisible(mImpl->hwnd);
 }
 
@@ -519,9 +518,41 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
         //    // WM_DESTROY is sent to the window, then the child windows are destroyed,
         //    // and finally WM_NCDESTROY is sent to the window
         //    return 0;
-        case WM_PAINT:
-            w->onDraw();
+        case WM_ACTIVATE:
+            // WM_ACTIVATEAPP, which is only called if the user is switching between apps.
+            // Since we could have multiple windows (e.g. editing multiple documents) that
+            // the user switches between, we want WM_ACTIVATE, which is sent regardless of
+            // whether the window is (de)activated for a different app or within the app.
+            if ((wParam & 0xff) == WA_INACTIVE) {
+                w->onDeactivated();
+            } else {
+                w->onActivated(w->currentMouseLocation());
+            }
             return 0;
+        case WM_MOUSEACTIVATE: {
+            // WM_MOUSEACTIVATE is sent when the mouse is clicked in a window.
+            // If this is a popup window, we should not activate it, as the main
+            // window should stay active. (And if we do activate the child, then
+            // things get pretty messed up, which clicks not getting delivered
+            // to the next popup window, and the main window does not get activated
+            // again.
+            bool isPopup = (GetWindowLongA(hwnd, GWL_STYLE) & WS_POPUP);
+            if (isPopup) {
+                return MA_NOACTIVATE;
+            } else {
+                return MA_ACTIVATE;
+            }
+        }
+        case WM_PAINT: {
+            // Even if we are using Direct2D to draw, we still need to call BeginPaint()
+            // and EndPaint(), otherwise the paint region will never be cleared and we
+            // will have endless redraws.
+            PAINTSTRUCT ps;
+            BeginPaint(hwnd, &ps);
+            w->onDraw();
+            EndPaint(hwnd, &ps);
+            return 0;
+        }
         case WM_SIZING: {  // WM_SIZE is sent when done, but we want live resizing
             auto *rectPx = (RECT*)lParam;  // can change this to alter the changing size
             w->onResize();

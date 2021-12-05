@@ -37,6 +37,8 @@
 #include "Label.h"
 #include "ListView.h"
 #include "NumberEdit.h"
+#include "Menu.h"
+#include "Menubar.h"
 #include "ProgressBar.h"
 #include "ScrollView.h"
 #include "SegmentedControl.h"

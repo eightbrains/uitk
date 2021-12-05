@@ -22,7 +22,9 @@
 
 #include "Menu.h"
 
+#include "Application.h"
 #include "Events.h"
+#include "MenuUITK.h"
 
 #include <unordered_map>
 
@@ -69,10 +71,124 @@ StandardItemInfo gStandardItems;
 
 } // namespace
 
+//-----------------------------------------------------------------------------
+
 bool Menu::isShortcutFor(StandardItem item, const KeyEvent& e)
 {
     auto info = gStandardItems.item2item[item];
     return (e.keymods == info.shortcutKeymods && e.key == info.shortcutKey);
+}
+
+MenuId Menu::kInvalidId = OSMenu::kInvalidId;
+
+struct Menu::Impl
+{
+    std::shared_ptr<OSMenu> menu;  // use this for most things
+    std::shared_ptr<MenuUITK> menuUitk;  // will be null if using platform menus
+};
+
+Menu::Menu()
+    : mImpl(new Menu::Impl())
+{
+    mImpl->menuUitk = std::make_shared<MenuUITK>();
+    mImpl->menu = mImpl->menuUitk;
+}
+
+Menu::~Menu()
+{
+}
+
+MenuUITK* Menu::menuUitk() const { return mImpl->menuUitk.get(); }
+
+void Menu::clear()
+{
+    mImpl->menu->clear();
+}
+
+Menu* Menu::addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut)
+{
+    mImpl->menu->addItem(text, id, shortcut);
+    return this;
+}
+
+Menu* Menu::addMenu(const std::string& text, Menu *menu)
+{
+    mImpl->menu->addMenu(text, menu);
+    return this;
+}
+
+//Menu* Menu::addItem(MenuItem *item, int id, std::function<void()> onItem)
+
+Menu* Menu::addSeparator()
+{
+    mImpl->menu->addSeparator();
+    return this;
+}
+
+Menu* Menu::insertItem(int index, const std::string& text, MenuId id, const ShortcutKey& shortcut)
+{
+    mImpl->menu->insertItem(index, text, id, shortcut);
+    return this;
+}
+
+Menu* Menu::insertMenu(int index, const std::string& text, Menu *menu)
+{
+    mImpl->menu->insertMenu(index, text, menu);
+    return this;
+}
+
+//Menu* insertItem(int index, MenuItem *item, MenuId id, std::function<void()> onItem)
+
+Menu* Menu::insertSeparator(MenuId index)
+{
+    mImpl->menu->insertSeparator(index);
+    return this;
+}
+
+void Menu::removeItem(MenuId id)
+{
+    mImpl->menu->removeItem(id);
+}
+
+bool Menu::isSeparator(MenuId id) const
+{
+    return mImpl->menu->isSeparator(id);
+}
+
+bool Menu::itemChecked(MenuId id) const
+{
+    return mImpl->menu->itemChecked(id);
+}
+
+Menu::ItemFound Menu::setItemChecked(MenuId id, bool checked)
+{
+    return mImpl->menu->setItemChecked(id, checked);
+}
+
+bool Menu::itemEnabled(MenuId id) const
+{
+    return mImpl->menu->itemEnabled(id);
+}
+
+Menu::ItemFound Menu::setItemEnabled(MenuId id, bool enabled)
+{
+    return mImpl->menu->setItemEnabled(id, enabled);
+}
+
+const std::string& Menu::itemText(MenuId id) const
+{
+    return mImpl->menu->itemText(id);
+}
+
+Menu::ItemFound Menu::setItemText(MenuId id, const std::string& text)
+{
+    return mImpl->menu->setItemText(id, text);
+}
+
+Menu::ItemFound Menu::activateItem(MenuId id) const
+{
+    auto *win = Application::instance().activeWindow();
+    return mImpl->menu->activateItem(id, win);
 }
 
 } // namespace uitk

@@ -76,6 +76,8 @@ bool MacOSApplication::isOriginInUpperLeft() const { return false; }
 
 bool MacOSApplication::shouldHideScrollbars() const { return true; }
 
+bool MacOSApplication::platformHasMenubar() const { return true; }
+
 Clipboard& MacOSApplication::clipboard() const { return *mImpl->clipboard; }
 
 Theme::Params MacOSApplication::themeParams() const
@@ -90,11 +92,15 @@ Theme::Params MacOSApplication::themeParams() const
     };
 
     auto windowBackground = toUITKColor(NSColor.windowBackgroundColor);
-    auto params = EmpireTheme::defaultParams();
-    params.accentColor = toUITKColor(NSColor.controlAccentColor);
+    auto textColor = toUITKColor(NSColor.controlTextColor);
+    auto accentColor = toUITKColor(NSColor.controlAccentColor);
+    bool isDarkMode = (textColor.toGrey().red() > 0.5f); // window bg may be transparent
+    auto params = (isDarkMode ? EmpireTheme::darkModeParams(accentColor)
+                              : EmpireTheme::lightModeParams(accentColor));
+    params.accentColor = accentColor;
     params.windowBackgroundColor = Color(0.0f, 0.0f, 0.0f, 0.0f); // draw nothing
     params.nonEditableBackgroundColor = toUITKColor(NSColor.controlColor);
-    params.textColor = toUITKColor(NSColor.controlTextColor);
+    params.textColor = textColor;
     params.disabledTextColor = toUITKColor(NSColor.disabledControlTextColor);
     params.disabledBackgroundColor = Color(params.nonEditableBackgroundColor.red(),
                                            params.nonEditableBackgroundColor.green(),
@@ -105,6 +111,9 @@ Theme::Params MacOSApplication::themeParams() const
     NSFont *nsfont = [NSTextField labelWithString:@"Ag"].font;
     params.labelFont = Font(nsfont.familyName.UTF8String,
                             PicaPt::fromPixels(nsfont.pointSize, 72.0f));
+    NSFont *nsmenufont = [NSFont menuFontOfSize:0.0];
+    params.nonNativeMenubarFont = Font(nsmenufont.familyName.UTF8String,
+                                       PicaPt::fromPixels(nsmenufont.pointSize, 72.0f));
     return params;
 }
 
@@ -118,6 +127,11 @@ void MacOSApplication::scheduleLater(Window* w, std::function<void()> f)
     dispatch_async(dispatch_get_main_queue(), ^{ f(); });
 }
 
+void MacOSApplication::beep()
+{
+    NSBeep();
+}
+
 int MacOSApplication::run()
 {
     @autoreleasepool {
@@ -129,6 +143,13 @@ int MacOSApplication::run()
         [NSApp run];
     }
     return 0;
+}
+
+void MacOSApplication::exitRun()
+{
+    // Note: the docs say that -stop: only exits the run loop after an event is
+    //       processed, and that a timer firing is not an event.
+    [NSApp stop:nil];
 }
 
 } // namespace uitk

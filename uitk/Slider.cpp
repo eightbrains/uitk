@@ -43,13 +43,14 @@ Size Slider::preferredThumbSize(const LayoutContext& context) const
 
 void Slider::drawTrack(UIContext& context, const Point& thumbMid)
 {
-    context.theme.drawSliderTrack(context, direction(), bounds(), thumbMid, style(state()), state());
+    context.theme.drawSliderTrack(context, direction(), bounds(), thumbMid,
+                                  style(themeState()), themeState());
 }
 
 void Slider::drawThumb(UIContext& context, Widget *thumb)
 {
     context.theme.drawSliderThumb(context, thumb->frame(),
-                                  thumb->style(thumb->state()), thumb->state());
+                                  thumb->style(thumb->themeState()), thumb->themeState());
 }
 
 }  // namespace

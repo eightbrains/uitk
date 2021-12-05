@@ -52,15 +52,23 @@ public:
     Rect calcTextEditRectForFrame(const Rect& frame, const DrawContext& dc, const Font& font) const override;
     Size calcPreferredIncDecSize(const DrawContext& dc) const override;
     PicaPt calcPreferredScrollbarThickness(const DrawContext& dc) const override;
-    Size calcPreferredMenuItemSize(const DrawContext& dc, const std::string& text) const override;
+    Size calcPreferredMenuItemSize(const DrawContext& dc,
+                                   const std::string& text, const std::string& shortcut,
+                                   MenuItemAttribute itemAttr,
+                                   PicaPt *shortcutWidth) const override;
+    MenubarMetrics calcPreferredMenuItemMetrics(const DrawContext& dc, const PicaPt& height) const override;
+    PicaPt calcPreferredMenuVerticalMargin() const override;
+    PicaPt calcPreferredMenubarItemHorizMargin(const DrawContext& dc, const PicaPt& height) const override;
 
     void drawCheckmark(UIContext& ui, const Rect& r, const WidgetStyle& style) const override;
+    void drawSubmenuIcon(UIContext& ui, const Rect& frame, const WidgetStyle& style) const override;
 
     void drawWindowBackground(UIContext& ui, const Size& size) const override;
     void drawFrame(UIContext& ui, const Rect& frame,
                    const WidgetStyle& style) const override;
     void clipFrame(UIContext& ui, const Rect& frame,
                    const WidgetStyle& style) const override;
+    WidgetStyle labelStyle(const WidgetStyle& style, WidgetState state) const override;
     void drawButton(UIContext& ui, const Rect& frame,
                     const WidgetStyle& style, WidgetState state,
                     bool isOn) const override;
@@ -104,14 +112,19 @@ public:
                       const WidgetStyle& style, WidgetState state) const override;
     void clipListView(UIContext& ui, const Rect& frame,
                       const WidgetStyle& style, WidgetState state) const override;
-    void drawListViewSelectedRow(UIContext& ui, const Rect& frame,
-                                 const WidgetStyle& style, WidgetState state) const override;
-    void drawMenuBackground(UIContext& ui, const Rect& frame) override;
-    void calcMenuItemFrames(const DrawContext& dc, const Rect& frame,
-                            Rect *checkRect, Rect *textRect) const override;
-    void drawMenuItem(UIContext& ui, const Rect& frame, const std::string& text,
-                      const bool isChecked, const WidgetStyle& style, WidgetState state) const override;
+    void drawListViewSpecialRow(UIContext& ui, const Rect& frame,
+                                const WidgetStyle& style, WidgetState state) const override;
+    void drawMenuBackground(UIContext& ui, const Size& size) override;
+    void calcMenuItemFrames(const DrawContext& dc, const Rect& frame, const PicaPt& shortcutWidth,
+                            Rect *checkRect, Rect *textRect, Rect *shortcutRect) const override;
+    void drawMenuItem(UIContext& ui, const Rect& frame, const PicaPt& shortcutWidth,
+                      const std::string& text, const std::string& shortcutKey,
+                      MenuItemAttribute itemAttr,
+                      const WidgetStyle& style, WidgetState state) const override;
     void drawMenuSeparatorItem(UIContext& ui, const Rect& frame) const override;
+    void drawMenubarBackground(UIContext& ui, const Rect& frame) const override;
+    void drawMenubarItem(UIContext& ui, const Rect& frame, const std::string& text,
+                         WidgetState state) const override;
 
 protected:
     void setVectorParams(const Params& params);
@@ -121,25 +134,27 @@ protected:
     PicaPt mBorderWidth;
     PicaPt mBorderRadius;
 
-    WidgetStyle mButtonStyles[4];
-    WidgetStyle mButtonOnStyles[4];
-    WidgetStyle mCheckboxStyles[4];
-    WidgetStyle mCheckboxOnStyles[4];
-    WidgetStyle mSegmentedControlStyles[4];  // style for the background
-    WidgetStyle mSegmentStyles[4];  // style for individual segment (button-style)
-    WidgetStyle mSegmentOffStyles[4];  // style for individual segment (off)
-    WidgetStyle mSegmentOnStyles[4];  // style for individual segment (on)
-    WidgetStyle mComboBoxStyles[4];
-    WidgetStyle mComboBoxIconAreaStyles[4];
-    WidgetStyle mSliderTrackStyles[4];
-    WidgetStyle mSliderThumbStyles[4];
-    WidgetStyle mScrollbarTrackStyles[4];
-    WidgetStyle mScrollbarThumbStyles[4];
-    WidgetStyle mProgressBarStyles[4];
-    WidgetStyle mTextEditStyles[4];
-    WidgetStyle mScrollViewStyles[4];
-    WidgetStyle mListViewStyles[4];
-    WidgetStyle mMenuItemStyles[4];
+    WidgetStyle mLabelStyles[5];
+    WidgetStyle mButtonStyles[5];
+    WidgetStyle mButtonOnStyles[5];
+    WidgetStyle mCheckboxStyles[5];
+    WidgetStyle mCheckboxOnStyles[5];
+    WidgetStyle mSegmentedControlStyles[5];  // style for the background
+    WidgetStyle mSegmentStyles[5];  // style for individual segment (button-style)
+    WidgetStyle mSegmentOffStyles[5];  // style for individual segment (off)
+    WidgetStyle mSegmentOnStyles[5];  // style for individual segment (on)
+    WidgetStyle mComboBoxStyles[5];
+    WidgetStyle mComboBoxIconAreaStyles[5];
+    WidgetStyle mSliderTrackStyles[5];
+    WidgetStyle mSliderThumbStyles[5];
+    WidgetStyle mScrollbarTrackStyles[5];
+    WidgetStyle mScrollbarThumbStyles[5];
+    WidgetStyle mProgressBarStyles[5];
+    WidgetStyle mTextEditStyles[5];
+    WidgetStyle mScrollViewStyles[5];
+    WidgetStyle mListViewStyles[5];
+    WidgetStyle mMenuItemStyles[5];
+    WidgetStyle mMenubarItemStyles[5];
 };
 
 }  // namespace uitk

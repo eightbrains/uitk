@@ -25,6 +25,8 @@
 
 #include "Widget.h"
 
+#include <functional>
+
 namespace uitk {
 
 class NumberEdit : public Widget
@@ -41,8 +43,8 @@ public:
     /// Sets the value to the argument truncated to the nearest increment.
     NumberEdit* setValue(double val);
 
-    /// Sets the upper, lower, and increment values. Increment must be 1 or larger
-    /// for integer sliders.
+    /// Sets the upper, lower, and increment values. Increment must be 1 or
+    /// larger for integer sliders.
     void setLimits(int minVal, int maxVal, int inc = 1);
 
     /// Sets the upper, lower, and increment values. Increment of 0

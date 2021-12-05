@@ -59,7 +59,7 @@ void ProgressBar::draw(UIContext& context)
 {
     Super::draw(context);
 
-    context.theme.drawProgressBar(context, bounds(), mImpl->value, style(state()), state());
+    context.theme.drawProgressBar(context, bounds(), mImpl->value, style(themeState()), themeState());
 }
 
 }  // namespace uitk

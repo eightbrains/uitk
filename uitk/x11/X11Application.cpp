@@ -273,9 +273,18 @@ void X11Application::setExitWhenLastWindowCloses(bool exits)
     // be no way to open a new window after the last one closes.
 }
 
+void X11Application::beep()
+{
+    if (mImpl->display) {
+        XBell(mImpl->display, 0 /* base volume, ranges [-100, 100]*/);
+    }
+}
+
 bool X11Application::isOriginInUpperLeft() const { return true; }
 
 bool X11Application::shouldHideScrollbars() const { return false; }
+
+bool X11Application::platformHasMenubar() const { return true; }
 
 Clipboard& X11Application::clipboard() const { return *mImpl->clipboard; }
 
@@ -476,13 +485,17 @@ int X11Application::run()
                 break;
             }
             case DestroyNotify:  // get with StructureNotifyMask
-                w->onWindowWillClose();
-                mImpl->xwin2window.erase(wit);
-                if (mImpl->xwin2window.empty()) {
-                    done = true;
-                }
+                // Should not happen, window should be unregistered
+
+                // Note that the window is destroyed, it is too late to
+                // call w->onWindowWillClose(). Instead, this is done in
+                // X11Window::close(), right before destruction.
+                // Also note that X11Window::close() needs to unregister
+                // the window, but we do it here just in case.
+                unregisterWindow(wit->first);  // just in case
                 break;
             case FocusIn:
+                w->onActivated(w->currentMouseLocation());
                 mImpl->clickCounter.reset();
                 // X11 makes the clipboard owned by the window, instead of
                 // globally, which is how it functions (and how macOS and Win32
@@ -493,6 +506,7 @@ int X11Application::run()
                 mImpl->clipboard->setActiveWindow(event.xany.window);
                 break;
             case FocusOut:
+                w->onDeactivated();
                 mImpl->clickCounter.reset();
                 break;
             case KeymapNotify:
@@ -573,7 +587,7 @@ int X11Application::run()
                     for (size_t i = 0; i < n; ++i) {
                         std::function<void()> f;
                         mImpl->postedFunctionsLock.lock();
-                        f = *mImpl->postedFunctions.begin();
+                        f = *mImpl->postedFunctions.begin();  // copy
                         mImpl->postedFunctionsLock.unlock();
 
                         f();
@@ -587,10 +601,21 @@ int X11Application::run()
             default:
                 break;
         }
+
+        if (mImpl->xwin2window.empty()) {
+            done = true;
+        }
     }
 
     XDestroyIC(xic);
     XCloseIM(xim);
+}
+
+void X11Application::exitRun()
+{
+    // We do not need to do anything here because this should only be called from
+    // Application::quit(), which will have closed all the windows, causing us to
+    // exit.
 }
 
 Theme::Params X11Application::themeParams() const
@@ -607,6 +632,11 @@ void X11Application::registerWindow(long unsigned int xwindow,
                                     X11Window *window)
 {
     mImpl->xwin2window[(::Window)xwindow] = window;
+}
+
+void X11Application::unregisterWindow(long unsigned int xwindow)
+{
+    mImpl->xwin2window.erase((::Window)xwindow);
 }
 
 float X11Application::dpiForScreen(int screen)

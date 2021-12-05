@@ -23,7 +23,7 @@
 #include "StringEdit.h"
 
 #include "Events.h"
-#include "PopupMenu.h"
+#include "MenuUITK.h"
 #include "StringEditorLogic.h"
 #include "UIContext.h"
 #include "Window.h"
@@ -106,7 +106,7 @@ struct StringEdit::Impl
     int alignment = Alignment::kLeft | Alignment::kVCenter;
     Rect editorTextRect;
     PicaPt scrollOffset = PicaPt::kZero;
-    PopupMenu *popup = nullptr;  // we own this
+    MenuUITK *popup = nullptr;  // we own this
     std::function<void(const std::string&)> onTextChanged;
     std::function<void(StringEdit*)> onValueChanged;
     bool textHasChanged = false;
@@ -233,7 +233,7 @@ Widget::EventResult StringEdit::mouse(const MouseEvent& e)
                 mImpl->popup->cancel();
                 delete mImpl->popup;
             }
-            mImpl->popup = new PopupMenu();
+            mImpl->popup = new MenuUITK();
             mImpl->popup->addItem("Cut", 1,
                                   [this]() { mImpl->editor.cutToClipboard(); setNeedsDraw(); });
             mImpl->popup->addItem("Copy", 2, [this]() { mImpl->editor.copyToClipboard(); });
@@ -288,7 +288,7 @@ void StringEdit::draw(UIContext& context)
     // mouse() and key() do not have access to the DrawContext, so we need to postpone
     // layout until the draw.
     if (mImpl->editor.needsLayout() || mImpl->editor.layoutDPI() != context.dc.dpi()) {
-        auto s = context.theme.textEditStyle(style(state()), state());
+        auto s = context.theme.textEditStyle(style(themeState()), themeState());
         mImpl->editor.layoutText(context.dc, context.theme.params().labelFont, s.fgColor, PicaPt(1e6));
     }
     // mouse() and key() will change the selection (since the caret is a selection)
@@ -304,7 +304,7 @@ void StringEdit::draw(UIContext& context)
     auto alignOffset = calcAlignmentOffset(mImpl->editor, mImpl->editorTextRect, mImpl->alignment).x;
     context.theme.drawTextEdit(context, bounds(), alignOffset + mImpl->scrollOffset,
                                mImpl->placeholder, mImpl->editor, mImpl->alignment,
-                               style(state()), state(), focused());
+                               style(themeState()), themeState(), focused());
     Super::draw(context);
 }
 

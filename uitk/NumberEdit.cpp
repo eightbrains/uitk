@@ -154,11 +154,13 @@ NumberEdit* NumberEdit::setDecimalDigits(int nDigits)
     mImpl->nFormatDigits = nDigits;
     mImpl->userHasSetFormatDigits = true;
     setNeedsDraw();
+    return this;
 }
 
 NumberEdit* NumberEdit::setOnValueChanged(std::function<void(NumberEdit*)> onChanged)
 {
     mImpl->onChanged = onChanged;
+    return this;
 }
 
 Size NumberEdit::preferredSize(const LayoutContext& context) const

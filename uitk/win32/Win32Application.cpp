@@ -121,6 +121,14 @@ int Win32Application::run()
     return int(msg.wParam);
 }
 
+
+void Win32Application::exitRun()
+{
+    // We do not need to do anything here because this should only be called from
+    // Application::quit(), which will have closed all the windows, causing us to
+    // exit.
+}
+
 void Win32Application::scheduleLater(Window *w, std::function<void()> f)
 {
     {
@@ -131,9 +139,16 @@ void Win32Application::scheduleLater(Window *w, std::function<void()> f)
     PostMessage((HWND)w->nativeHandle(), kCheckPostedFunctionsMsg, 0, 0);
 }
 
+void Win32Application::beep()
+{
+    MessageBeep(MB_OK);  // default beep
+}
+
 bool Win32Application::isOriginInUpperLeft() const { return true; }
 
 bool Win32Application::shouldHideScrollbars() const { return false; }
+
+bool Win32Application::platformHasMenubar() const { return true; }
 
 Theme::Params Win32Application::themeParams() const
 {
@@ -189,6 +204,7 @@ Theme::Params Win32Application::themeParams() const
         params = EmpireTheme::lightModeParams(accent);
     }
     params.labelFont = Font(fontFamily, fontSize);
+    params.nonNativeMenubarFont = params.labelFont;
 
     return params;
 }

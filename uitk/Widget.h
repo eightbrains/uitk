@@ -94,7 +94,7 @@ public:
     /// Removes all the children and deletes them.
     void clearAllChildren();
 
-    const std::vector<Widget*> children() const;
+    const std::vector<Widget*>& children() const;
 
     /// Returns the parent of this widget, or nullptr
     Widget* parent() const;
@@ -146,8 +146,23 @@ public:
                                  int indent = 0) const;
 
 public:
-    Theme::WidgetState state() const;
+    enum MouseState { kNormal = 0, kDisabled, kMouseOver, kMouseDown };
+    MouseState state() const;
+    /// Merges MouseState with any other state that the widget may have (notably,
+    /// selection) to produce the state the widget should use to draw. If setThemeState()
+    /// has been called, that state will be used.
+    virtual Theme::WidgetState themeState() const;
     Theme::WidgetStyle& style(Theme::WidgetState state);
+
+    /// Forces a widget state for drawing. This can be useful when using a widget
+    /// as a child to reuse drawing, instead of reusing functionality. For example,
+    /// Button uses Label to draw, but the label should take the button's theme state.
+    /// Contrast with NumericEdit, which uses IncDecWidget as a child, but in that case
+    /// the child keeps its own drawing state because it functions as widget.
+    void setThemeState(Theme::WidgetState state);
+
+    /// Sets theme state back to unset, to undo a call to setThemeState().
+    void resetThemeState();
 
 protected:
     // Return true if parent's mouse() should grab the widget if mouse down is consumed.
@@ -156,7 +171,7 @@ protected:
 
     void setWindow(Window* window);  // for Window
 
-    void setState(Theme::WidgetState state);
+    void setState(MouseState state);
 
     EventResult mouseChild(const MouseEvent& e, Widget *child, EventResult result); // e is child's parent's event
     void drawChild(UIContext& context, Widget *child);

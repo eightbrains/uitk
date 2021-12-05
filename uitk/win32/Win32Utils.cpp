@@ -25,6 +25,8 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
+#include <sstream>
+
 namespace uitk {
 
 std::wstring win32UnicodeFromUTF8(const std::string& utf8)
@@ -50,5 +52,116 @@ std::string utf8FromWin32Unicode(wchar_t *wstr)
     delete [] str;
     return utf8;
 }
+
+//-----------------------------------------------------------------------------
+DPrint::DPrint()
+{
+}
+
+DPrint::~DPrint()
+{
+    mLine += '\n';
+    OutputDebugStringA(mLine.c_str());
+}
+
+DPrint& DPrint::operator<<(bool b)
+{
+    mLine += (b ? "true" : "false");
+    return *this;
+}
+
+DPrint& DPrint::operator<<(char c)
+{
+    mLine += c;
+    return *this;
+}
+
+DPrint& DPrint::operator<<(unsigned char c)
+{
+    mLine += c;
+    return *this;
+}
+
+DPrint& DPrint::operator<<(short i)
+{
+    mLine += std::to_string(i);
+    return *this;
+}
+
+DPrint& DPrint::operator<<(unsigned short i)
+{
+    mLine += std::to_string(i);
+    return *this;
+}
+
+DPrint& DPrint::operator<<(int i)
+{
+    mLine += std::to_string(i);
+    return *this;
+}
+
+DPrint& DPrint::operator<<(unsigned int i)
+{
+    mLine += std::to_string(i);
+    return *this;
+}
+
+DPrint& DPrint::operator<<(long i)
+{
+    mLine += std::to_string(i);
+    return *this;
+}
+
+DPrint& DPrint::operator<<(unsigned long i)
+{
+    mLine += std::to_string(i);
+    return *this;
+}
+
+DPrint& DPrint::operator<<(long long i)
+{
+    mLine += std::to_string(i);
+    return *this;
+}
+
+DPrint& DPrint::operator<<(unsigned long long i)
+{
+    mLine += std::to_string(i);
+    return *this;
+}
+
+DPrint& DPrint::operator<<(float f)
+{
+    mLine += std::to_string(f);
+    return *this;
+}
+
+DPrint& DPrint::operator<<(double d)
+{
+    mLine += std::to_string(d);
+    return *this;
+}
+
+DPrint& DPrint::operator<<(const std::string& s)
+{
+    mLine += s;
+    return *this;
+}
+
+DPrint& DPrint::operator<<(const char *str)
+{
+    mLine += str;
+    return *this;
+}
+
+DPrint& DPrint::operator<<(void *p)
+{
+    std::stringstream ss;
+    ss << p;  // prints as hex
+    mLine += "0x";
+    mLine += ss.str();
+    return *this;
+}
+
 
 } // namespace uitk

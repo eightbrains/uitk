@@ -70,14 +70,14 @@ const Color& Label::textColor() const { return mImpl->textColor; }
 
 Label* Label::setTextColor(const Color& c)
 {
-    mImpl->textColor = c;
+    setTextColorNoRedraw(c);
     setNeedsDraw();
     return this;
 }
 
-void Label::setWidgetState(Theme::WidgetState state)
+void Label::setTextColorNoRedraw(const Color& c)
 {
-    setState(state);
+    mImpl->textColor = c;
 }
 
 Size Label::preferredSize(const LayoutContext& context) const
@@ -97,8 +97,13 @@ void Label::draw(UIContext& ui)
 {
     Super::draw(ui);
 
+    if (themeState() == Theme::WidgetState::kSelected) {
+        themeState();
+    }
+
     auto &r = bounds();
-    ui.theme.drawFrame(ui, r, style(state()));
+    auto &themeStyle = style(themeState());
+    ui.theme.drawFrame(ui, r, themeStyle);
 
     auto &font = ui.theme.params().labelFont;
     auto metrics = font.metrics(ui.dc);
@@ -106,7 +111,7 @@ void Label::draw(UIContext& ui)
     Point pt;
 
     if (mImpl->textColor.alpha() == 0.0f) {  // color is unset
-        ui.dc.setFillColor(ui.theme.params().textColor);
+        ui.dc.setFillColor(ui.theme.labelStyle(themeStyle, themeState()).fgColor);
     } else {
         ui.dc.setFillColor(mImpl->textColor);
     }

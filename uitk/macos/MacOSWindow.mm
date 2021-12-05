@@ -458,6 +458,9 @@ MacOSWindow::MacOSWindow(IWindowCallbacks& callbacks,
     if (flags & Window::Flags::kPopup) {
         mImpl->contentView.wantsLayer = YES;
         mImpl->contentView.layer.cornerRadius = 5;
+        if (flags & Window::Flags::kMenuEdges) {
+            mImpl->contentView.layer.maskedCorners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner;
+        }
         mImpl->contentView.layer.masksToBounds = YES;
         mImpl->contentView.layer.backgroundColor = mImpl->window.backgroundColor.CGColor;
         mImpl->contentView.layer.borderWidth = CGFloat(kPopopBorderWidth);

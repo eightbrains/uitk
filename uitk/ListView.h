@@ -31,7 +31,8 @@
 
 namespace uitk {
 
-class ListView : public ScrollView {
+class ListView : public ScrollView
+{
     using Super = ScrollView;
 public:
     ListView();
@@ -80,10 +81,13 @@ public:
     Size preferredSize(const LayoutContext& context) const override;
     void layout(const LayoutContext& context) override;
     EventResult mouse(const MouseEvent& e) override;
+    void mouseExited() override;
+    void key(const KeyEvent& e) override;
     void draw(UIContext& context) override;
 
 protected:
     int calcRowIndex(const Point& p) const;  // p is ListView widget coords
+    int highlightedIndex() const;
 
 private:
     struct Impl;

@@ -30,5 +30,34 @@ namespace uitk {
 std::wstring win32UnicodeFromUTF8(const std::string& utf8);
 std::string utf8FromWin32Unicode(wchar_t *wstr);
 
+// Use like:  DPrint() << "text " << i << ", " << ptr;
+// Destructor will add a newline before printing.
+class DPrint
+{
+public:
+    DPrint();
+    ~DPrint();
+
+    DPrint& operator<<(bool b);
+    DPrint& operator<<(char c);
+    DPrint& operator<<(unsigned char c);
+    DPrint& operator<<(short i);
+    DPrint& operator<<(unsigned short i);
+    DPrint& operator<<(int i);
+    DPrint& operator<<(unsigned int i);
+    DPrint& operator<<(long i);
+    DPrint& operator<<(unsigned long i);
+    DPrint& operator<<(long long i);
+    DPrint& operator<<(unsigned long long i);
+    DPrint& operator<<(float f);
+    DPrint& operator<<(double d);
+    DPrint& operator<<(const std::string& s);
+    DPrint& operator<<(const char *str);
+    DPrint& operator<<(void *p);
+
+protected:
+    std::string mLine;
+};
+
 } // namespace uitk
 #endif // UITK_WIN32_UTILS_H

@@ -20,48 +20,49 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_WIN32_APPLICATION_H
-#define UITK_WIN32_APPLICATION_H
+#ifndef UITK_SHORTCUT_KEY_H
+#define UITK_SHORTCUT_KEY_H
 
-#include "../OSApplication.h"
+#include "Events.h"
 
 #include <memory>
+#include <string>
 
 namespace uitk {
 
-class Win32Window;
+struct ShortcutKey
+{
+    KeyModifier::Values modifier;
+    Key key;
 
-class Win32Application : public OSApplication
+    static const ShortcutKey kNone;
+    
+    ShortcutKey() : modifier(KeyModifier::kNone), key(Key::kNone) {}
+    ShortcutKey(KeyModifier::Values m, Key k) : modifier(m), key(k) {}
+
+    std::size_t hash() const;
+    bool operator==(const ShortcutKey& rhs) const
+        { return (this->modifier == rhs.modifier && this->key == rhs.key); }
+
+    std::string displayText() const;
+};
+
+class Shortcuts
 {
 public:
-    Win32Application();
-    ~Win32Application();
+    Shortcuts();
+    ~Shortcuts();
 
-    void setExitWhenLastWindowCloses(bool exits) override;
-    int run() override;
-    void exitRun() override;
+    void add(int menuId, const ShortcutKey& shortcut);
+    void remove(int menuId);
 
-    void scheduleLater(Window* w, std::function<void()> f) override;
-
-    void beep() override;
-
-    bool isOriginInUpperLeft() const override;
-    bool shouldHideScrollbars() const override;
-    bool platformHasMenubar() const override;
-
-    Clipboard& clipboard() const override;
-
-    Theme::Params themeParams() const override;
-
-public:
-    // HWND is void* to keep Windows headers out
-    void registerWindow(void* hwnd, Win32Window* w);
-    void unregisterWindow(void* hwnd);
+    bool hasShortcut(const KeyEvent& e, int *menuId);
 
 private:
     struct Impl;
     std::unique_ptr<Impl> mImpl;
 };
 
-} // namespace uitk
-#endif // UITK_WIN32_APPLICATION_H
+}  // namespace uitk
+
+#endif // UITK_SHORTCUT_KEY_H

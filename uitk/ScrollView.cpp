@@ -264,11 +264,11 @@ void ScrollView::draw(UIContext& context)
     }
     if (mImpl->drawsFrame == Tristate::kTrue) {
         Rect frameRect(PicaPt::kZero, PicaPt::kZero, frame().width, frame().height);
-        context.theme.drawScrollView(context, frameRect, style(state()), state());
+        context.theme.drawScrollView(context, frameRect, style(themeState()), themeState());
     }
 
     context.dc.save();
-    context.theme.clipScrollView(context, mImpl->contentRect, style(state()), state());
+    context.theme.clipScrollView(context, mImpl->contentRect, style(themeState()), themeState());
 
     // It would be nicer to be able to Super::draw() here (and have the scrollbars on top),
     // but that would require that we have a content widget that everything is added to.
