@@ -345,7 +345,7 @@ void X11Window::onMouse(MouseEvent& e, int x, int y)
     // requires the window only for popup windows, we just keep track of the
     // active window and use that in show(). There is not a good way to check
     // what the window stacking order is (and if there were, what do you do
-    // for multiple montiors?), but it seems like a mouse click is a reasonable
+    // for multiple monitors?), but it seems like a mouse click is a reasonable
     // proxy. This will certainly work for popup menus (you have to click to
     // trigger the menu), although it would fail for dialog boxes that appear
     // not as a result of user interaction (such as an error for a long-running

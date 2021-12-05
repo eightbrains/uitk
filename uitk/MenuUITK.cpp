@@ -67,8 +67,12 @@
    - Activating a shortcut should blink the menubar item, then take the
      action in the corresponding menu. If the menu item is disabled, then do
      not blink but beep.
-   - On macOS, Ctrl-F2 should enter menubar navigation. On Windows/Linux, pressing
-     and releasing Alt (without any other key) should enter menubar navigation.
+   - On macOS, Ctrl-F2 should enter menubar navigation. On Windows/Linux,
+     pressing and releasing Alt (without any other key) should enter menubar
+     navigation.
+   - Test: move mouse slowly from a separator item to a submenu item. Ensures
+     that entering a submenu item on the top edge does not immediately cancel
+     because it is also on the bottom edge of the disabled item.
  */
 namespace uitk {
 
@@ -269,7 +273,14 @@ public:
         if (w && w->popupMenu()) {
             auto row = calcRowIndex(e.pos);
             auto *cell = cellAtIndex(row);
-            if (cell && !cell->enabled()) {
+            // Note that calcRowIndex() uses mathematical rects, but the mouse
+            // uses pixels. So if the mouse is exactly on the border, the
+            // frame rects of two cells will test true for contains(e).
+            // Treat the mathematical edge of the bottom of the frame as in
+            // the next cell. (To test, move mouse slowly from a separator
+            // item to a submenu item in Linux/X11.)
+            auto f = cell->frame();
+            if (cell && !cell->enabled() && e.pos.y > f.y && e.pos.y < f.maxY()) {
                 w->popupMenu()->cancel();
             }
         }
@@ -799,14 +810,14 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
             });
         } else {
             // We need to have submenus enabled, but that means clicking on them
-            // is possible, and we don't want clicking to select them in the list view,
-            // so undo it here.
+            // is possible, and we don't want clicking to select them in the
+            // list view, so undo it here.
             if (idx >= 0 && idx < int(mImpl->items.size())) {
                 auto *submenu = mImpl->items[idx]->submenu();
 
                 // If the selected item was a submenu, either the user clicked
-                // on it or pressed Enter/Return/Space via keyboard navigation. In either
-                // case, toggle the open-ness of the submenu.
+                // on it or pressed Enter/Return/Space via keyboard navigation.
+                // In either case, toggle the open-ness of the submenu.
                 if (submenu && submenu->menuUitk()) {
                     if (submenu->menuUitk()->isShowing()) {
                         submenu->menuUitk()->cancel();
