@@ -20,7 +20,7 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#include "Menubar.h"
+#include "MenubarUITK.h"
 
 #include "Application.h"
 #include "Events.h"
@@ -234,24 +234,24 @@ protected:
 };
 
 //-----------------------------------------------------------------------------
-struct Menubar::Impl
+struct MenubarUITK::Impl
 {
     bool isNative;
     MenubarModel model;
 };
 
-Menubar::Menubar()
+MenubarUITK::MenubarUITK()
     : mImpl(new Impl())
 {
     mImpl->isNative = false;
 }
 
-std::unique_ptr<Widget> Menubar::createWidget() const
+std::unique_ptr<Widget> MenubarUITK::createWidget() const
 {
     return std::make_unique<MenubarWidget>(mImpl->model);
 }
 
-Menubar::~Menubar()
+MenubarUITK::~MenubarUITK()
 {
     for (auto item : mImpl->model.menus) {
         delete item.menu;
@@ -259,14 +259,14 @@ Menubar::~Menubar()
     mImpl->model.menus.clear();
 }
 
-Menu* Menubar::newMenu(const std::string& name)
+Menu* MenubarUITK::newMenu(const std::string& name)
 {
     auto menu = new Menu();
     addMenu(menu, name);
     return menu;
 }
 
-void Menubar::addMenu(Menu* menu, const std::string& name)
+void MenubarUITK::addMenu(Menu* menu, const std::string& name)
 {
     if (menu->menuUitk()) {
         menu->menuUitk()->setOnClose([this](){
@@ -277,7 +277,7 @@ void Menubar::addMenu(Menu* menu, const std::string& name)
     mImpl->model.menus.push_back({menu, removeUnderscores(name)});
 }
 
-Menu* Menubar::removeMenu(const std::string& name)
+Menu* MenubarUITK::removeMenu(const std::string& name)
 {
     auto it = mImpl->model.menus.begin();
     while (it != mImpl->model.menus.end()) {
@@ -291,7 +291,7 @@ Menu* Menubar::removeMenu(const std::string& name)
     return nullptr;
 }
 
-Menu* Menubar::menu(const std::string& name) const
+Menu* MenubarUITK::menu(const std::string& name) const
 {
     auto it = mImpl->model.menus.begin();
     while (it != mImpl->model.menus.end()) {
@@ -303,7 +303,12 @@ Menu* Menubar::menu(const std::string& name) const
     return nullptr;
 }
 
-void Menubar::setItemEnabled(int itemId, bool enabled)
+Menu* MenubarUITK::macosApplicationMenu() const
+{
+    return nullptr;
+}
+
+void MenubarUITK::setItemEnabled(int itemId, bool enabled)
 {
     for (auto &item : mImpl->model.menus) {
         if (item.menu->setItemEnabled(itemId, enabled) == OSMenu::ItemFound::kYes) {
@@ -312,7 +317,7 @@ void Menubar::setItemEnabled(int itemId, bool enabled)
     }
 }
 
-void Menubar::setItemChecked(int itemId, bool checked)
+void MenubarUITK::setItemChecked(int itemId, bool checked)
 {
     for (auto &item : mImpl->model.menus) {
         if (item.menu->setItemChecked(itemId, checked) == OSMenu::ItemFound::kYes) {
@@ -321,7 +326,7 @@ void Menubar::setItemChecked(int itemId, bool checked)
     }
 }
 
-void Menubar::activateItemId(MenuId itemId) const
+void MenubarUITK::activateItemId(MenuId itemId) const
 {
     auto *win = Application::instance().activeWindow();
     if (win) {
@@ -338,12 +343,6 @@ void Menubar::activateItemId(MenuId itemId) const
             }
         }
     }
-}
-
-bool Menubar::isNative() const { return mImpl->isNative; }
-
-void Menubar::setIsNative(bool isNative)
-{
 }
 
 }  // namespace uitk

@@ -24,9 +24,9 @@
 
 #include "Application.h"
 #include "Events.h"
-#include "Menubar.h"
 #include "OSWindow.h"
 #include "MenuUITK.h"
+#include "MenubarUITK.h"
 #include "UIContext.h"
 #include "Widget.h"
 #include "themes/Theme.h"
@@ -61,7 +61,7 @@ struct Window::Impl
     MenuUITK *activePopup = nullptr;
     void *dialog = nullptr;  // placeholder for later
     PopupState popupState = PopupState::kNone;
-    std::function<void(Menubar&)> onMenuWillShow;
+    std::function<void(OSMenubar&)> onMenuWillShow;
     std::unordered_map<MenuId, std::function<void()>> onMenuActivatedCallbacks;
     std::function<void(Window& w, const LayoutContext& context)> onWillShow;
     std::function<void(Window& w)> onDidDeactivate;
@@ -104,8 +104,9 @@ Window::Window(const std::string& title, int x, int y, int width, int height,
     mImpl->flags = flags;
 
     auto &menubar = Application::instance().menubar();
-    if (!(flags & Flags::kPopup) && !menubar.isNative()) {
-        mImpl->menubarWidget = menubar.createWidget();
+    if (!(flags & Flags::kPopup) && !Application::instance().supportsNativeMenus()) {
+        auto &uitkMenubar = dynamic_cast<MenubarUITK&>(Application::instance().menubar());
+        mImpl->menubarWidget = uitkMenubar.createWidget();
         mImpl->menubarWidget->setWindow(this);
     }
 
@@ -254,7 +255,7 @@ Window* Window::addChild(Widget *child)
     return this;
 }
 
-void Window::setOnMenuWillShow(std::function<void(Menubar&)> onWillShow)
+void Window::setOnMenuWillShow(std::function<void(OSMenubar&)> onWillShow)
 {
     mImpl->onMenuWillShow = onWillShow;
 }

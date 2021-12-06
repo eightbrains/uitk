@@ -121,6 +121,8 @@ public:
 
     Menu* submenu() const { return mSubmenu.get(); }
 
+    Menu* removeSubmenu() { return mSubmenu.release(); }  // transfers ownership to caller
+
     virtual PicaPt preferredShortcutWidth(const LayoutContext& context) const = 0;
 
     void setShortcutWidth(const PicaPt& w) { mShortcutWidth = w; }
@@ -605,6 +607,27 @@ void MenuUITK::removeItem(MenuId id)
     Application::instance().keyboardShortcuts().remove(id);
 }
 
+Menu* MenuUITK::removeMenu(const std::string& text)
+{
+    for (auto it = mImpl->items.begin();  it != mImpl->items.end();  ++it) {
+        if ((*it)->submenu() && (*it)->text() == text) {
+            Menu *menu = (*it)->removeSubmenu();
+            mImpl->items.erase(it);
+        }
+    }
+    return nullptr;
+}
+
+Menu* MenuUITK::menu(const std::string& text) const
+{
+    for (auto it = mImpl->items.begin();  it != mImpl->items.end();  ++it) {
+        if ((*it)->submenu() && (*it)->text() == text) {
+            return (*it)->submenu();
+        }
+    }
+    return nullptr;
+}
+
 bool MenuUITK::isSeparator(MenuId id) const
 {
     if (auto item = mImpl->itemForId(id)) {
@@ -647,7 +670,7 @@ MenuUITK::ItemFound MenuUITK::setItemEnabled(MenuId id, bool enabled)
     return ItemFound::kNo;
 }
 
-const std::string& MenuUITK::itemText(MenuId id) const
+std::string MenuUITK::itemText(MenuId id) const
 {
     static const std::string kNoItemText = "";
 

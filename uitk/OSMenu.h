@@ -64,6 +64,11 @@ public:
     virtual void insertSeparator(int index) = 0;
 
     virtual void removeItem(MenuId id) = 0;
+    // Returns ownership of the menu (if it exists)
+    virtual Menu* removeMenu(const std::string& text) = 0;
+
+    // Returns the menu associated with
+    virtual Menu* menu(const std::string& text) const = 0;
 
     virtual bool isSeparator(MenuId id) const = 0;
 
@@ -75,7 +80,9 @@ public:
 
     /// Returns the text of the item with the requested index, or "" if the
     /// index is invalid.
-    virtual const std::string& itemText(MenuId id) const = 0;
+    /// Design note: this cannot return a const reference since we may need to convert
+    ///              from the OS text representation.
+    virtual std::string itemText(MenuId id) const = 0;
     virtual ItemFound setItemText(MenuId id, const std::string& text) = 0;
 
     // Activates the item if existing, and returns ItemFound::kYes if the item exists,

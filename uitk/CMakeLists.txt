@@ -11,12 +11,13 @@ set(UITK_HEADERS Application.h
                  Label.h
                  ListView.h
                  Menu.h
-                 Menubar.h
                  MenuUITK.h
+                 MenubarUITK.h
                  NumberEdit.h
                  NumericModel.h
                  OSApplication.h
                  OSMenu.h
+                 OSMenubar.h
                  OSWindow.h
                  ProgressBar.h
                  ScrollBar.h
@@ -43,7 +44,7 @@ set(UITK_SOURCES Application.cpp
                  Label.cpp
                  ListView.cpp
                  Menu.cpp
-                 Menubar.cpp
+                 MenubarUITK.cpp
                  MenuUITK.cpp
                  NumberEdit.cpp
                  NumericModel.cpp
@@ -79,9 +80,13 @@ list(APPEND UITK_LIBS nativedraw)
 if (APPLE)
     list(APPEND UITK_HEADERS macos/MacOSApplication.h
                              macos/MacOSClipboard.h
+                             macos/MacOSMenu.h
+                             macos/MacOSMenubar.h
                              macos/MacOSWindow.h)
     list(APPEND UITK_SOURCES macos/MacOSApplication.mm
                              macos/MacOSClipboard.mm
+                             macos/MacOSMenu.mm
+                             macos/MacOSMenubar.mm
                              macos/MacOSWindow.mm)
     find_library(CORE_GRAPHICS CoreGraphics)
     find_library(APPKIT AppKit)

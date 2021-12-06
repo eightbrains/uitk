@@ -30,7 +30,7 @@
 namespace uitk {
 
 class Clipboard;
-class Menubar;
+class OSMenubar;
 class OSApplication;
 class Shortcuts;
 class Theme;
@@ -92,6 +92,9 @@ public:
     /// true, and mobile platorms (Android, iOS) will return false;
     bool platformHasMenubar() const;
 
+    /// Returns true if the platform supports using native menus.
+    bool supportsNativeMenus() const;
+
     /// Returns the active window, or nullptr if no windows are active.
     Window* activeWindow() const;
 
@@ -99,7 +102,7 @@ public:
     Clipboard& clipboard() const;
 
     /// Gets the applications menubar
-    Menubar& menubar() const;
+    OSMenubar& menubar() const;
 
     /// Gets the applications keyboard shortcuts manager. Note that if native
     /// menus are enabled the keyboard shorts in menus will be processed by

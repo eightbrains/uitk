@@ -45,17 +45,28 @@ public:
     virtual ~Menu();
     
     void clear();
+    /// Adds item with the given string. When using native menus on Windows, an underscore
+    /// marks the key navigation for the menu item; on all other platform underscores are
+    /// removed.
     Menu* addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut);
     /// Takes ownership of menu
     Menu* addMenu(const std::string& text, Menu *menu);
     Menu* addSeparator();
 
+    /// Inserts item with the given string at the index. When using native menus on Windows,
+    /// an underscore marks the key navigation for the menu item; on all other platform
+    /// underscores are removed.
     Menu* insertItem(int index, const std::string& text, MenuId id, const ShortcutKey& shortcut);
     /// Takes ownership of menu
     Menu* insertMenu(int index, const std::string& text, Menu *menu);
     Menu* insertSeparator(int index);
 
     void removeItem(MenuId id);
+    // Returns ownership of the menu (if it exists)
+    Menu* removeMenu(const std::string& text);
+
+    // Returns the menu associated with the text, otherwise nullptr. Retains ownership.
+    Menu* menu(const std::string& text) const;
 
     bool isSeparator(MenuId id) const;
 
@@ -71,7 +82,9 @@ public:
 
     /// Returns the text of the item with the requested index, or "" if the
     /// index is invalid.
-    const std::string& itemText(MenuId id) const;
+    /// Design note: this cannot return a const reference since we may need to convert
+    ///              from the OS text representation.
+    std::string itemText(MenuId id) const;
     ItemFound setItemText(MenuId id, const std::string& text);
 
     /// Activates the item if it exists in the menu tree and is enabled.
@@ -81,6 +94,8 @@ public:
 
     /// This is for internal use
     MenuUITK* menuUitk() const;
+    /// This is for internal use
+    OSMenu* nativeMenu() const;
 
 public:
     enum class StandardItem {

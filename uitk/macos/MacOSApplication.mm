@@ -24,6 +24,7 @@
 
 #include "MacOSClipboard.h"
 
+#include "../Application.h"
 #include "../themes/EmpireTheme.h"
 
 #import <Cocoa/Cocoa.h>
@@ -33,16 +34,26 @@
 
 @interface AppDelegate ()
 {
+    uitk::MacOSApplication *mApp;
 }
 @property bool exitsWhenLastWindowCloses;
 @end
 
 @implementation AppDelegate
-- (id)init {
+- (id)init:(uitk::MacOSApplication*)app
+{
     if (self = [super init]) {
+        mApp = app;
         self.exitsWhenLastWindowCloses = false;  // macOS default
     }
     return self;
+}
+
+-(void)applicationDidFinishLaunching:(NSNotification *)notification
+{
+    // This must be called here, rather then before [NSApp run] is called,
+    // otherwise the menu will not work correctly.
+    [NSApp activateIgnoringOtherApps:YES];
 }
 
 - (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender
@@ -135,11 +146,16 @@ void MacOSApplication::beep()
 int MacOSApplication::run()
 {
     @autoreleasepool {
-        [NSApplication sharedApplication];  // create NSApp object
+        // Create NSApp object. (Note that this is likely to already be created
+        // by accessing Application::instance().menubar(), not sure how that
+        // affects the autoreleasepool at all.
+        [NSApplication sharedApplication];
         NSApp.delegate = mImpl->delegate;
         // Allow apps without a bundle and Info.plist to get focus
         [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
-        [NSApp activateIgnoringOtherApps:YES];
+        // -activateIgnoringOtherApps: MUST be called in the delegate's
+        //    -applicationDidFinishLaunching: otherwise menu items won't show up.
+        //[NSApp activateIgnoringOtherApps:YES];
         [NSApp run];
     }
     return 0;

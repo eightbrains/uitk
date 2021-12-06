@@ -22,7 +22,7 @@
 
 #include "Application.h"
 
-#include "Menubar.h"
+#include "MenubarUITK.h"
 #include "OSApplication.h"
 #include "ShortcutKey.h"
 #include "Window.h"
@@ -30,6 +30,7 @@
 
 #if defined(__APPLE__)
 #include "macos/MacOSApplication.h"
+#include "macos/MacOSMenubar.h"
 #elif defined(_WIN32) || defined(_WIN64)  // _WIN32 covers everything except 64-bit ARM
 #include "win32/Win32Application.h"
 #else
@@ -46,7 +47,7 @@ struct Application::Impl
 
     std::unique_ptr<OSApplication> osApp;
     std::shared_ptr<Theme> theme;
-    std::unique_ptr<Menubar> menubar;
+    std::unique_ptr<OSMenubar> menubar;
     std::unique_ptr<Shortcuts> shortcuts;
     std::set<Window*> windows;  // we do not own these
     Window* activeWindow = nullptr;  // we do not own this
@@ -70,8 +71,10 @@ Application::Application()
     mImpl->osApp = std::make_unique<X11Application>();
 #endif
 
-    // Application is a friend, but std::make_unique<>() is not
-    mImpl->menubar = std::unique_ptr<Menubar>(new Menubar());
+    // Defer creation of menubar until it is requested, since menubar may
+    // ask us (Application) if we support native menus. This is so that we
+    // could potentially turn it off, e.g. for testing.
+
     mImpl->shortcuts = std::make_unique<Shortcuts>();
 
     assert(!Application::Impl::instance);
@@ -136,6 +139,17 @@ bool Application::platformHasMenubar() const
     return mImpl->osApp->platformHasMenubar();
 }
 
+bool Application::supportsNativeMenus() const
+{
+#if defined(__APPLE__)
+    return true;
+#elif defined(_WIN32) || defined(_WIN64)
+    return false;
+#else
+    return false;
+#endif
+}
+
 std::shared_ptr<Theme> Application::theme() const
 {
     if (!mImpl->theme) {
@@ -156,8 +170,18 @@ Clipboard& Application::clipboard() const
     return mImpl->osApp->clipboard();
 }
 
-Menubar& Application::menubar() const
+OSMenubar& Application::menubar() const
 {
+    if (!mImpl->menubar) {
+        // Application is a friend, but std::make_unique<>() is not
+#if defined(__APPLE__)
+        mImpl->menubar = std::unique_ptr<MacOSMenubar>(new MacOSMenubar());
+#elif defined(_WIN32) || defined(_WIN64)
+        mImpl->menubar = std::unique_ptr<MenubarUITK>(new MenubarUITK());
+#else
+        mImpl->menubar = std::unique_ptr<MenubarUITK>(new MenubarUITK());
+#endif
+    }
     return *mImpl->menubar;
 }
 

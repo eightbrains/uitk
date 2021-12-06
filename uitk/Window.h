@@ -37,8 +37,8 @@ struct Point;
 struct KeyEvent;
 struct MouseEvent;
 struct LayoutContext;
-class Menubar;
 class MenuUITK;
+class OSMenubar;
 class Widget;
 
 class Window : public IWindowCallbacks
@@ -134,7 +134,7 @@ public:
     /// This is where menu items should be enabled and disabled. This is called
     /// after onMenuItemsWillShow(), which sets the standard menu items (if any
     /// are included).
-    void setOnMenuWillShow(std::function<void(Menubar&)> onWillShow);
+    void setOnMenuWillShow(std::function<void(OSMenubar&)> onWillShow);
 
     /// Sets the callback when a menu item is activated/selected.
     /// This is a convenience instead of overriding onMenuActivated and putting

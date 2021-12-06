@@ -89,7 +89,7 @@ ComboBox* ComboBox::addSeparator()
     return this;
 }
 
-const std::string& ComboBox::textAtIndex(int index) const
+std::string ComboBox::textAtIndex(int index) const
 {
     static const std::string kBadIndexText = "";
     if (index >= 0 || index < int(mImpl->items.size())) {

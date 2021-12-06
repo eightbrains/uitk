@@ -63,6 +63,11 @@ public:
     void insertSeparator(int index) override;
 
     void removeItem(MenuId id) override;
+    // Returns ownership of the menu (if it exists)
+    Menu* removeMenu(const std::string& text) override;
+
+    // Returns the menu associated with the text, otherwise nullptr. Retains ownership.
+    Menu* menu(const std::string& text) const override;
 
     bool isSeparator(MenuId id) const override;
 
@@ -74,7 +79,7 @@ public:
 
     /// Returns the text of the item with the requested index, or "" if the
     /// index is invalid.
-    const std::string& itemText(MenuId id) const override;
+    std::string itemText(MenuId id) const override;
     ItemFound setItemText(MenuId id, const std::string& text) override;
 
     ItemFound activateItem(MenuId id, Window *activeWindow) const override;

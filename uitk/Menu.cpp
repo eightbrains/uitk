@@ -26,6 +26,12 @@
 #include "Events.h"
 #include "MenuUITK.h"
 
+#if defined(__APPLE__)
+#include "macos/MacOSMenu.h"
+#elif defined(_WIN32) || defined(_WIN64)
+//#include "win32/Win32Menu.h"
+#endif
+
 #include <unordered_map>
 
 namespace uitk {
@@ -90,12 +96,29 @@ struct Menu::Impl
 Menu::Menu()
     : mImpl(new Menu::Impl())
 {
-    mImpl->menuUitk = std::make_shared<MenuUITK>();
-    mImpl->menu = mImpl->menuUitk;
+    if (Application::instance().supportsNativeMenus()) {
+#if defined(__APPLE__)
+        mImpl->menu = std::make_shared<MacOSMenu>();
+#elif defined(_WIN32) || defined(_WIN64)
+        assert(false);
+#endif
+    } else {
+        mImpl->menuUitk = std::make_shared<MenuUITK>();
+        mImpl->menu = mImpl->menuUitk;
+    }
 }
 
 Menu::~Menu()
 {
+}
+
+OSMenu* Menu::nativeMenu() const
+{
+    if (mImpl->menuUitk) {
+        return nullptr;  // mImpl->menu always exists, but if menuUitk exists, menu is not a native menu
+    } else {
+        return mImpl->menu.get();
+    }
 }
 
 MenuUITK* Menu::menuUitk() const { return mImpl->menuUitk.get(); }
@@ -150,6 +173,16 @@ void Menu::removeItem(MenuId id)
     mImpl->menu->removeItem(id);
 }
 
+Menu* Menu::removeMenu(const std::string& text)
+{
+    return mImpl->menu->removeMenu(text);
+}
+
+Menu* Menu::menu(const std::string& text) const
+{
+    return mImpl->menu->menu(text);
+}
+
 bool Menu::isSeparator(MenuId id) const
 {
     return mImpl->menu->isSeparator(id);
@@ -175,7 +208,7 @@ Menu::ItemFound Menu::setItemEnabled(MenuId id, bool enabled)
     return mImpl->menu->setItemEnabled(id, enabled);
 }
 
-const std::string& Menu::itemText(MenuId id) const
+std::string Menu::itemText(MenuId id) const
 {
     return mImpl->menu->itemText(id);
 }

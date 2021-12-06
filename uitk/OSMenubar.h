@@ -20,8 +20,8 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_MENUBAR_H
-#define UITK_MENUBAR_H
+#ifndef UITK_OSMENUBAR_H
+#define UITK_OSMENUBAR_H
 
 #include "OSMenu.h"
 
@@ -33,71 +33,52 @@ namespace uitk {
 class Menu;
 class Widget;
 
-class Menubar
+class OSMenubar
 {
-    friend class Application;
-    friend class Window;
 public:
-    Menubar(const Menubar&) = delete;
-    ~Menubar();
+    OSMenubar() {}
+    OSMenubar(const OSMenubar&) = delete;
+    virtual ~OSMenubar() {}
 
     /// Creates a new Menu and adds to the menubar. Retains ownership.
-    Menu* newMenu(const std::string& name);
+    virtual Menu* newMenu(const std::string& name) = 0;
 
     /// Adds a Menu to the menubar; takes ownership. When using native menus
     /// on Windows, an underscore will be used for key navigation; on all
     /// other platforms underscores will be removed.
-    void addMenu(Menu* menu, const std::string& name);
+    virtual void addMenu(Menu* menu, const std::string& name) = 0;
 
     /// Removes the first Menu that matches the name from the menubar.
     /// Gives ownership to the caller, or returns nullptr if no menu was found.
-    Menu* removeMenu(const std::string& name);
+    virtual Menu* removeMenu(const std::string& name) = 0;
 
     /// Returns the first Menu that matches the name from the menubar,
     /// or nullptr if no matching menu was found. Ownership of the menu remains
     /// with the menubar.
-    Menu* menu(const std::string& name) const;
+    virtual Menu* menu(const std::string& name) const = 0;
+
+    /// Returns the application menu on macOS, and nullptr on other platforms.
+    /// The application menu is where macOS users expect to find "About...",
+    /// "Preferences..." and "Quit".
+    virtual Menu* macosApplicationMenu() const = 0;
 
     /// Sets the item with the given ID enabled (or disabled). This will
     /// search through the entire menu tree to find the item. If the item is
     /// not found the request will be ignored.
-    void setItemEnabled(MenuId itemId, bool enabled);
+    virtual void setItemEnabled(MenuId itemId, bool enabled) = 0;
 
     /// Sets the item with the given ID checked (or unchecked). This will
     /// search through the entire menu tree to find the item. If the item is
     /// not found the request will be ignored.
-    void setItemChecked(MenuId itemId, bool checked);
+    virtual void setItemChecked(MenuId itemId, bool checked) = 0;
 
     /// This is the programmatic way of clicking on a menu item. If the itemId
     /// exists in one of the menus its callback function will be called the
     /// same as if the user navigated through the menus. In particular,
     /// if the item is disabled, nothing will happen.
-    void activateItemId(MenuId itemId) const;
-
-    /// Returns true if the menus are using the native platform menus,
-    /// false otherwise. The default is true for platforms that have native
-    /// menus. If false, the menubar and menus will be drawn using UITK
-    /// code.
-    bool isNative() const;
-
-    /// Sets whether to the native platform menus. THIS MUST BE CALLED
-    /// BEFORE THE FIRST MENU IS ADDED. If false, the menubar and menus
-    /// will be drawn using UITK code. The default is true for platforms
-    /// that have native menus. If the platform does not have native
-    /// menus (e.g. X11, WebAssembly) the argument will be ignored.
-    /// This is mostly useful for testing and this should not be called
-    /// in production code unless absolutely necessary, as users (especially
-    /// macOS users) prefer native menus.
-    void setIsNative(bool isNative);
-
-private:
-    Menubar();
-    std::unique_ptr<Widget> createWidget() const;
-
-    struct Impl;
-    std::unique_ptr<Impl> mImpl;
+    virtual void activateItemId(MenuId itemId) const = 0;
 };
 
 }  // namespace uitk
 
-#endif // UITK_MENUBAR_H
+#endif // UITK_OSMENUBAR_H

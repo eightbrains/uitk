@@ -20,33 +20,44 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
+#ifndef UITK_MENUBAR_UITK_H
+#define UITK_MENUBAR_UITK_H
 
-#define ND_NAMESPACE uitk
-
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
-
-#include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "Clipboard.h"
-#include "ComboBox.h"
-#include "Events.h"
-#include "Label.h"
-#include "ListView.h"
-#include "NumberEdit.h"
-#include "Menu.h"
 #include "OSMenubar.h"
-#include "ProgressBar.h"
-#include "ScrollView.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
-#include "StringEdit.h"
-#include "UIContext.h"
-#include "Window.h"
 
-#include <nativedraw.h>
+#include <memory>
+#include <string>
 
-#endif // UITK_H
+namespace uitk {
+
+class MenubarUITK : public OSMenubar
+{
+    friend class Application;
+    friend class Window;
+public:
+    MenubarUITK(const MenubarUITK&) = delete;
+    ~MenubarUITK();
+
+    Menu* newMenu(const std::string& name) override;
+    void addMenu(Menu* menu, const std::string& name) override;
+    Menu* removeMenu(const std::string& name) override;
+
+    Menu* menu(const std::string& name) const override;
+    Menu* macosApplicationMenu() const override;
+
+    void setItemEnabled(MenuId itemId, bool enabled) override;
+    void setItemChecked(MenuId itemId, bool checked) override;
+
+    void activateItemId(MenuId itemId) const override;
+
+private:
+    MenubarUITK();
+    std::unique_ptr<Widget> createWidget() const;
+
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
+};
+
+}  // namespace uitk
+
+#endif // UITK_MENUBAR_UITK_H

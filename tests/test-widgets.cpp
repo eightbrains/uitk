@@ -693,7 +693,7 @@ public:
     Document()
         : Window("UITK test widgets", 1024, 768)
     {
-        setOnMenuWillShow([this](Menubar& menubar) {
+        setOnMenuWillShow([this](OSMenubar& menubar) {
             menubar.setItemEnabled(kMenuIdDisabled, false);
             menubar.setItemChecked(kMenuIdCheckable, mModel.testChecked);
             menubar.setItemChecked(kMenuIdAlpha, mModel.alphaChecked);

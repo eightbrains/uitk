@@ -42,7 +42,7 @@ public:
 
     /// Returns the text of the item at the requested index, or "" if the
     /// index is invalid.
-    const std::string& textAtIndex(int index) const;
+    std::string textAtIndex(int index) const;
     ComboBox* setTextAtIndex(int index, const std::string& text);
     /// Returns the value of the item at the requested index, or 0 if the
     /// index is invalid.
