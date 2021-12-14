@@ -46,6 +46,8 @@ public:
     void insertSeparator(int index) override;
 
     void removeItem(int index) override;
+    // Does NOT destroy the menu, returns ownership to caller
+    Menu* removeMenu(int index) override;
 
     MenuId itemIdAt(int index) const override;
     Menu* itemMenuAt(int index) const override;

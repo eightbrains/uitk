@@ -194,6 +194,17 @@ void Win32Menu::removeItem(int index)
 	}
 }
 
+Menu* Win32Menu::removeMenu(int index)
+{
+	if (index >= 0 && index <= int(mImpl->items.size())) {
+		Menu *m = mImpl->items[index]->submenu.release();
+		mImpl->items.erase(mImpl->items.begin() + index);
+		updateMenubars();
+		return m;
+	}
+	return nullptr;
+}
+
 MenuId Win32Menu::itemIdAt(int index) const
 {
 	if (index >= 0 && index < int(mImpl->items.size())) {
