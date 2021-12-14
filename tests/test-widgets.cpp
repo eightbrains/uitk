@@ -678,6 +678,7 @@ static const MenuId kMenuIdNew = 1;
 static const MenuId kMenuIdQuit = 2;
 static const MenuId kMenuIdDisabled = 10;
 static const MenuId kMenuIdCheckable = 11;
+static const MenuId kMenuIdAddItem = 12;
 static const MenuId kMenuIdAlpha = 30;
 static const MenuId kMenuIdBeta = 31;
 static const MenuId kMenuIdToggleAlpha = 32;
@@ -693,10 +694,26 @@ public:
     Document()
         : Window("UITK test widgets", 1024, 768)
     {
-        setOnMenuWillShow([this](OSMenubar& menubar) {
-            menubar.setItemEnabled(kMenuIdDisabled, false);
-            menubar.setItemChecked(kMenuIdCheckable, mModel.testChecked);
-            menubar.setItemChecked(kMenuIdAlpha, mModel.alphaChecked);
+        setOnMenuItemNeedsUpdate([this](MenuItem& item) {
+            switch (item.id()) {
+                case kMenuIdDisabled:
+                    item.setEnabled(false);
+                    break;
+                case kMenuIdCheckable:
+                    item.setChecked(mModel.testChecked);
+                    break;
+                case kMenuIdAlpha:
+                    item.setChecked(mModel.alphaChecked);
+                    break;
+                case kMenuIdAddItem:
+                    if (mModel.itemAdded) {
+                        item.setText("Remove &Item from Menu");
+                    } else {
+                        item.setText("Add &Item to Menu");
+                    }
+                    break;
+                default: break;
+            }
         });
 
         setOnMenuActivated(kMenuIdNew, [](){ Document::createNewDocument(); });
@@ -707,6 +724,18 @@ public:
                            [this](){ mModel.testChecked = !mModel.testChecked; });
         setOnMenuActivated(kMenuIdToggleAlpha,
                            [this](){ mModel.alphaChecked = !mModel.alphaChecked; });
+        setOnMenuActivated(kMenuIdAddItem,
+                           [this]() {
+                if (!mModel.itemAdded) {
+                    auto* m = Application::instance().menubar().menu("Test");
+                    m->insertItem(0, "[Added item]", OSMenu::kInvalidId, ShortcutKey::kNone);
+                    mModel.itemAdded = true;
+                } else {
+                    auto* m = Application::instance().menubar().menu("Test");
+                    m->removeItem(0);
+                    mModel.itemAdded = false;
+                }
+            });
 
         addChild((new AllWidgetsTest())
                    ->setFrame(Rect(PicaPt(0), PicaPt(0), PicaPt(1024), PicaPt(768))));
@@ -716,11 +745,13 @@ public:
     }
 
 private:
-    struct {
+    struct Model {
+        static bool itemAdded; // this is a global setting, since it alters the menu structure
         bool testChecked = true;
         bool alphaChecked = true;
     } mModel;
 };
+bool Document::Model::itemAdded = false;
 
 #if defined(_WIN32) || defined(_WIN64)
 #define WIN32_LEAN_AND_MEAN
@@ -755,13 +786,17 @@ int main(int argc, char *argv[])
         ->addSeparator()
         ->addItem("Quit", kMenuIdQuit, ShortcutKey(KeyModifier::kCtrl, Key::kQ));
     //app.menubar().newMenu("Edit");
-    app.menubar().newMenu("_Test")
-        ->addItem("_Disabled", kMenuIdDisabled, ShortcutKey(KeyModifier::kCtrl, Key::kD))
-        ->addItem("_Checkable", kMenuIdCheckable, ShortcutKey::kNone)
+    app.menubar().newMenu("&Test")
+        ->addItem("&Disabled", kMenuIdDisabled, ShortcutKey(KeyModifier::kCtrl, Key::kD))
+        ->addItem("&Checkable", kMenuIdCheckable, ShortcutKey::kNone)
+        ->addSeparator()
+        ->addItem("这是一个 UTF8 标题", -1, ShortcutKey::kNone)
         ->addSeparator()
         ->addMenu("Submenu", submenu)
-        ->addMenu("Submenu 2", submenu2);
-    app.menubar().newMenu("Empty");
+        ->addMenu("Submenu 2", submenu2)
+        ->addSeparator()
+        ->addItem("Add Item to Menu", kMenuIdAddItem, ShortcutKey::kNone);
+   app.menubar().newMenu("Empty");
     //app.menubar().newMenu("Help");
 
     // TODO: this is a memory leak, figure out a way for UITK to manage these

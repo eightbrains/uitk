@@ -126,7 +126,7 @@ ComboBox* ComboBox::setSelectedIndex(int index)
     int oldIdx = mImpl->selectedIndex;
 
     if (index >= 0 || index < int(mImpl->items.size())) {
-        if (mImpl->menu->isSeparator(mImpl->items[index].id)) {
+        if (mImpl->menu->isSeparatorAt(index)) {
             return this;
         }
     }
@@ -149,7 +149,7 @@ ComboBox* ComboBox::setSelectedValue(int value)
 {
     for (size_t i = 0;  i < mImpl->items.size();  ++i) {
         if (mImpl->items[i].value == value) {
-            return setSelectedIndex(i);
+            return setSelectedIndex(int(i));
         }
     }
     return this;
@@ -159,7 +159,7 @@ ComboBox* ComboBox::setSelectedText(const std::string& text)
 {
     for (size_t i = 0;  i < mImpl->items.size();  ++i) {
         if (mImpl->menu->itemText(mImpl->items[i].id) == text) {
-            return setSelectedIndex(i);
+            return setSelectedIndex(int(i));
         }
     }
     return this;

@@ -25,6 +25,7 @@
 #include "../Application.h"
 #include "../Menu.h"
 #include "../Window.h"
+#include "../private/Utils.h"
 
 #import <Cocoa/Cocoa.h>
 
@@ -52,15 +53,9 @@ namespace uitk {
 
 namespace {
 
-NSString* nsstringWithoutUnderscores(const std::string& s)
+NSString* nsstringWithoutMnemonics(const std::string& s)
 {
-    auto noUnderscores = s;
-    auto idx = noUnderscores.find("_");
-    while (idx != std::string::npos) {
-        noUnderscores = noUnderscores.replace(idx, 1, "");
-        idx = noUnderscores.find("_");
-    }
-    return [NSString stringWithUTF8String:noUnderscores.c_str()];
+    return [NSString stringWithUTF8String:removeMenuItemMnemonics(s).c_str()];
 }
 
 static MenuActivatedReceiver* gMenuReceiver = [[MenuActivatedReceiver alloc] init];
@@ -73,7 +68,7 @@ NSString* nsstringFromChar(unichar c)
 NSMenuItem* createMenuItem(const std::string& title, MenuId id, const ShortcutKey& shortcut)
 {
     NSMenuItem* item = [[NSMenuItem alloc]
-                        initWithTitle:nsstringWithoutUnderscores(title)
+                        initWithTitle:nsstringWithoutMnemonics(title)
                         action:nil
                         keyEquivalent:@""];  // docs say @"" for no shortcut, NOT nil
     item.tag = id;
@@ -195,7 +190,7 @@ struct MacOSMenu::Impl
 {
     NSMenu* menu;
     // Since the OSMenu interface takes ownership of the submenu pointers we need
-    // to keep them somewhere. Note that the text key does NOT contain any underscores.
+    // to keep them somewhere.
     std::map<std::string, std::unique_ptr<Menu>> ownedSubmenus;
 
     NSMenuItem* findMenuItem(MenuId id)
@@ -241,6 +236,11 @@ void MacOSMenu::clear()
     [mImpl->menu removeAllItems];
 }
 
+int MacOSMenu::size() const
+{
+    return mImpl->menu.numberOfItems;
+}
+
 void MacOSMenu::addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut)
 {
     [mImpl->menu addItem:createMenuItem(text, id, shortcut)];
@@ -268,7 +268,7 @@ void MacOSMenu::insertMenu(int index, const std::string& text, Menu *menu)
     }
 
     assert(menu->nativeMenu());
-    NSString* title = nsstringWithoutUnderscores(text);
+    NSString* title = nsstringWithoutMnemonics(text);
     mImpl->ownedSubmenus[title.UTF8String] = std::move(std::unique_ptr<Menu>(menu));
 
     NSMenuItem* item = [[NSMenuItem alloc]
@@ -286,6 +286,99 @@ void MacOSMenu::insertSeparator(int index)
     [mImpl->menu insertItem:[NSMenuItem separatorItem] atIndex:index];
 }
 
+void MacOSMenu::removeItem(int index)
+{
+    if (isSubmenuAt(index)) {
+        delete removeMenu(index);
+    } else {
+        [mImpl->menu removeItemAtIndex:index];
+    }
+}
+
+Menu* MacOSMenu::removeMenu(int index)
+{
+    Menu *m = nullptr;
+    if (isSubmenuAt(index)) {
+        auto name = std::string([mImpl->menu itemAtIndex:index].title.UTF8String);
+        auto it = mImpl->ownedSubmenus.find(name);
+        if (it != mImpl->ownedSubmenus.end()) {
+            m = it->second.get();
+        }
+        mImpl->ownedSubmenus.erase(it);
+        [mImpl->menu removeItemAtIndex:index];
+    }
+    return m;
+}
+
+MenuId MacOSMenu::itemIdAt(int index) const
+{
+    return MenuId([mImpl->menu itemAtIndex:index].tag);
+}
+
+Menu* MacOSMenu::itemMenuAt(int index) const
+{
+    if (isSubmenuAt(index)) {
+        auto name = std::string([mImpl->menu itemAtIndex:index].title.UTF8String);
+        auto it = mImpl->ownedSubmenus.find(name);
+        if (it != mImpl->ownedSubmenus.end()) {
+            return it->second.get();
+        }
+    }
+    return nullptr;
+}
+
+bool MacOSMenu::isSubmenuAt(int index) const
+{
+    return ([mImpl->menu itemAtIndex:index].submenu != nil);
+}
+
+bool MacOSMenu::isSeparatorAt(int index) const
+{
+    return ([mImpl->menu itemAtIndex:index].separatorItem == YES);
+}
+
+bool MacOSMenu::itemCheckedAt(int index) const
+{
+    return ([mImpl->menu itemAtIndex:index].state == NSControlStateValueOn);
+}
+
+void MacOSMenu::setItemCheckedAt(int index, bool checked)
+{
+    [mImpl->menu itemAtIndex:index].state = (checked ? NSControlStateValueOn : NSControlStateValueOff);
+}
+
+bool MacOSMenu::itemEnabledAt(int index) const
+{
+    return ([mImpl->menu itemAtIndex:index].enabled == YES);
+}
+
+void MacOSMenu::setItemEnabledAt(int index, bool enabled)
+{
+    [mImpl->menu itemAtIndex:index].enabled = (enabled ? YES : NO);
+}
+
+std::string MacOSMenu::itemTextAt(int index) const
+{
+    return std::string([mImpl->menu itemAtIndex:index].title.UTF8String);
+}
+
+void MacOSMenu::setItemTextAt(int index, const std::string& text)
+{
+    NSString *title = nsstringWithoutMnemonics(text);
+    if (isSubmenuAt(index)) {
+        auto old = std::string([mImpl->menu itemAtIndex:index].submenu.title.UTF8String);
+        [mImpl->menu itemAtIndex:index].submenu.title = title;
+        auto it = mImpl->ownedSubmenus.find(old);
+        if (it != mImpl->ownedSubmenus.end()) {
+            auto *menu = it->second.release();
+            mImpl->ownedSubmenus.erase(it);
+            mImpl->ownedSubmenus[std::string(title.UTF8String)] = std::unique_ptr<Menu>(menu);
+        }
+    }
+    [mImpl->menu itemAtIndex:index].title = title;
+}
+
+/*
 void MacOSMenu::removeItem(MenuId id)
 {
     NSMenuItem* it = mImpl->findMenuItem(id);
@@ -362,7 +455,7 @@ OSMenu::ItemFound MacOSMenu::setItemText(MenuId id, const std::string& text)
     it.title = nsstringWithoutUnderscores(text);
     return (it != nil ? ItemFound::kYes : ItemFound::kNo);
 }
-
+*/
 OSMenu::ItemFound MacOSMenu::activateItem(MenuId id, Window *activeWindow) const
 {
     NSMenuItem* it = mImpl->findMenuItem(id);

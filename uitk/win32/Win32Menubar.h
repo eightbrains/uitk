@@ -20,44 +20,38 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_MACOS_MENUBAR_H
-#define UITK_MACOS_MENUBAR_H
+#ifndef UITK_WIN32_MENUBAR_H
+#define UITK_WIN32_MENUBAR_H
 
 #include "../OSMenubar.h"
 
-#include <memory>
-#include <string>
-
 namespace uitk {
-
-class MacOSMenubar : public OSMenubar
+class Win32Menubar : public OSMenubar
 {
-    friend class Application;
-    friend class Window;
 public:
-    MacOSMenubar(const MacOSMenubar&) = delete;
-    ~MacOSMenubar();
-
+    Win32Menubar();
+    Win32Menubar(const OSMenubar&) = delete;
+    virtual ~Win32Menubar();
     Menu* newMenu(const std::string& name) override;
     void addMenu(Menu* menu, const std::string& name) override;
     Menu* removeMenu(const std::string& name) override;
-
     Menu* menu(const std::string& name) const override;
     Menu* macosApplicationMenu() const override;
-
     std::vector<Menu*> menus() const override;
-
+//    void setItemEnabled(MenuId itemId, bool enabled) override;
+//    void setItemChecked(MenuId itemId, bool checked) override;
     void activateItemId(MenuId itemId) const override;
 
-    void onApplicationFinishedLaunching();
+    // Creates the HMENU that can be used with ::SetMenu() to set the menu
+    // for a window. void* is returned instead of HMENU to keep windows.h
+    // out of the header files.
+    void* createNativeMenubar();
 
 private:
-    MacOSMenubar();
-
     struct Impl;
     std::unique_ptr<Impl> mImpl;
 };
 
 }  // namespace uitk
 
-#endif // UITK_MACOS_MENUBAR_H
+#endif // UITK_WIN32_MENUBAR_H

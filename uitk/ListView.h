@@ -42,6 +42,9 @@ public:
     SelectionMode selectionMode() const;
     ListView* setSelectionModel(SelectionMode mode);
 
+    /// Returns the number of cells in the list view
+    int size() const;
+
     /// Deletes all the cells
     void clearCells();
     /// Removes all the cells and returns ownership of all cells to the caller.
@@ -57,6 +60,10 @@ public:
     /// Returns the cell or nullptr if there is no cell at the index.
     /// ListView retains ownership to the pointer.
     Widget* cellAtIndex(int index) const;
+
+    /// Removes the cell and transfers ownership to the caller.
+    /// If index is out of range, returns nullptr;
+    Widget* removeCellAtIndex(int index);
 
     /// Returns the selected index or -1 if there is none.
     /// Should only be used in single item mode. Use selectedIndices() for

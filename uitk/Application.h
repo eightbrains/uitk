@@ -98,6 +98,9 @@ public:
     /// Returns the active window, or nullptr if no windows are active.
     Window* activeWindow() const;
 
+    /// Returns all windows
+    const std::set<Window*>& windows() const;
+
     /// Gets the application's clipboard
     Clipboard& clipboard() const;
 

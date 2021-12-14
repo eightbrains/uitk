@@ -20,44 +20,14 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_MACOS_MENUBAR_H
-#define UITK_MACOS_MENUBAR_H
+#ifndef UITK_UTILS_H
+#define UITK_UTILS_H
 
-#include "../OSMenubar.h"
-
-#include <memory>
 #include <string>
 
 namespace uitk {
 
-class MacOSMenubar : public OSMenubar
-{
-    friend class Application;
-    friend class Window;
-public:
-    MacOSMenubar(const MacOSMenubar&) = delete;
-    ~MacOSMenubar();
+std::string removeMenuItemMnemonics(const std::string& s);
 
-    Menu* newMenu(const std::string& name) override;
-    void addMenu(Menu* menu, const std::string& name) override;
-    Menu* removeMenu(const std::string& name) override;
-
-    Menu* menu(const std::string& name) const override;
-    Menu* macosApplicationMenu() const override;
-
-    std::vector<Menu*> menus() const override;
-
-    void activateItemId(MenuId itemId) const override;
-
-    void onApplicationFinishedLaunching();
-
-private:
-    MacOSMenubar();
-
-    struct Impl;
-    std::unique_ptr<Impl> mImpl;
-};
-
-}  // namespace uitk
-
-#endif // UITK_MACOS_MENUBAR_H
+} // namespace uitk
+#endif // UITK_UTILS_H

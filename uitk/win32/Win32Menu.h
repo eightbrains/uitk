@@ -20,27 +20,29 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_MACOS_MENU_H
-#define UITK_MACOS_MENU_H
+#ifndef UITK_WIN32_MENU_H
+#define UITK_WIN32_MENU_H
 
 #include "../OSMenu.h"
 
 namespace uitk {
 
-class MacOSMenu : public OSMenu
+class Win32Menu : public OSMenu
 {
 public:
-    MacOSMenu();
-    ~MacOSMenu();
+    Win32Menu();
+    virtual ~Win32Menu();
 
     void clear() override;
     int size() const override;
     void addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut) override;
-    void addMenu(const std::string& text, Menu *menu) override;
+    /// Takes ownership of menu
+    void addMenu(const std::string& text, Menu* menu) override;
     void addSeparator() override;
 
     void insertItem(int index, const std::string& text, MenuId id, const ShortcutKey& shortcut) override;
-    void insertMenu(int index, const std::string& text, Menu *menu) override;
+    /// Takes ownership of menu
+    void insertMenu(int index, const std::string& text, Menu* menu) override;
     void insertSeparator(int index) override;
 
     void removeItem(int index) override;
@@ -62,29 +64,31 @@ public:
     std::string itemTextAt(int index) const override;
     void setItemTextAt(int index, const std::string& text) override;
 
-    /*void removeItem(MenuId id);
-    Menu* removeMenu(const std::string& text);  /// return ownership
+/*    void removeItem(MenuId id) override;
+    // Returns ownership of the menu (if it exists)
+    Menu* removeMenu(const std::string& text) override;
 
-    Menu* menu(const std::string& text) const;  /// retains ownership
+    // Returns the menu associated with
+    Menu* menu(const std::string& text) const override;
 
-    bool isSeparator(MenuId id) const;
+    bool itemChecked(MenuId id) const override;
+    ItemFound setItemChecked(MenuId id, bool checked) override;
 
-    bool itemChecked(MenuId id) const;
-    ItemFound setItemChecked(MenuId id, bool checked);
+    bool itemEnabled(MenuId id) const override;
+    ItemFound setItemEnabled(MenuId id, bool enabled) override;
 
-    bool itemEnabled(MenuId id) const;
-    ItemFound setItemEnabled(MenuId id, bool enabled);
-
-    std::string itemText(MenuId id) const;
-    ItemFound setItemText(MenuId id, const std::string& text); */
-
-    ItemFound activateItem(MenuId id, Window *activeWindow) const override;
-
-    void* nsmenu();
+    std::string itemText(MenuId id) const override;
+    ItemFound setItemText(MenuId id, const std::string& text) override;
+*/
+    ItemFound activateItem(MenuId id, Window* activeWindow) const override;
 
     //bool isShowing() const override;
     //void show(Window *w, const Point& upperLeft, MenuId id = kInvalidId) override;
     //void cancel() override;
+
+    /// Creates a Win32 HMENU implementing this menu truee. The caller owns the HMENU.
+    /// The return value is void* to avoid pulling in windows.h into this header file.
+    void* createNativeMenu();
 
 private:
     struct Impl;
@@ -92,4 +96,4 @@ private:
 };
 
 }  // namespace uitk
-#endif // UITK_MACOS_MENU_H
+#endif // UITK_WIN32_MENU_H

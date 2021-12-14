@@ -67,8 +67,14 @@ public:
     void* nativeHandle() override;
     IWindowCallbacks& callbacks() override;
 
+    // Since each window has its own copy of the menus, if the structure
+    // of the menus changes, it needs to be reloaded.
+    void setNeedsUpdateMenubar();
+
 public:  // these are public so that WndProc (which cannot be a member function) can use them
     ClickCounter& clickCounter();
+    bool menubarNeedsUpdate() const;
+    void updateMenubar();
 
     void onMoved();
     void onResize();
@@ -79,6 +85,8 @@ public:  // these are public so that WndProc (which cannot be a member function)
     void onText(const TextEvent& e);
     void onActivated(const Point& currentMousePos);
     void onDeactivated();
+    void onMenuWillShow();
+    void onMenuActivated(MenuId id);
     bool onWindowShouldClose();
     void onWindowWillClose();
 
