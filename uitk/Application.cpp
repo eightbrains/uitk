@@ -33,6 +33,7 @@
 #include "macos/MacOSMenubar.h"
 #elif defined(_WIN32) || defined(_WIN64)  // _WIN32 covers everything except 64-bit ARM
 #include "win32/Win32Application.h"
+#include "win32/Win32Menubar.h"
 #else
 #include "x11/X11Application.h"
 #endif
@@ -144,7 +145,7 @@ bool Application::supportsNativeMenus() const
 #if defined(__APPLE__)
     return true;
 #elif defined(_WIN32) || defined(_WIN64)
-    return false;
+    return true;
 #else
     return false;
 #endif
@@ -174,13 +175,17 @@ OSMenubar& Application::menubar() const
 {
     if (!mImpl->menubar) {
         // Application is a friend, but std::make_unique<>() is not
+        if (supportsNativeMenus()) {
 #if defined(__APPLE__)
-        mImpl->menubar = std::unique_ptr<MacOSMenubar>(new MacOSMenubar());
+            mImpl->menubar = std::unique_ptr<MacOSMenubar>(new MacOSMenubar());
 #elif defined(_WIN32) || defined(_WIN64)
-        mImpl->menubar = std::unique_ptr<MenubarUITK>(new MenubarUITK());
+            mImpl->menubar = std::unique_ptr<Win32Menubar>(new Win32Menubar());
 #else
-        mImpl->menubar = std::unique_ptr<MenubarUITK>(new MenubarUITK());
+            assert(false);
 #endif
+        } else {
+            mImpl->menubar = std::unique_ptr<MenubarUITK>(new MenubarUITK());
+        }
     }
     return *mImpl->menubar;
 }
@@ -202,6 +207,8 @@ std::set<Window*>& Application::windowSet() const
 {
     return mImpl->windows;
 }
+
+const std::set<Window*>& Application::windows() const { return mImpl->windows; }
 
 Window* Application::activeWindow() const { return mImpl->activeWindow; }
 

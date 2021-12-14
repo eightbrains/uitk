@@ -25,6 +25,7 @@
 #include "../Application.h"
 #include "../Events.h"
 #include "Win32Application.h"
+#include "Win32Menubar.h"
 #include "Win32Utils.h"
 
 #include <unordered_map>
@@ -142,6 +143,7 @@ struct Win32Window::Impl {
     std::string title;
     std::shared_ptr<DrawContext> dc;
     ClickCounter clickCounter;
+    bool needsUpdateMenu = false;
     bool needsLayout = true;
 
     void updateDrawContext()
@@ -220,12 +222,42 @@ Win32Window::Win32Window(IWindowCallbacks& callbacks,
     win32app.registerWindow(mImpl->hwnd, this);
     mImpl->updateDrawContext();
     setTitle(title);
+
+    updateMenubar();
 }
 
 Win32Window::~Win32Window()
 {
     if (mImpl->hwnd) {
         close();
+    }
+}
+
+void Win32Window::setNeedsUpdateMenubar()
+{
+    // Defer the update, just in case the user is adding multiple menu items,
+    // we do not want to be updating the menubar after each one.
+    mImpl->needsUpdateMenu = true;
+}
+
+bool Win32Window::menubarNeedsUpdate() const { return mImpl->needsUpdateMenu; }
+
+void Win32Window::updateMenubar()
+{
+    // Calling SetMenu() generates a message, which interrupts this, so we
+    // need to say we are updated before we get finished to avoid an infinite loop.
+    mImpl->needsUpdateMenu = false;
+
+    if (!(GetWindowStyle(mImpl->hwnd) & WS_POPUP)) {  // WS_OVERLAPPEDWINDOW is 0x0, cannot compare with that
+        if (auto* win32menubar = dynamic_cast<Win32Menubar*>(&Application::instance().menubar())) {
+            // The docs for CreateMenu() state that "resources associated with a menu
+            // that is assigned to a window are freed automatically". Otherwise we need
+            // to call DestroyMenu(). But... if there's already a menu, SetMenu() does
+            // not destroy it.
+            HMENU old = GetMenu(mImpl->hwnd);
+            SetMenu(mImpl->hwnd, (HMENU)win32menubar->createNativeMenubar());
+            DestroyMenu(old);  // empirically, destroying a null menu is okay
+        }
     }
 }
 
@@ -403,6 +435,16 @@ void Win32Window::onDeactivated()
     mImpl->callbacks.onDeactivated();
 }
 
+void Win32Window::onMenuWillShow()
+{
+    mImpl->callbacks.onMenuWillShow();
+}
+
+void Win32Window::onMenuActivated(MenuId id)
+{
+    mImpl->callbacks.onMenuActivated(id);
+}
+
 bool Win32Window::onWindowShouldClose()
 {
     return mImpl->callbacks.onWindowShouldClose();
@@ -497,6 +539,9 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
                              WPARAM wParam, LPARAM lParam)
 {
     Win32Window *w = (Win32Window*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    if (w && w->menubarNeedsUpdate()) {
+        w->updateMenubar();
+    }
     switch (message) {
         case WM_CREATE: {
             auto *create = (CREATESTRUCT*)lParam;
@@ -730,6 +775,26 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
                 }
                 return FALSE;
             }
+        }
+        case WM_ENTERMENULOOP:
+            w->onMenuWillShow();
+            return 0;
+        case WM_COMMAND: {
+            // AppendMenu() offers a UINT as a menu item identifier, but
+            // since WM_COMMAND uses the high word of 32-bit wParam for
+            // other information, only 16-bits is left in the low word
+            // for the identifier :(. WM_MENUCOMMAND gives us the menu index,
+            // from which we can retrieve the full menu item ID, but that
+            // requires the menu to have MNS_NOTIFYBYPOS assigned in menuItem.dwFlags,
+            // and it does not work for submenus, so that is not an option.
+            if (HIWORD(wParam) == 0 ||  // user clicked on a menu
+                HIWORD(wParam) == 1) {  // user pressed accelerator key
+                w->onMenuActivated(MenuId(LOWORD(wParam)));
+                return 0;  // return 0: handled
+            }
+            // This is a control message. Not sure if we need to pass to
+            // DefWindowProc, but just to be safe...
+            return DefWindowProc(hwnd, message, wParam, lParam);
         }
         case WM_DWMCOLORIZATIONCOLORCHANGED:
             Application::instance().onSystemThemeChanged();

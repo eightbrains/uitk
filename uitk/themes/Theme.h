@@ -73,6 +73,7 @@ public:
         Color accentedBackgroundTextColor;  // for when accentColor is bg of text
         Color accentColor;
         Color selectionColor;
+        Color nonNativeMenuSeparatorColor;
         Color nonNativeMenuBackgroundColor;
         Color nonNativeMenubarBackgroundColor;
         Font labelFont;

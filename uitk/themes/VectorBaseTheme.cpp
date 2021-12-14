@@ -1104,7 +1104,7 @@ void VectorBaseTheme::drawMenuSeparatorItem(UIContext& ui, const Rect& frame) co
     if (thicknessPx % 2 == 1) {
         thicknessPx += 1;
     }
-    ui.dc.setStrokeColor(mMenuItemStyles[int(WidgetState::kDisabled)].fgColor);
+    ui.dc.setStrokeColor(mParams.nonNativeMenuSeparatorColor);
     ui.dc.setStrokeWidth(float(thicknessPx) * ui.dc.onePixel());
     ui.dc.setStrokeEndCap(kEndCapButt);
     ui.dc.drawLines({Point(frame.x, frame.midY()), Point(frame.maxX(), frame.midY()) });

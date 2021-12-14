@@ -171,6 +171,11 @@ ListView* ListView::setSelectionModel(SelectionMode mode)
     return this;
 }
 
+int ListView::size() const
+{
+    return int(mImpl->content->children().size());
+}
+
 void ListView::clearCells()
 {
     clearSelection();
@@ -197,6 +202,20 @@ Widget* ListView::cellAtIndex(int index) const
         return nullptr;
     }
     return childs[index];
+}
+
+Widget* ListView::removeCellAtIndex(int index)
+{
+    auto& childs = mImpl->content->children();
+    if (index < 0 || index >= int(childs.size())) {
+        return nullptr;
+    }
+
+    clearSelection(); // changes all the indices of cells below it, so easiest to just clear
+    mImpl->setMouseOverIndex(-1);
+    auto *w = childs[index];
+    mImpl->content->removeChild(w);
+    return w;
 }
 
 int ListView::selectedIndex() const

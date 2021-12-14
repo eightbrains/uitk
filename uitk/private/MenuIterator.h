@@ -20,43 +20,48 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_MENUBAR_UITK_H
-#define UITK_MENUBAR_UITK_H
-
-#include "OSMenubar.h"
+#ifndef UITK_MENU_ITERATOR_H
+#define UITK_MENU_ITERATOR_H
 
 #include <memory>
-#include <string>
+#include <vector>
 
 namespace uitk {
 
-class MenubarUITK : public OSMenubar
+class Menu;
+class MenuItem;
+class OSMenu;
+
+// Cannot use a C++, STL-style iterator, because we do not want to expose
+// begin() and end() functions on Menu.
+class MenuIterator
 {
-    friend class Application;
-    friend class Window;
 public:
-    MenubarUITK(const MenubarUITK&) = delete;
-    ~MenubarUITK();
+    explicit MenuIterator(Menu *menu);
+    explicit MenuIterator(OSMenu *osmenu);
+    ~MenuIterator();
 
-    Menu* newMenu(const std::string& name) override;
-    void addMenu(Menu* menu, const std::string& name) override;
-    Menu* removeMenu(const std::string& name) override;
+    void next();
+    bool done();
+    // returned object is valid until the next call to an iterator function
+    MenuItem& menuItem();
 
-    Menu* menu(const std::string& name) const override;
-    Menu* macosApplicationMenu() const override;
+protected:
+    struct Iterator
+    {
+        OSMenu *menu = nullptr;
+        int index = 0;
+        int maxIndex = 0;
+    };
 
-    std::vector<Menu*> menus() const override;
+    std::vector<Iterator> mStack;
 
-    void activateItemId(MenuId itemId) const override;
+    void push(Menu *menu);
 
 private:
-    MenubarUITK();
-    std::unique_ptr<Widget> createWidget() const;
-
     struct Impl;
     std::unique_ptr<Impl> mImpl;
 };
 
 }  // namespace uitk
-
-#endif // UITK_MENUBAR_UITK_H
+#endif // UITK_MENU_ITERATOR_H

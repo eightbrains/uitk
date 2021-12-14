@@ -40,6 +40,7 @@ public:
     ~MenuUITK();
 
     void clear() override;
+    int size() const override;
     /// Adds item with the given string. When using native menus on Windows, an underscore
     /// marks the key navigation for the menu item; on all other platform underscores are
     /// removed.
@@ -62,27 +63,42 @@ public:
     void insertMenu(int index, const std::string& text, Menu *menu) override;
     void insertSeparator(int index) override;
 
-    void removeItem(MenuId id) override;
+    void removeItem(int index) override;
+
+    MenuId itemIdAt(int index) const override;
+
+    bool isSubmenuAt(int index) const override;
+    bool isSeparatorAt(int index) const override;
+    Menu* itemMenuAt(int index) const override;
+
+    bool itemCheckedAt(int index) const override;
+    void setItemCheckedAt(int index, bool checked) override;
+
+    bool itemEnabledAt(int index) const override;
+    void setItemEnabledAt(int index, bool enabled) override;
+
+    std::string itemTextAt(int index) const override;
+    void setItemTextAt(int index, const std::string& text) override;
+
+    void removeItem(MenuId id);
     // Returns ownership of the menu (if it exists)
-    Menu* removeMenu(const std::string& text) override;
+    Menu* removeMenu(const std::string& text);
 
     // Returns the menu associated with the text, otherwise nullptr. Retains ownership.
-    Menu* menu(const std::string& text) const override;
+    Menu* itemMenu(const std::string& text) const;
 
-    bool isSeparator(MenuId id) const override;
+    bool itemChecked(MenuId id) const;
+    ItemFound setItemChecked(MenuId id, bool checked);
 
-    bool itemChecked(MenuId id) const override;
-    ItemFound setItemChecked(MenuId id, bool checked) override;
-
-    bool itemEnabled(MenuId id) const override;
-    ItemFound setItemEnabled(MenuId id, bool enabled) override;
+    bool itemEnabled(MenuId id) const;
+    ItemFound setItemEnabled(MenuId id, bool enabled);
 
     /// Returns the text of the item with the requested index, or "" if the
     /// index is invalid.
-    std::string itemText(MenuId id) const override;
-    ItemFound setItemText(MenuId id, const std::string& text) override;
+    std::string itemText(MenuId id) const;
+    ItemFound setItemText(MenuId id, const std::string& text);
 
-    ItemFound activateItem(MenuId id, Window *activeWindow) const override;
+    ItemFound activateItem(MenuId id, Window *activeWindow) const;
 
     Size preferredSize(const LayoutContext& context) const;
 

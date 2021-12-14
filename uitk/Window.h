@@ -26,8 +26,8 @@
 #include <memory>
 #include <string>
 
+#include "Global.h"
 #include "OSWindow.h"
-#include "OSMenu.h"
 
 namespace uitk {
 
@@ -37,6 +37,7 @@ struct Point;
 struct KeyEvent;
 struct MouseEvent;
 struct LayoutContext;
+class MenuItem;
 class MenuUITK;
 class OSMenubar;
 class Widget;
@@ -128,13 +129,31 @@ public:
 
     PicaPt borderWidth() const;
     
+    OSWindow* nativeWindow();
     void* nativeHandle();
 
-    /// Sets a callback that will be called whenever a menu is about to show.
-    /// This is where menu items should be enabled and disabled. This is called
-    /// after onMenuItemsWillShow(), which sets the standard menu items (if any
-    /// are included).
-    void setOnMenuWillShow(std::function<void(OSMenubar&)> onWillShow);
+    /// Sets a callback that will be called whenever a menu item needs to
+    /// update its checked or enabled state; currently this is right before
+    /// the menu is opened, and is called for all menu items.
+    /// This is where menu items should be enabled and disabled. Note that
+    /// an item should either be ignored, or it should always set its status.
+    /// Menus are global, so the current "state" of the menu should be
+    /// considered to be incorrect, as it may have been set for a different
+    /// window.
+    /// The usual pattern for the callback is:
+    ///   void itemNeedsUpdate(Menu::Item& item) {
+    ///     switch (item.id()) {
+    ///       case Feature1ActionItemId:
+    ///         item.setEnabled(model.isFeature1Valid);
+    ///         break;
+    ///       case BoolFeature2Id:
+    ///         item.setChecked(model.feature2State);
+    ///         break;
+    ///       default:
+    ///         break;  // these items will always be enabled and unchecked
+    ///     }
+    ///   }
+    void setOnMenuItemNeedsUpdate(std::function<void(MenuItem&)> onNeedsUpdate);
 
     /// Sets the callback when a menu item is activated/selected.
     /// This is a convenience instead of overriding onMenuActivated and putting
@@ -171,11 +190,10 @@ public:
     void onText(const TextEvent& e) override;
     void onActivated(const Point& currentMousePos) override;
     void onDeactivated() override;
+    void onMenuWillShow() override;
+    void onMenuActivated(MenuId id) override;
     bool onWindowShouldClose() override;
     void onWindowWillClose() override;
-
-    virtual void onMenuWillShow();
-    virtual void onMenuActivated(MenuId id);
 
 protected:
     /// Posts a redraw message to the event loop scheduling a redraw.

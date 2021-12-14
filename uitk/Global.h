@@ -29,5 +29,8 @@ enum class Dir { kHoriz, kVert };
 
 enum class SliderDir { kHoriz, kVertZeroAtTop, kVertZeroAtBottom };
 
+/// Win32 is limited to 16-bits by WM_COMMAND message, see Win32Window.cpp for more details
+using MenuId = unsigned short;
+
 }  // namespace uitk
 #endif // UITK_GLOBAL_H

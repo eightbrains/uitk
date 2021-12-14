@@ -62,15 +62,9 @@ public:
     /// "Preferences..." and "Quit".
     virtual Menu* macosApplicationMenu() const = 0;
 
-    /// Sets the item with the given ID enabled (or disabled). This will
-    /// search through the entire menu tree to find the item. If the item is
-    /// not found the request will be ignored.
-    virtual void setItemEnabled(MenuId itemId, bool enabled) = 0;
-
-    /// Sets the item with the given ID checked (or unchecked). This will
-    /// search through the entire menu tree to find the item. If the item is
-    /// not found the request will be ignored.
-    virtual void setItemChecked(MenuId itemId, bool checked) = 0;
+    /// Returns a vector of the menus in the menubar. Ownership of the menu
+    /// remains with the menubar.
+    virtual std::vector<Menu*> menus() const = 0;
 
     /// This is the programmatic way of clicking on a menu item. If the itemId
     /// exists in one of the menus its callback function will be called the

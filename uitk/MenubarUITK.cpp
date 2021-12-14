@@ -29,6 +29,7 @@
 #include "UIContext.h"
 #include "Widget.h"
 #include "Window.h"
+#include "private/Utils.h"
 #include "themes/Theme.h"
 
 #include <chrono>
@@ -36,8 +37,6 @@
 #include <vector>
 
 namespace uitk {
-
-extern std::string removeUnderscores(const std::string& s);  // in MenuUITK.cpp
 
 //-----------------------------------------------------------------------------
 namespace {
@@ -156,7 +155,7 @@ public:
                         if (win->popupMenu()) {
                             win->popupMenu()->cancel();
                         }
-                        mModel.activeIndex = i;
+                        mModel.activeIndex = int(i);
                         if (menuUitk) {
                             win->onMenuWillShow();
                             menuUitk->show(win, Point(frame().x + x, frame().maxY()),
@@ -274,7 +273,7 @@ void MenubarUITK::addMenu(Menu* menu, const std::string& name)
             mImpl->model.activeIndex = MenubarModel::kNoActiveMenu;
         });
     }
-    mImpl->model.menus.push_back({menu, removeUnderscores(name)});
+    mImpl->model.menus.push_back({menu, removeMenuItemMnemonics(name)});
 }
 
 Menu* MenubarUITK::removeMenu(const std::string& name)
@@ -308,22 +307,14 @@ Menu* MenubarUITK::macosApplicationMenu() const
     return nullptr;
 }
 
-void MenubarUITK::setItemEnabled(int itemId, bool enabled)
+std::vector<Menu*> MenubarUITK::menus() const
 {
+    std::vector<Menu*> mm;
+    mm.reserve(mImpl->model.menus.size());
     for (auto &item : mImpl->model.menus) {
-        if (item.menu->setItemEnabled(itemId, enabled) == OSMenu::ItemFound::kYes) {
-            break;
-        }
+        mm.push_back(item.menu);
     }
-}
-
-void MenubarUITK::setItemChecked(int itemId, bool checked)
-{
-    for (auto &item : mImpl->model.menus) {
-        if (item.menu->setItemChecked(itemId, checked) == OSMenu::ItemFound::kYes) {
-            break;
-        }
-    }
+    return mm;
 }
 
 void MenubarUITK::activateItemId(MenuId itemId) const
@@ -335,7 +326,7 @@ void MenubarUITK::activateItemId(MenuId itemId) const
         for (size_t i = 0;  i < mImpl->model.menus.size();  ++i) {
             auto &item = mImpl->model.menus[i];
             if (item.menu->activateItem(itemId) == OSMenu::ItemFound::kYes) {
-                mImpl->model.transientShortcutActivatedIndex = i;
+                mImpl->model.transientShortcutActivatedIndex = int(i);
                 mImpl->model.transientStartTime = std::chrono::steady_clock::now();
                 // caller needs to call setNeedsDisplay(), since we do not know
                 // which one of our menubars was actually activated.

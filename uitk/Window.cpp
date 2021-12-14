@@ -29,6 +29,7 @@
 #include "MenubarUITK.h"
 #include "UIContext.h"
 #include "Widget.h"
+#include "private/MenuIterator.h"
 #include "themes/Theme.h"
 #include "themes/EmpireTheme.h"
 
@@ -61,7 +62,7 @@ struct Window::Impl
     MenuUITK *activePopup = nullptr;
     void *dialog = nullptr;  // placeholder for later
     PopupState popupState = PopupState::kNone;
-    std::function<void(OSMenubar&)> onMenuWillShow;
+    std::function<void(MenuItem&)> onMenuItemNeedsUpdate;
     std::unordered_map<MenuId, std::function<void()>> onMenuActivatedCallbacks;
     std::function<void(Window& w, const LayoutContext& context)> onWillShow;
     std::function<void(Window& w)> onDidDeactivate;
@@ -105,9 +106,10 @@ Window::Window(const std::string& title, int x, int y, int width, int height,
 
     auto &menubar = Application::instance().menubar();
     if (!(flags & Flags::kPopup) && !Application::instance().supportsNativeMenus()) {
-        auto &uitkMenubar = dynamic_cast<MenubarUITK&>(Application::instance().menubar());
-        mImpl->menubarWidget = uitkMenubar.createWidget();
-        mImpl->menubarWidget->setWindow(this);
+        if (auto* uitkMenubar = dynamic_cast<MenubarUITK*>(&Application::instance().menubar())) {
+            mImpl->menubarWidget = uitkMenubar->createWidget();
+            mImpl->menubarWidget->setWindow(this);
+        }
     }
 
 #if defined(__APPLE__)
@@ -137,6 +139,8 @@ void Window::deleteLater()
         delete w;
     });
 }
+
+OSWindow* Window::nativeWindow() { return mImpl->window.get(); }
 
 void* Window::nativeHandle() { return mImpl->window->nativeHandle(); }
 
@@ -255,9 +259,9 @@ Window* Window::addChild(Widget *child)
     return this;
 }
 
-void Window::setOnMenuWillShow(std::function<void(OSMenubar&)> onWillShow)
+void Window::setOnMenuItemNeedsUpdate(std::function<void(MenuItem&)> onNeedsUpdate)
 {
-    mImpl->onMenuWillShow = onWillShow;
+    mImpl->onMenuItemNeedsUpdate = onNeedsUpdate;
 }
 
 void Window::setOnMenuActivated(MenuId id, std::function<void()> onActivated)
@@ -476,6 +480,7 @@ void Window::onKey(const KeyEvent &e)
 {
     int menuId;
     if (!mImpl->dialog && e.type == KeyEvent::Type::kKeyDown && Application::instance().keyboardShortcuts().hasShortcut(e, &menuId)) {
+        onMenuWillShow();  // make sure items are enabled/disabled for *this current* window
         Application::instance().menubar().activateItemId(menuId);
         // We need to flash the menu that got activated, but the menubar
         // does not know which menubar widget was actually activated, so we
@@ -612,10 +617,18 @@ void Window::onDeactivated()
 
 void Window::onMenuWillShow()
 {
+    assert(Application::instance().activeWindow() == this);
+
     // TODO: handle standard menu items here
 
-    if (mImpl->onMenuWillShow) {
-        mImpl->onMenuWillShow(Application::instance().menubar());
+    for (auto* menu : Application::instance().menubar().menus()) {
+        MenuIterator it(menu);
+        while (!it.done()) {
+            if (mImpl->onMenuItemNeedsUpdate) {
+                mImpl->onMenuItemNeedsUpdate(it.menuItem());
+            }
+            it.next();
+        }
     }
 }
 

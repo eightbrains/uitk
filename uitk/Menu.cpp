@@ -29,7 +29,7 @@
 #if defined(__APPLE__)
 #include "macos/MacOSMenu.h"
 #elif defined(_WIN32) || defined(_WIN64)
-//#include "win32/Win32Menu.h"
+#include "win32/Win32Menu.h"
 #endif
 
 #include <unordered_map>
@@ -100,7 +100,7 @@ Menu::Menu()
 #if defined(__APPLE__)
         mImpl->menu = std::make_shared<MacOSMenu>();
 #elif defined(_WIN32) || defined(_WIN64)
-        assert(false);
+        mImpl->menu = std::make_shared<Win32Menu>();
 #endif
     } else {
         mImpl->menuUitk = std::make_shared<MenuUITK>();
@@ -162,60 +162,20 @@ Menu* Menu::insertMenu(int index, const std::string& text, Menu *menu)
 
 //Menu* insertItem(int index, MenuItem *item, MenuId id, std::function<void()> onItem)
 
-Menu* Menu::insertSeparator(MenuId index)
+Menu* Menu::insertSeparator(int index)
 {
     mImpl->menu->insertSeparator(index);
     return this;
 }
 
-void Menu::removeItem(MenuId id)
+void Menu::removeItem(int index)
 {
-    mImpl->menu->removeItem(id);
+    mImpl->menu->removeItem(index);
 }
 
-Menu* Menu::removeMenu(const std::string& text)
+bool Menu::isSeparator(int index) const
 {
-    return mImpl->menu->removeMenu(text);
-}
-
-Menu* Menu::menu(const std::string& text) const
-{
-    return mImpl->menu->menu(text);
-}
-
-bool Menu::isSeparator(MenuId id) const
-{
-    return mImpl->menu->isSeparator(id);
-}
-
-bool Menu::itemChecked(MenuId id) const
-{
-    return mImpl->menu->itemChecked(id);
-}
-
-Menu::ItemFound Menu::setItemChecked(MenuId id, bool checked)
-{
-    return mImpl->menu->setItemChecked(id, checked);
-}
-
-bool Menu::itemEnabled(MenuId id) const
-{
-    return mImpl->menu->itemEnabled(id);
-}
-
-Menu::ItemFound Menu::setItemEnabled(MenuId id, bool enabled)
-{
-    return mImpl->menu->setItemEnabled(id, enabled);
-}
-
-std::string Menu::itemText(MenuId id) const
-{
-    return mImpl->menu->itemText(id);
-}
-
-Menu::ItemFound Menu::setItemText(MenuId id, const std::string& text)
-{
-    return mImpl->menu->setItemText(id, text);
+    return mImpl->menu->isSeparatorAt(index);
 }
 
 Menu::ItemFound Menu::activateItem(MenuId id) const

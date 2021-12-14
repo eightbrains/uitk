@@ -28,6 +28,7 @@
 #include "Menu.h"
 #include "UIContext.h"
 #include "Window.h"
+#include "private/Utils.h"
 #include "themes/Theme.h"
 
 #include <chrono>
@@ -76,28 +77,17 @@
  */
 namespace uitk {
 
-std::string removeUnderscores(const std::string& s)
-{
-    auto noUnderscores = s;
-    auto idx = noUnderscores.find("_");
-    while (idx != std::string::npos) {
-        noUnderscores = noUnderscores.replace(idx, 1, "");
-        idx = noUnderscores.find("_");
-    }
-    return noUnderscores;
-}
-
 namespace {
-class MenuItem : public Widget
+class MenuItemWidget : public Widget
 {
     using Super = Widget;
 public:
     enum Separator { kSeparator };
-    MenuItem(const std::string& text, const std::string& shortcut) : mText(text), mShortcut(shortcut) {}
-    MenuItem(const std::string& text, Menu *menu) : mText(text), mSubmenu(menu) {}
-    explicit MenuItem(Separator s) : mIsSeparator(true) {}
+    MenuItemWidget(const std::string& text, const std::string& shortcut) : mText(text), mShortcut(shortcut) {}
+    MenuItemWidget(const std::string& text, Menu *menu) : mText(text), mSubmenu(menu) {}
+    explicit MenuItemWidget(Separator s) : mIsSeparator(true) {}
 
-    virtual ~MenuItem() {}
+    virtual ~MenuItemWidget() {}
 
     bool isSeparator() const { return mIsSeparator; }
 
@@ -146,12 +136,12 @@ protected:
     PicaPt mShortcutWidth;
 };
 
-class StringMenuItem : public MenuItem
+class StringMenuItem : public MenuItemWidget
 {
-    using Super = MenuItem;
+    using Super = MenuItemWidget;
 public:
     explicit StringMenuItem(const std::string& text, const ShortcutKey& shortcut)
-        : MenuItem(text, shortcut.displayText())
+        : MenuItemWidget(text, shortcut.displayText())
     {}
     ~StringMenuItem() {}
 
@@ -180,11 +170,11 @@ private:
     mutable PicaPt mPreferredShortcutWidth;
 };
 
-class SeparatorMenuItem : public MenuItem
+class SeparatorMenuItem : public MenuItemWidget
 {
 public:
     SeparatorMenuItem()
-        : MenuItem(MenuItem::kSeparator)
+        : MenuItemWidget(MenuItemWidget::kSeparator)
     {
         setEnabled(false);
     }
@@ -204,12 +194,12 @@ public:
     }
 };
 
-class SubmenuItem : public MenuItem
+class SubmenuItem : public MenuItemWidget
 {
-    using Super = MenuItem;
+    using Super = MenuItemWidget;
 public:
     explicit SubmenuItem(const std::string& text, Menu *submenu)
-        : MenuItem(text, submenu)
+        : MenuItemWidget(text, submenu)
     {
     }
 
@@ -332,7 +322,7 @@ public:
                     handled = true;
                     break;
                 case Key::kRight:
-                    if (auto *item = dynamic_cast<MenuItem*>(cellAtIndex(highlightedIndex()))) {
+                    if (auto *item = dynamic_cast<MenuItemWidget*>(cellAtIndex(highlightedIndex()))) {
                         if (!item->submenu()) {
                             break;  // not a submenu item, ignore
                         }
@@ -446,11 +436,11 @@ private:
 struct MenuUITK::Impl
 {
     struct ItemData {
-        MenuItem* item;  // this acts as a reference (but we can't use a reference b/c no copy constructor)
+        MenuItemWidget* item;  // this acts as a reference (but we can't use a reference b/c no copy constructor)
         std::function<void()> onSelected;
     };
 
-    std::vector<MenuItem*> items;  // we own these
+    std::vector<MenuItemWidget*> items;  // we own these
     std::unordered_map<MenuId, ItemData> id2item;
     std::function<void()> onClose;
     std::function<void()> onCancelParentMenu;  // this is not exposed
@@ -480,14 +470,15 @@ struct MenuUITK::Impl
         return nullptr;
     }
 
-    void insertItem(int index, MenuItem *item, MenuId id, std::function<void()> onItem)
+    void insertItem(int index, MenuItemWidget*item, MenuId id, std::function<void()> onItem)
     {
-        item->setText(removeUnderscores(item->text()));
+        index = std::min(index, int(this->items.size()));
+        item->setText(removeMenuItemMnemonics(item->text()));
         this->id2item[id] = Impl::ItemData{item, onItem};
         this->items.insert(this->items.begin() + index, item);
     }
 
-    void addItem(MenuItem *item, MenuId id, std::function<void()> onItem)
+    void addItem(MenuItemWidget*item, MenuId id, std::function<void()> onItem)
     {
         insertItem(int(this->items.size()), item, id, onItem);
     }
@@ -537,6 +528,8 @@ void MenuUITK::clear()
     mImpl->items.clear();
     mImpl->id2item.clear();
 }
+
+int MenuUITK::size() const { return int(mImpl->items.size()); }
 
 void MenuUITK::addItem(const std::string& text, MenuId id,
                        const ShortcutKey& shortcut)
@@ -592,14 +585,26 @@ void MenuUITK::insertSeparator(int index)
     mImpl->insertItem(index, new SeparatorMenuItem(), kInvalidId, nullptr);
 }
 
+void MenuUITK::removeItem(int index)
+{
+    if (index >= 0 && index < int(mImpl->items.size())) {
+        if (mImpl->listView) {
+            mImpl->listView->removeCellAtIndex(index);
+        }
+        delete mImpl->items[index];
+        mImpl->items.erase(mImpl->items.begin() + index);
+    }
+}
+
 void MenuUITK::removeItem(MenuId id)
 {
     auto it = mImpl->id2item.find(id);
     if (it != mImpl->id2item.end()) {
         for (auto itemsIt = mImpl->items.begin();  itemsIt != mImpl->items.end();  ++itemsIt) {
             if (it->second.item == *itemsIt) {
-                mImpl->items.erase(itemsIt);
                 mImpl->id2item.erase(it);
+                int index = int(itemsIt - mImpl->items.begin());
+                removeItem(index); // changes mImpl->items, so invalidates itemsIt
                 return;
             }
         }
@@ -612,13 +617,50 @@ Menu* MenuUITK::removeMenu(const std::string& text)
     for (auto it = mImpl->items.begin();  it != mImpl->items.end();  ++it) {
         if ((*it)->submenu() && (*it)->text() == text) {
             Menu *menu = (*it)->removeSubmenu();
-            mImpl->items.erase(it);
+            removeItem(int(it - mImpl->items.begin()));
         }
     }
     return nullptr;
 }
 
-Menu* MenuUITK::menu(const std::string& text) const
+MenuId MenuUITK::itemIdAt(int index) const
+{
+    if (index >= 0 && index < int(mImpl->items.size())) {
+        auto *item = mImpl->items[index];
+        for (auto it = mImpl->id2item.begin(); it != mImpl->id2item.end(); ++it) {
+            if (it->second.item == item) {
+                return it->first;
+            }
+        }
+    }
+    return kInvalidId;
+}
+
+bool MenuUITK::isSubmenuAt(int index) const
+{
+    if (index >= 0 && index < int(mImpl->items.size())) {
+        return (mImpl->items[index]->submenu() != nullptr);
+    }
+    return false;
+}
+
+bool MenuUITK::isSeparatorAt(int index) const
+{
+    if (index >= 0 && index < int(mImpl->items.size())) {
+        return mImpl->items[index]->isSeparator();
+    }
+    return false;
+}
+
+Menu* MenuUITK::itemMenuAt(int index) const
+{
+    if (index >= 0 && index < int(mImpl->items.size())) {
+        return mImpl->items[index]->submenu();
+    }
+    return nullptr;
+}
+
+Menu* MenuUITK::itemMenu(const std::string& text) const
 {
     for (auto it = mImpl->items.begin();  it != mImpl->items.end();  ++it) {
         if ((*it)->submenu() && (*it)->text() == text) {
@@ -628,10 +670,10 @@ Menu* MenuUITK::menu(const std::string& text) const
     return nullptr;
 }
 
-bool MenuUITK::isSeparator(MenuId id) const
+bool MenuUITK::itemCheckedAt(int index) const
 {
-    if (auto item = mImpl->itemForId(id)) {
-        return item->item->isSeparator();
+    if (index >= 0 && index < int(mImpl->items.size())) {
+        return mImpl->items[index]->checked();
     }
     return false;
 }
@@ -644,6 +686,13 @@ bool MenuUITK::itemChecked(MenuId id) const
     return false;
 }
 
+void MenuUITK::setItemCheckedAt(int index, bool checked)
+{
+    if (index >= 0 && index < int(mImpl->items.size())) {
+        mImpl->items[index]->setChecked(checked);
+    }
+}
+
 MenuUITK::ItemFound MenuUITK::setItemChecked(MenuId id, bool checked)
 {
     if (auto item = mImpl->itemForId(id)) {
@@ -653,12 +702,28 @@ MenuUITK::ItemFound MenuUITK::setItemChecked(MenuId id, bool checked)
     return ItemFound::kNo;
 }
 
+bool MenuUITK::itemEnabledAt(int index) const
+{
+    if (index >= 0 && index < int(mImpl->items.size())) {
+        return mImpl->items[index]->enabled();
+    }
+    return false;
+}
+
+
 bool MenuUITK::itemEnabled(MenuId id) const
 {
     if (auto item = mImpl->itemForId(id)) {
         return item->item->enabled();
     }
     return false;
+}
+
+void MenuUITK::setItemEnabledAt(int index, bool enabled)
+{
+    if (index >= 0 && index < int(mImpl->items.size())) {
+        mImpl->items[index]->setEnabled(enabled);
+    }
 }
 
 MenuUITK::ItemFound MenuUITK::setItemEnabled(MenuId id, bool enabled)
@@ -668,6 +733,14 @@ MenuUITK::ItemFound MenuUITK::setItemEnabled(MenuId id, bool enabled)
         return ItemFound::kYes;
     }
     return ItemFound::kNo;
+}
+
+std::string MenuUITK::itemTextAt(int index) const
+{
+    if (index >= 0 && index < int(mImpl->items.size())) {
+        return mImpl->items[index]->text();
+    }
+    return false;
 }
 
 std::string MenuUITK::itemText(MenuId id) const
@@ -680,10 +753,17 @@ std::string MenuUITK::itemText(MenuId id) const
     return kNoItemText;
 }
 
+void MenuUITK::setItemTextAt(int index, const std::string& text)
+{
+    if (index >= 0 && index < int(mImpl->items.size())) {
+        mImpl->items[index]->setText(removeMenuItemMnemonics(text));
+    }
+}
+
 MenuUITK::ItemFound MenuUITK::setItemText(MenuId id, const std::string& text)
 {
     if (auto item = mImpl->itemForId(id)) {
-        item->item->setText(text);
+        item->item->setText(removeMenuItemMnemonics(text));
         return ItemFound::kYes;
     }
     return ItemFound::kNo;
@@ -812,6 +892,7 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
                 parent->setPopupMenu(nullptr);
                 mImpl->menuWindow->close();
                 mImpl->isShowing = false;
+                // do not clear listView here, it exists until onCloseCallback.
 
                 if (idx >= 0 && idx < int(mImpl->items.size())) {
                     for (auto &kv : mImpl->id2item) {
@@ -872,6 +953,7 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
         list->mouseExited();
 
         mImpl->isShowing = false;  // also here (as well as above), in case cancel() was called
+        mImpl->listView = nullptr;
         mImpl->menuWindow->deleteLater();
         mImpl->menuWindow = nullptr;
 
