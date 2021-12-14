@@ -612,6 +612,19 @@ void MenuUITK::removeItem(MenuId id)
     Application::instance().keyboardShortcuts().remove(id);
 }
 
+Menu* MenuUITK::removeMenu(int index)
+{
+    if (index >= 0 && index < int(mImpl->items.size())) {
+        if (mImpl->listView) {
+            mImpl->listView->removeCellAtIndex(index);
+        }
+        Menu *menu = mImpl->items[index]->submenu();
+        mImpl->items.erase(mImpl->items.begin() + index);
+        return menu;
+    }
+    return nullptr;
+}
+
 Menu* MenuUITK::removeMenu(const std::string& text)
 {
     for (auto it = mImpl->items.begin();  it != mImpl->items.end();  ++it) {
@@ -740,7 +753,7 @@ std::string MenuUITK::itemTextAt(int index) const
     if (index >= 0 && index < int(mImpl->items.size())) {
         return mImpl->items[index]->text();
     }
-    return false;
+    return "";
 }
 
 std::string MenuUITK::itemText(MenuId id) const

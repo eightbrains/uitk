@@ -173,6 +173,11 @@ void Menu::removeItem(int index)
     mImpl->menu->removeItem(index);
 }
 
+Menu* Menu::removeMenu(int index)
+{
+    return mImpl->menu->removeMenu(index);
+}
+
 bool Menu::isSeparator(int index) const
 {
     return mImpl->menu->isSeparatorAt(index);

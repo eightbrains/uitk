@@ -45,8 +45,7 @@ public:
     Menu* menu(const std::string& name) const override;
     Menu* macosApplicationMenu() const override;
 
-    void setItemEnabled(MenuId itemId, bool enabled) override;
-    void setItemChecked(MenuId itemId, bool checked) override;
+    std::vector<Menu*> menus() const override;
 
     void activateItemId(MenuId itemId) const override;
 

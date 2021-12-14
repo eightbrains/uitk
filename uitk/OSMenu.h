@@ -67,6 +67,8 @@ public:
 
     // Destroys the item, including any submenu it may have
     virtual void removeItem(int index) = 0;
+    // Does NOT destroy the menu, returns ownership to caller
+    virtual Menu* removeMenu(int index) = 0;
 
     virtual MenuId itemIdAt(int index) const = 0;
     virtual Menu* itemMenuAt(int index) const = 0;

@@ -136,6 +136,9 @@ public:
     /// if applicable.
     void removeItem(int index);
 
+    /// Removes the submenu and returns ownership to the caller.
+    Menu* removeMenu(int index);
+
     bool isSeparator(int index) const;
 
     /// Activates the item if it exists in the menu tree and is enabled.

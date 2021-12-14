@@ -34,6 +34,7 @@ public:
     ~MacOSMenu();
 
     void clear() override;
+    int size() const override;
     void addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut) override;
     void addMenu(const std::string& text, Menu *menu) override;
     void addSeparator() override;
@@ -42,21 +43,40 @@ public:
     void insertMenu(int index, const std::string& text, Menu *menu) override;
     void insertSeparator(int index) override;
 
-    void removeItem(MenuId id) override;
-    Menu* removeMenu(const std::string& text) override;  /// return ownership
+    void removeItem(int index) override;
+    // Does NOT destroy the menu, returns ownership to caller
+    Menu* removeMenu(int index) override;
 
-    Menu* menu(const std::string& text) const override;  /// retains ownership
+    MenuId itemIdAt(int index) const override;
+    Menu* itemMenuAt(int index) const override;
 
-    bool isSeparator(MenuId id) const override;
+    bool isSubmenuAt(int index) const override;
+    bool isSeparatorAt(int index) const override;
 
-    bool itemChecked(MenuId id) const override;
-    ItemFound setItemChecked(MenuId id, bool checked) override;
+    bool itemCheckedAt(int index) const override;
+    void setItemCheckedAt(int index, bool checked) override;
 
-    bool itemEnabled(MenuId id) const override;
-    ItemFound setItemEnabled(MenuId id, bool enabled) override;
+    bool itemEnabledAt(int index) const override;
+    void setItemEnabledAt(int index, bool enabled) override;
 
-    std::string itemText(MenuId id) const override;
-    ItemFound setItemText(MenuId id, const std::string& text) override;
+    std::string itemTextAt(int index) const override;
+    void setItemTextAt(int index, const std::string& text) override;
+
+    /*void removeItem(MenuId id);
+    Menu* removeMenu(const std::string& text);  /// return ownership
+
+    Menu* menu(const std::string& text) const;  /// retains ownership
+
+    bool isSeparator(MenuId id) const;
+
+    bool itemChecked(MenuId id) const;
+    ItemFound setItemChecked(MenuId id, bool checked);
+
+    bool itemEnabled(MenuId id) const;
+    ItemFound setItemEnabled(MenuId id, bool enabled);
+
+    std::string itemText(MenuId id) const;
+    ItemFound setItemText(MenuId id, const std::string& text); */
 
     ItemFound activateItem(MenuId id, Window *activeWindow) const override;
 

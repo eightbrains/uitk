@@ -63,7 +63,10 @@ public:
     void insertMenu(int index, const std::string& text, Menu *menu) override;
     void insertSeparator(int index) override;
 
+    /// Removes item at index and destroys all memory, including submenus if applicable.
     void removeItem(int index) override;
+    /// Removes the submenu, but returns ownership to the caller.
+    Menu* removeMenu(int index) override;
 
     MenuId itemIdAt(int index) const override;
 
@@ -98,7 +101,7 @@ public:
     std::string itemText(MenuId id) const;
     ItemFound setItemText(MenuId id, const std::string& text);
 
-    ItemFound activateItem(MenuId id, Window *activeWindow) const;
+    ItemFound activateItem(MenuId id, Window *activeWindow) const override;
 
     Size preferredSize(const LayoutContext& context) const;
 

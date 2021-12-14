@@ -25,6 +25,7 @@
 #include "../Application.h"
 #include "../Menu.h"
 #include "../Window.h"
+#include "../private/Utils.h"
 #include "MacOSMenu.h"
 
 #import <Cocoa/Cocoa.h>
@@ -54,7 +55,14 @@ static MenubarDelegate* gDelegate = [[MenubarDelegate alloc] init];
 
 struct MacOSMenubar::Impl
 {
+    struct MenuInfo
+    {
+        Menu *menu;  // we do not own this
+        std::string title;
+    };
+
     std::unique_ptr<Menu> menubar;
+    std::vector<MenuInfo> menuInfo;
     MenubarDelegate* delegate = nil;
     Menu *appMenu = nullptr; // menubar owns this
 };
@@ -111,16 +119,29 @@ void MacOSMenubar::addMenu(Menu* menu, const std::string& name)
     // name should be. We could dig out the NSMenu from 'menu' here, but addMenu()
     // will take care of setting the 'title' property for us.
     mImpl->menubar->addMenu(name, menu);
+
+    mImpl->menuInfo.push_back({ menu, removeMenuItemMnemonics(name) });
 }
 
 Menu* MacOSMenubar::removeMenu(const std::string& name)
 {
-    return mImpl->menubar->removeMenu(name);
+    auto nameNoMnemonics = removeMenuItemMnemonics(name);
+    for (size_t i = 0;  i < mImpl->menuInfo.size();  ++i) {
+        if (mImpl->menuInfo[i].title == nameNoMnemonics) {
+            return mImpl->menubar->removeMenu(int(i));
+        }
+    }
+    return nullptr;
 }
 
 Menu* MacOSMenubar::menu(const std::string& name) const
 {
-    return mImpl->menubar->menu(name);
+    for (auto &info : mImpl->menuInfo) {
+        if (info.title == name) {
+            return info.menu;
+        }
+    }
+    return nullptr;
 }
 
 Menu* MacOSMenubar::macosApplicationMenu() const
@@ -128,14 +149,14 @@ Menu* MacOSMenubar::macosApplicationMenu() const
     return mImpl->appMenu;
 }
 
-void MacOSMenubar::setItemEnabled(MenuId itemId, bool enabled)
+std::vector<Menu*> MacOSMenubar::menus() const
 {
-    mImpl->menubar->setItemEnabled(itemId, enabled);
-}
-
-void MacOSMenubar::setItemChecked(MenuId itemId, bool checked)
-{
-    mImpl->menubar->setItemChecked(itemId, checked);
+    std::vector<Menu*> mm;
+    mm.reserve(mImpl->menuInfo.size());
+    for (auto &info : mImpl->menuInfo) {
+        mm.push_back(info.menu);
+    }
+    return mm;
 }
 
 void MacOSMenubar::activateItemId(MenuId itemId) const
