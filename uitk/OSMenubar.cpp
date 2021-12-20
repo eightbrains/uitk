@@ -141,9 +141,9 @@ void OSMenubar::addStandardItems(Menu **file, Menu **edit, Menu **window, Menu *
         *file = newMenu("&File");
     }
     idx = (*file)->size();
-    if (addItem(file, StandardItem::kQuit, &idx)) {
+    if (addItem(*file, StandardItem::kQuit, &idx)) {
         --idx;
-        addSeparator(file, &idx);
+        addSeparator(*file, &idx);
     }
 
     idx = 0;
@@ -165,18 +165,30 @@ void OSMenubar::addStandardItems(Menu **file, Menu **edit, Menu **window, Menu *
 
     idx = (*edit)->size();
     addSeparator(*edit, &idx, itemsHas(StandardItem::kPreferences));
-    --idx;
     addItem(*edit, StandardItem::kPreferences, &idx);
 
-    int idx = 0;
+    idx = 0;
     Menu *helpMenu = nullptr;
-    if (!file) {
-        file = &helpMenu;
+    if (!help) {
+        help = &helpMenu;
     }
     if (!*help) {
         *help = newMenu("&Help");
     }
-    addItem(app, StandardItem::kAbout, &idx);
+    addItem(*help, StandardItem::kAbout, &idx);
+
+    idx = 0;
+    Menu* windowMenu = nullptr;
+    if (!window) {
+        window = &windowMenu;
+    }
+    if (!*window) {
+        *window = newMenu("&Window");
+    }
+    idx = (*window)->size() - 1;
+    addSeparator(*window, &idx, (idx >= 0));
+    idx = std::max(0, idx);
+    addItem(*window, StandardItem::kWindowList, &idx);
 #endif
 }
 
@@ -193,7 +205,8 @@ void OSMenubar::addStandardItem(Menu *menu, StandardItem item, int index)
             break;
         case StandardItem::kQuit:
 #if defined(_WIN32) || defined(_WIN64)
-            menu->insertItem(index, "E&xit", MenuId(item), ShortcutKey::kNone);
+            menu->insertItem(index, "E&xit", MenuId(item),
+                             ShortcutKey(KeyModifier::kAlt, Key::kF4));
 #elif defined(__APPLE__)
             menu->insertItem(index, "Quit " + Application::instance().applicationName(), MenuId(item),
                              ShortcutKey(KeyModifier::kCtrl, Key::kQ));
@@ -223,8 +236,12 @@ void OSMenubar::addStandardItem(Menu *menu, StandardItem item, int index)
 #endif
             break;
         case StandardItem::kPreferences:
-            menu->insertItem(index, "&Preferences", MenuId(item),
+#if defined(__APPLE__)
+            menu->insertItem(index, "&Preferences...", MenuId(item),
                              ShortcutKey(KeyModifier::kCtrl, Key::kNumComma));
+#else
+            menu->insertItem(index, "&Preferences...", MenuId(item), ShortcutKey::kNone);
+#endif
             break;
         case StandardItem::kWindowList:
             menu->insertItem(index, "Window List", MenuId(item), ShortcutKey::kNone);

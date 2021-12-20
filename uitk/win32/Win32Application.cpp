@@ -33,6 +33,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <psapi.h>  // for GetProcessImageFileName()
 #include <shellscalingapi.h>  // for SetProcessDpiAwareness()
 #include <wrl.h>
 #include <windows.ui.viewmanagement.h>
@@ -142,7 +143,8 @@ void Win32Application::scheduleLater(Window *w, std::function<void()> f)
 
 std::string Win32Application::applicationName() const
 {
-    WCHAR path[MAX_PATH] = 0;
+    WCHAR path[MAX_PATH];
+    path[0] = 0;
     GetProcessImageFileNameW(NULL, path, MAX_PATH);
     return utf8FromWin32Unicode(path);
 }

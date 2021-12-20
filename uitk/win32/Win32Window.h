@@ -44,6 +44,8 @@ public:
     bool isShowing() const override;
     void show(bool show,
               std::function<void(const DrawContext&)> onWillShow) override;
+    void toggleMinimize() override;
+    void toggleMaximize() override;
 
     void close() override;
 

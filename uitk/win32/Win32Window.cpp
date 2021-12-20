@@ -283,6 +283,25 @@ void Win32Window::show(bool show,
     }
 }
 
+void Win32Window::toggleMinimize()
+{
+    if (IsIconic(mImpl->hwnd)) {
+        ShowWindow(mImpl->hwnd, SW_RESTORE);
+    } else {
+        ShowWindow(mImpl->hwnd, SW_MINIMIZE);
+    }
+}
+
+void Win32Window::toggleMaximize()
+{
+    if (IsZoomed(mImpl->hwnd)) {
+        ShowWindow(mImpl->hwnd, SW_RESTORE);
+    }
+    else {
+        ShowWindow(mImpl->hwnd, SW_MAXIMIZE);
+    }
+}
+
 void Win32Window::close()
 {
     if (mImpl->hwnd) {
