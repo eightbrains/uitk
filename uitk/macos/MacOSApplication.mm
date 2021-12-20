@@ -69,6 +69,7 @@ struct MacOSApplication::Impl
 {
     AppDelegate *delegate;
     std::unique_ptr<MacOSClipboard> clipboard;
+    bool isHidingOtherApplications = false;
 };
 
 MacOSApplication::MacOSApplication()
@@ -138,6 +139,11 @@ void MacOSApplication::scheduleLater(Window* w, std::function<void()> f)
     dispatch_async(dispatch_get_main_queue(), ^{ f(); });
 }
 
+std::string MacOSApplication::applicationName() const
+{
+    return std::string(NSRunningApplication.currentApplication.localizedName.UTF8String);
+}
+
 void MacOSApplication::beep()
 {
     NSBeep();
@@ -166,6 +172,28 @@ void MacOSApplication::exitRun()
     // Note: the docs say that -stop: only exits the run loop after an event is
     //       processed, and that a timer firing is not an event.
     [NSApp stop:nil];
+}
+
+void MacOSApplication::hideApplication()
+{
+    [NSApp hide:NSApp];
+}
+
+void MacOSApplication::hideOtherApplications()
+{
+    [NSApp hideOtherApplications:NSApp];
+    mImpl->isHidingOtherApplications = true;
+}
+
+void MacOSApplication::showOtherApplications()
+{
+    [NSApp unhideAllApplications:NSApp];
+    mImpl->isHidingOtherApplications = false;
+}
+
+bool MacOSApplication::isHidingOtherApplications() const
+{
+    return mImpl->isHidingOtherApplications;
 }
 
 } // namespace uitk

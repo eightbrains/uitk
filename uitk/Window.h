@@ -75,6 +75,8 @@ public:
 
     bool isShowing() const;
     Window* show(bool show);
+    void toggleMinimize();
+    void toggleMaximize();
 
     bool isActive() const;
 

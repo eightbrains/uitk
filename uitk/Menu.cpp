@@ -36,55 +36,6 @@
 
 namespace uitk {
 
-namespace {
-
-struct Item
-{
-    std::string title;
-    int shortcutKeymods;
-    Key shortcutKey;
-};
-
-struct StandardItemInfo
-{
-    std::unordered_map<Menu::StandardItem, Item> item2item;
-
-
-    void add(Menu::StandardItem item, const std::string& title, int keymods = 0, Key key = Key::kNone)
-    {
-        item2item[item] = Item{title, keymods, key};
-    }
-
-    StandardItemInfo()
-    {
-        add(Menu::StandardItem::kCopy, "Copy", KeyModifier::kCtrl, Key::kC);
-        add(Menu::StandardItem::kCut, "Cut", KeyModifier::kCtrl, Key::kX);
-        add(Menu::StandardItem::kPaste, "Paste", KeyModifier::kCtrl, Key::kV);
-        add(Menu::StandardItem::kUndo, "Undo", KeyModifier::kCtrl, Key::kZ);
-        add(Menu::StandardItem::kRedo, "Redo", KeyModifier::kCtrl | KeyModifier::kShift, Key::kZ);
-        add(Menu::StandardItem::kAbout, "About...");
-        add(Menu::StandardItem::kPreferences, "Preferences...");
-#if defined(__APPLE__)
-        add(Menu::StandardItem::kQuit, "Quit", KeyModifier::kCtrl, Key::kQ);
-#elif defined(_WIN32) || defined(_WIN64)  // _WIN32 covers everything except 64-bit ARM
-        add(Menu::StandardItem::kQuit, "Exit", KeyModifier::kCtrl, Key::kQ);
-#else
-        add(Menu::StandardItem::kQuit, "Quit", KeyModifier::kCtrl, Key::kQ);
-#endif
-    }
-};
-StandardItemInfo gStandardItems;
-
-} // namespace
-
-//-----------------------------------------------------------------------------
-
-bool Menu::isShortcutFor(StandardItem item, const KeyEvent& e)
-{
-    auto info = gStandardItems.item2item[item];
-    return (e.keymods == info.shortcutKeymods && e.key == info.shortcutKey);
-}
-
 MenuId Menu::kInvalidId = OSMenu::kInvalidId;
 
 struct Menu::Impl
@@ -122,6 +73,8 @@ OSMenu* Menu::nativeMenu() const
 }
 
 MenuUITK* Menu::menuUitk() const { return mImpl->menuUitk.get(); }
+
+int Menu::size() const { return mImpl->menu->size(); }
 
 void Menu::clear()
 {
@@ -176,6 +129,11 @@ void Menu::removeItem(int index)
 Menu* Menu::removeMenu(int index)
 {
     return mImpl->menu->removeMenu(index);
+}
+
+MenuId Menu::menuId(int index) const
+{
+    return mImpl->menu->itemIdAt(index);
 }
 
 bool Menu::isSeparator(int index) const

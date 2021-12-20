@@ -5,6 +5,7 @@ set(UITK_HEADERS Application.h
                  Checkbox.h
                  Clipboard.h
                  ComboBox.h
+                 CutPasteable.h
                  Events.h
                  Global.h
                  IncDecWidget.h
@@ -50,6 +51,7 @@ set(UITK_SOURCES Application.cpp
                  MenuUITK.cpp
                  NumberEdit.cpp
                  NumericModel.cpp
+                 OSMenubar.cpp
                  ProgressBar.cpp
                  ScrollBar.cpp
                  ScrollView.cpp

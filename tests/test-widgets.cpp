@@ -688,11 +688,24 @@ class Document : public Window
 public:
     static Document* createNewDocument()
     {
-        return new Document();
+        auto *doc = new Document();
+        doc->setOnWindowWillClose([](Window& w) { w.deleteLater(); });
+        return doc;
+    }
+
+    std::string calcTitle() const
+    {
+        static int gWindowNum = 0;
+        ++gWindowNum;
+        std::string suffix;
+        if (gWindowNum > 1) {
+            suffix = std::string(" (") + std::to_string(gWindowNum) + ")";
+        }
+        return std::string("UITK test widgets") + suffix;
     }
 
     Document()
-        : Window("UITK test widgets", 1024, 768)
+        : Window(calcTitle(), 1024, 768)
     {
         setOnMenuItemNeedsUpdate([this](MenuItem& item) {
             switch (item.id()) {
@@ -781,25 +794,33 @@ int main(int argc, char *argv[])
     submenu2->addItem("Second", 41, ShortcutKey::kNone);
     submenu2->addItem("Third", 42, ShortcutKey::kNone);
 
-    app.menubar().newMenu("File")
-        ->addItem("New", kMenuIdNew, ShortcutKey(KeyModifier::kCtrl, Key::kN))
-        ->addSeparator()
-        ->addItem("Quit", kMenuIdQuit, ShortcutKey(KeyModifier::kCtrl, Key::kQ));
-    //app.menubar().newMenu("Edit");
-    app.menubar().newMenu("&Test")
-        ->addItem("&Disabled", kMenuIdDisabled, ShortcutKey(KeyModifier::kCtrl, Key::kD))
-        ->addItem("&Checkable", kMenuIdCheckable, ShortcutKey::kNone)
-        ->addSeparator()
-        ->addItem("这是一个 UTF8 标题", -1, ShortcutKey::kNone)
-        ->addSeparator()
-        ->addMenu("Submenu", submenu)
-        ->addMenu("Submenu 2", submenu2)
-        ->addSeparator()
-        ->addItem("Add Item to Menu", kMenuIdAddItem, ShortcutKey::kNone);
-   app.menubar().newMenu("Empty");
+    auto *fileMenu =
+        app.menubar().newMenu("File")
+        ->addItem("New", kMenuIdNew, ShortcutKey(KeyModifier::kCtrl, Key::kN));
+//            ->addSeparator()
+//            ->addItem("Quit", kMenuIdQuit, ShortcutKey(KeyModifier::kCtrl, Key::kQ));
+    auto *editMenu =
+        app.menubar().newMenu("Edit");
+    auto *testMenu =
+        app.menubar().newMenu("&Test")
+            ->addItem("&Disabled", kMenuIdDisabled, ShortcutKey(KeyModifier::kCtrl, Key::kD))
+            ->addItem("&Checkable", kMenuIdCheckable, ShortcutKey::kNone)
+            ->addSeparator()
+            ->addItem("这是一个 UTF8 标题", -1, ShortcutKey::kNone)
+            ->addSeparator()
+            ->addMenu("Submenu", submenu)
+            ->addMenu("Submenu 2", submenu2)
+            ->addSeparator()
+            ->addItem("Add Item to Menu", kMenuIdAddItem, ShortcutKey::kNone);
+    auto *emptyMenu =
+        app.menubar().newMenu("Empty");
+    auto *windowMenu =
+        app.menubar().newMenu("Window");
     //app.menubar().newMenu("Help");
+    app.menubar().addStandardItems(&fileMenu, &editMenu, &windowMenu, nullptr,
+                                   { OSMenubar::StandardItem::kUndo,
+                                     OSMenubar::StandardItem::kRedo });
 
-    // TODO: this is a memory leak, figure out a way for UITK to manage these
     Document::createNewDocument();
 
     return app.run();

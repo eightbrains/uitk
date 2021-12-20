@@ -23,6 +23,7 @@
 #ifndef UITK_WIDGET_H
 #define UITK_WIDGET_H
 
+#include "CutPasteable.h"
 #include "themes/Theme.h"
 
 #include <memory>
@@ -108,7 +109,12 @@ public:
     bool focused() const;
     void resignKeyFocus() const;
 
-    /// returned by size calculations to indicate that the widget wants
+    /// Objects that support cut and paste should override this and
+    /// return this interface. This is used by the copy/cut/paste menu items.
+    /// The base class action returns nullptr, which disables the items.
+    virtual CutPasteable* asCutPasteable();
+
+    /// Returned by size calculations to indicate that the widget wants
     /// as much space as possible in that dimension.
     static const PicaPt kDimGrow;
 

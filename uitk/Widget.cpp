@@ -326,6 +326,8 @@ void Widget::resignKeyFocus() const
     }
 }
 
+CutPasteable* Widget::asCutPasteable() { return nullptr; }
+
 Widget::MouseState Widget::state() const { return mImpl->state; }
 
 void Widget::setState(MouseState state)

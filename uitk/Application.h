@@ -73,6 +73,10 @@ public:
     /// This function is safe to call on either the main thread or another thread.
     void scheduleLater(Window* w, std::function<void()> f);
 
+    /// Returns the name of the application (used by some MacOS menus, the
+    /// the About dialog, and can be useful for window titles).
+    std::string applicationName() const;
+
     /// Plays a beep, usually when a keypress is rejected. (This is used
     /// to produce the beep when a pressing a keyboard shortcut for a menu
     /// item, and we are not using native OS menus.)
@@ -99,7 +103,7 @@ public:
     Window* activeWindow() const;
 
     /// Returns all windows
-    const std::set<Window*>& windows() const;
+    const std::vector<Window*>& windows() const;
 
     /// Gets the application's clipboard
     Clipboard& clipboard() const;
@@ -120,9 +124,8 @@ public:
     OSApplication& osApplication();  // for internal use
 
 private:
-    // The list of windows; this is a reference so that Window can add
-    // and remove windows.
-    std::set<Window*>& windowSet() const;
+    void addWindow(Window *w);  // does NOT take ownership
+    void removeWindow(Window *w);  // does NOT take ownership
     void setActiveWindow(Window *w);  // does NOT take ownership
 
 private:

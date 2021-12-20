@@ -114,7 +114,8 @@ public:
 
     Menu();
     virtual ~Menu();
-    
+
+    int size() const;
     void clear();
     /// Adds item with the given string. When using native menus on Windows, an ampersand
     /// marks the key navigation for the menu item; on all other platform ampersands are
@@ -139,6 +140,10 @@ public:
     /// Removes the submenu and returns ownership to the caller.
     Menu* removeMenu(int index);
 
+    /// Returns the MenuId of the item at index, or kInvalidId if index is out of
+    /// range or the item is a submenu or separator.
+    MenuId menuId(int index) const;
+
     bool isSeparator(int index) const;
 
     /// Activates the item if it exists in the menu tree and is enabled.
@@ -150,20 +155,6 @@ public:
     MenuUITK* menuUitk() const;
     /// This is for internal use
     OSMenu* nativeMenu() const;
-
-public:
-    enum class StandardItem {
-        kAbout = 1,
-        kQuit,
-        kCopy, kCut, kPaste,
-        kUndo, kRedo,
-        kPreferences
-    };
-
-    /// Returns true if the key event is the shortcut key for the given item
-    /// type (assuming a standard shortcut exists). You should
-    /// not need to call this function if you are using the menus.
-    static bool isShortcutFor(StandardItem item, const KeyEvent& e);
 
 private:
     struct Impl;

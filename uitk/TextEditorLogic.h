@@ -23,6 +23,8 @@
 #ifndef UITK_TEXT_EDITOR_LOGIC_H
 #define UITK_TEXT_EDITOR_LOGIC_H
 
+#include "CutPasteable.h"
+
 #include <functional>
 #include <memory>
 #include <string>
@@ -40,7 +42,7 @@ struct KeyEvent;
 struct MouseEvent;
 struct TextEvent;
 
-class TextEditorLogic
+class TextEditorLogic : public CutPasteable
 {
 public:
     using Index = int;
@@ -150,9 +152,11 @@ public:
     virtual void moveOneLineUp(SelectionMode mode);
     virtual void moveOneLineDown(SelectionMode mode);
     virtual void moveToLocation(Index i, SelectionMode mode);
-    virtual void copyToClipboard();
-    virtual void cutToClipboard();
-    virtual void pasteFromClipboard();
+
+    bool canCopyNow() const override;
+    void copyToClipboard() override;
+    void cutToClipboard() override;
+    void pasteFromClipboard() override;
 
     // Called in response to a change in text due to a mouse or keyboard event.
     // Is not called by insertText, deleteText, or other direct modification

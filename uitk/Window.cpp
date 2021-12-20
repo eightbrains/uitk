@@ -24,7 +24,9 @@
 
 #include "Application.h"
 #include "Events.h"
+#include "OSMenubar.h"
 #include "OSWindow.h"
+#include "Menu.h"
 #include "MenuUITK.h"
 #include "MenubarUITK.h"
 #include "UIContext.h"
@@ -34,6 +36,7 @@
 #include "themes/EmpireTheme.h"
 
 #if defined(__APPLE__)
+#include "macos/MacOSApplication.h"
 #include "macos/MacOSWindow.h"
 #elif defined(_WIN32) || defined(_WIN64)  // _WIN32 covers everything except 64-bit ARM
 #include "win32/Win32Window.h"
@@ -47,6 +50,215 @@
 
 namespace uitk {
 
+// Standard menu handlers
+namespace {
+
+void onMenuRaiseWindow(int n)
+{
+    auto &windowList = Application::instance().windows();
+    if (int(windowList.size()) > n) {
+        windowList[n - 1]->raiseToTop();
+    }
+}
+
+void addStandardMenuHandlers(Window &w)
+{
+    auto onAbout = [](){};
+    auto onQuit = [](){ Application::instance().quit(); };
+    auto onCut = [&w](){
+        if (auto *focus = w.focusWidget()) {
+            if (auto *copyable = focus->asCutPasteable()) {
+                if (copyable->canCopyNow()) {
+                    copyable->cutToClipboard();
+                    focus->setNeedsDraw();
+                }
+            }
+        }
+    };
+    auto onCopy = [&w](){
+        if (auto *focus = w.focusWidget()) {
+            if (auto *copyable = focus->asCutPasteable()) {
+                if (copyable->canCopyNow()) {
+                    copyable->copyToClipboard();
+                }
+            }
+        }
+    };
+    auto onPaste = [&w](){
+        if (auto *focus = w.focusWidget()) {
+            if (auto *copyable = focus->asCutPasteable()) {
+                copyable->pasteFromClipboard();
+                focus->setNeedsDraw();
+            }
+        }
+    };
+    auto onUndo = [](){};
+    auto onRedo = [](){};
+    auto onPreferences = [](){};
+
+    // We can set all the handlers; if they are not in the menu then their
+    // identifiers will never get referenced.
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kAbout), onAbout);
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kQuit), onQuit);
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kCut), onCut);
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kCopy), onCopy);
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kPaste), onPaste);
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kUndo), onUndo);
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kRedo), onRedo);
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kPreferences), onPreferences);
+
+    // We set all 10 callbacks for windows. Most of them will never be called because
+    // those IDs will not even be in the menu, but this way we can guarantee that if they
+    // *are* in the menu, it will work.
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kWindow1), [](){ onMenuRaiseWindow(1); });
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kWindow2), [](){ onMenuRaiseWindow(2); });
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kWindow3), [](){ onMenuRaiseWindow(3); });
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kWindow4), [](){ onMenuRaiseWindow(4); });
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kWindow5), [](){ onMenuRaiseWindow(5); });
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kWindow6), [](){ onMenuRaiseWindow(6); });
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kWindow7), [](){ onMenuRaiseWindow(7); });
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kWindow8), [](){ onMenuRaiseWindow(8); });
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kWindow9), [](){ onMenuRaiseWindow(9); });
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kWindow10), [](){ onMenuRaiseWindow(10); });
+
+    auto onMacMinimize = [](){
+        if (auto *w = Application::instance().activeWindow()) {
+            w->toggleMinimize();
+        }
+    };
+    auto onMacMaximize = [](){
+        if (auto *w = Application::instance().activeWindow()) {
+            w->toggleMaximize();
+        }
+    };
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kMacOSMinimize), onMacMinimize);
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kMacOSZoom), onMacMaximize);
+
+#if defined(__APPLE__)
+    // Note that we might not have an actual MacOSApplication: might be iOS, might
+    // be a non-windowed app.
+    auto onMacHideApp = [](){
+        if (auto *macApp = dynamic_cast<MacOSApplication*>(&Application::instance().osApplication())) {
+            macApp->hideApplication();
+        }
+    };
+    auto onMacHideOtherApps = [](){
+        if (auto *macApp = dynamic_cast<MacOSApplication*>(&Application::instance().osApplication())) {
+            macApp->hideOtherApplications();
+        }
+    };
+    auto onMacShowOtherApps = [](){
+        if (auto *macApp = dynamic_cast<MacOSApplication*>(&Application::instance().osApplication())) {
+            macApp->showOtherApplications();
+        }
+
+    };
+    auto onMacAllToFront = [](){
+        auto *w = Application::instance().activeWindow();
+        for (auto *w : Application::instance().windows()) {
+            w->raiseToTop();
+        }
+        if (w) {
+            w->raiseToTop();
+        }
+    };
+
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kMacOSHideApp), onMacHideApp);
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kMacOSHideOtherApps), onMacHideOtherApps);
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kMacOSShowOtherApps), onMacShowOtherApps);
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kMacOSBringAllToFront), onMacAllToFront);
+#endif // __APPLE__
+}
+
+void updateWindowList()
+{
+    // Find the Window menu. We do not know its name (it might be internationalized),
+    // so search for evidence of the window list.
+    Menu *windowMenu = nullptr;
+    int startIdx = -1;
+    auto menus = Application::instance().menubar().menus();  // returns vector, not vector&
+    // Search from back, since the Window menu is usually the last or second to last
+    for (auto it = menus.rbegin();  it != menus.rend();  ++it) {
+        int nItems = (*it)->size();
+        for (int idx = nItems - 1;  idx >= 0;  --idx) {
+            auto id = (*it)->menuId(idx);
+            if (id == MenuId(OSMenubar::StandardItem::kWindowList)
+                || id == MenuId(OSMenubar::StandardItem::kWindow1)) {
+                startIdx = idx;
+                break;
+            }
+        }
+        if (startIdx >= 0) {
+            windowMenu = *it;
+            break;
+        }
+    }
+
+    // If we have a Window menu, update the window list.
+    // TODO: on macOS this is alphabetized, not in stacking order
+    if (windowMenu) {
+        for (int idx = windowMenu->size() - 1;  idx >= startIdx;  --idx) {
+            windowMenu->removeItem(idx);
+        }
+        auto windows = Application::instance().windows();  // copy
+        for (int idx = 0;  idx < 10 && idx < int(windows.size());  ++idx) {
+            auto *w = windows[windows.size() - 1 - idx];
+            windowMenu->addItem(w->title(), MenuId(int(OSMenubar::StandardItem::kWindow1) + idx),
+                                ShortcutKey::kNone);
+        }
+    }
+}
+
+void updateStandardItem(Window &w, MenuItem *item)
+{
+    switch (item->id()) {
+        case (MenuId)OSMenubar::StandardItem::kCopy:
+            item->setEnabled(w.focusWidget() && w.focusWidget()->asCutPasteable() && w.focusWidget()->asCutPasteable()->canCopyNow());
+            break;
+        case (MenuId)OSMenubar::StandardItem::kCut:
+            item->setEnabled(w.focusWidget() && w.focusWidget()->asCutPasteable() && w.focusWidget()->asCutPasteable()->canCopyNow());
+            break;
+        case (MenuId)OSMenubar::StandardItem::kPaste:
+            // can always paste if a text item is focused
+            item->setEnabled(w.focusWidget() && w.focusWidget()->asCutPasteable());
+            break;
+        case (MenuId)OSMenubar::StandardItem::kUndo:
+            item->setEnabled(false);  // TODO: implement undo
+            break;
+        case (MenuId)OSMenubar::StandardItem::kRedo:
+            item->setEnabled(false);  // TODO: implement redo
+            break;
+        case (MenuId)OSMenubar::StandardItem::kAbout:
+            item->setEnabled(false);  // TODO: implement about dialog
+            break;
+        case (MenuId)OSMenubar::StandardItem::kPreferences:
+            item->setEnabled(false);  // TODO: implement preferences dialog
+            break;
+        case (MenuId)OSMenubar::StandardItem::kWindow1:
+            item->setChecked(true);
+            break;
+        case (MenuId)OSMenubar::StandardItem::kMacOSHideOtherApps:
+#if defined(__APPLE__)
+            if (auto *macApp = dynamic_cast<MacOSApplication*>(&Application::instance().osApplication())) {
+                item->setEnabled(!macApp->isHidingOtherApplications());
+            }
+#endif // __APPLE__
+            break;
+        case (MenuId)OSMenubar::StandardItem::kMacOSShowOtherApps:
+#if defined(__APPLE__)
+            if (auto *macApp = dynamic_cast<MacOSApplication*>(&Application::instance().osApplication())) {
+                item->setEnabled(macApp->isHidingOtherApplications());
+            }
+#endif // __APPLE__
+            break;
+        default:
+            break;
+    }
+}
+
+}  // namespace
+
+//-----------------------------------------------------------------------------
 enum class PopupState { kNone, kShowing, kCancelling };
 
 struct Window::Impl
@@ -103,6 +315,7 @@ Window::Window(const std::string& title, int x, int y, int width, int height,
     mImpl->rootWidget = std::make_unique<Widget>();
     mImpl->rootWidget->setWindow(this);
     mImpl->flags = flags;
+    mImpl->title = title;
 
     auto &menubar = Application::instance().menubar();
     if (!(flags & Flags::kPopup) && !Application::instance().supportsNativeMenus()) {
@@ -120,12 +333,14 @@ Window::Window(const std::string& title, int x, int y, int width, int height,
     mImpl->window = std::make_unique<X11Window>(*this, title, x, y, width, height, flags);
 #endif
 
-    Application::instance().windowSet().insert(this);
+    addStandardMenuHandlers(*this);
+
+    Application::instance().addWindow(this);
 }
 
 Window::~Window()
 {
-    Application::instance().windowSet().erase(this);
+    Application::instance().removeWindow(this);
     mImpl->cancelPopup();
     mImpl->theme.reset();
     mImpl->window.reset();
@@ -156,6 +371,16 @@ Window* Window::show(bool show)
     };
     mImpl->window->show(show, onWillShow);
     return this;
+}
+
+void Window::toggleMinimize()
+{
+    mImpl->window->toggleMinimize();
+}
+
+void Window::toggleMaximize()
+{
+    mImpl->window->toggleMaximize();
 }
 
 bool Window::isActive() const { return mImpl->isActive; }
@@ -619,11 +844,14 @@ void Window::onMenuWillShow()
 {
     assert(Application::instance().activeWindow() == this);
 
-    // TODO: handle standard menu items here
+    updateWindowList();
 
     for (auto* menu : Application::instance().menubar().menus()) {
         MenuIterator it(menu);
         while (!it.done()) {
+            // noop if not a standard item, also allows user to override standard items
+            updateStandardItem(*this, &it.menuItem());
+
             if (mImpl->onMenuItemNeedsUpdate) {
                 mImpl->onMenuItemNeedsUpdate(it.menuItem());
             }
@@ -635,8 +863,6 @@ void Window::onMenuWillShow()
 void Window::onMenuActivated(MenuId id)
 {
     assert((mImpl->flags & int(Flags::kPopup)) == 0);
-
-    // TODO: handle standard menu items here
 
     auto it = mImpl->onMenuActivatedCallbacks.find(id);
     if (it != mImpl->onMenuActivatedCallbacks.end() && it->second) {

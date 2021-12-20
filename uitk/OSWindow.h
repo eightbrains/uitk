@@ -81,6 +81,8 @@ public:
     // A: The lifetime of the DrawContext can only be properly controlled
     //    from the platform side.
     virtual void show(bool show, std::function<void(const DrawContext&)> onWillShow) = 0;
+    virtual void toggleMinimize() = 0;
+    virtual void toggleMaximize() = 0;
 
     virtual void close() = 0;
 
