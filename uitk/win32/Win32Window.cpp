@@ -367,7 +367,7 @@ void Win32Window::postRedraw() const
 
 void Win32Window::raiseToTop() const
 {
-    ShowWindow(mImpl->hwnd, SW_SHOWNORMAL);
+    BringWindowToTop(mImpl->hwnd);
 }
 
 PicaPt Win32Window::borderWidth() const

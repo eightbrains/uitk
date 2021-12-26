@@ -46,6 +46,7 @@
 
 #include <nativedraw.h>
 
+#include <algorithm>
 #include <unordered_map>
 
 namespace uitk {
@@ -53,10 +54,12 @@ namespace uitk {
 // Standard menu handlers
 namespace {
 
+std::vector<Window*> sortedWindowList();
+
 void onMenuRaiseWindow(int n)
 {
-    auto &windowList = Application::instance().windows();
-    if (int(windowList.size()) > n) {
+    auto &windowList = sortedWindowList();
+    if (int(windowList.size()) >= n) {  // n is [1, ...)
         windowList[n - 1]->raiseToTop();
     }
 }
@@ -170,6 +173,27 @@ void addStandardMenuHandlers(Window &w)
 #endif // __APPLE__
 }
 
+// This needs to sort the windows consistently, so that window #3 is always #3.
+// See more detailed comment in Window::onMenuWillShow().
+std::vector<Window*> sortedWindowList()
+{
+    auto titleLess = [](Window* x, Window* y) -> bool {
+        auto &xTitle = x->title();
+        auto &yTitle = y->title();
+        // Don't just use std::string::operator<, we need some way to keep windows with
+        // identical names consistently sorted. The address is not guaranteed to work,
+        // as a new window could show up at an earlier address, but at least it will be
+        // consistent until afterwards.
+        if (xTitle == yTitle) {
+            return &xTitle < &yTitle;
+        }
+        return (xTitle < yTitle);
+    };
+    auto windows = Application::instance().windows();  // returns ref, so we need to copy
+    std::sort(windows.begin(), windows.end(), titleLess);
+    return windows;
+}
+
 void updateWindowList()
 {
     // Find the Window menu. We do not know its name (it might be internationalized),
@@ -195,21 +219,25 @@ void updateWindowList()
     }
 
     // If we have a Window menu, update the window list.
-    // TODO: on macOS this is alphabetized, not in stacking order
+    // On macOS this is alphabetized, Linux has no native menus so we might as well
+    // use the macOS behavior there. Windows is unclear; I've always thought it is
+    // either stacking order / most recently used, but not only is this less usable,
+    // but it's not clear what a good way of associating the window pointer with the
+    // menu id, as it has to be done for all windows, so alphabetized is easier here.
     if (windowMenu) {
         for (int idx = windowMenu->size() - 1;  idx >= startIdx;  --idx) {
             windowMenu->removeItem(idx);
         }
-        auto windows = Application::instance().windows();  // copy
+        auto windows = sortedWindowList();  // copy
         for (int idx = 0;  idx < 10 && idx < int(windows.size());  ++idx) {
-            auto *w = windows[windows.size() - 1 - idx];
+            auto* w = windows[idx];
             windowMenu->addItem(w->title(), MenuId(int(OSMenubar::StandardItem::kWindow1) + idx),
                                 ShortcutKey::kNone);
         }
     }
 }
 
-void updateStandardItem(Window &w, MenuItem *item)
+void updateStandardItem(Window &w, MenuItem *item, MenuId activeWindowId)
 {
     switch (item->id()) {
         case (MenuId)OSMenubar::StandardItem::kCopy:
@@ -235,7 +263,16 @@ void updateStandardItem(Window &w, MenuItem *item)
             item->setEnabled(false);  // TODO: implement preferences dialog
             break;
         case (MenuId)OSMenubar::StandardItem::kWindow1:
-            item->setChecked(true);
+        case (MenuId)OSMenubar::StandardItem::kWindow2:
+        case (MenuId)OSMenubar::StandardItem::kWindow3:
+        case (MenuId)OSMenubar::StandardItem::kWindow4:
+        case (MenuId)OSMenubar::StandardItem::kWindow5:
+        case (MenuId)OSMenubar::StandardItem::kWindow6:
+        case (MenuId)OSMenubar::StandardItem::kWindow7:
+        case (MenuId)OSMenubar::StandardItem::kWindow8:
+        case (MenuId)OSMenubar::StandardItem::kWindow9:
+        case (MenuId)OSMenubar::StandardItem::kWindow10:
+            item->setChecked(item->id() == activeWindowId);
             break;
         case (MenuId)OSMenubar::StandardItem::kMacOSHideOtherApps:
 #if defined(__APPLE__)
@@ -336,11 +373,13 @@ Window::Window(const std::string& title, int x, int y, int width, int height,
     addStandardMenuHandlers(*this);
 
     Application::instance().addWindow(this);
+    updateWindowList();
 }
 
 Window::~Window()
 {
     Application::instance().removeWindow(this);
+    updateWindowList();
     mImpl->cancelPopup();
     mImpl->theme.reset();
     mImpl->window.reset();
@@ -401,12 +440,13 @@ bool Window::close(CloseBehavior ask /*= CloseBehavior::kAllowCancel*/)
     return true;
 }
 
-std::string Window::title() const { return mImpl->title; }
+const std::string& Window::title() const { return mImpl->title; }
 
 Window* Window::setTitle(const std::string& title)
 {
     mImpl->title = title;
     mImpl->window->setTitle(title);
+    updateWindowList();
     return this;
 }
 
@@ -844,13 +884,26 @@ void Window::onMenuWillShow()
 {
     assert(Application::instance().activeWindow() == this);
 
-    updateWindowList();
+    // We cannot change the menus in Window::onMenuWillShow() on systems like Windows,
+    // since it requires the menu to be recreated, but the menu will already be tracking
+    // by the time we know we need to update it. So we can only update the window list
+    // at other points. To avoid doing it too frequently we sort the window list by
+    // title (which is macOS behavior) and update the menus whenever the window
+    // title changes (limited to window creation, destruction, and document needs-save changed
+    // in most applications).
+    auto windowList = sortedWindowList();
+    MenuId activeWindowId = Menu::kInvalidId;
+    for (int i = 0;  i < int(windowList.size());  ++i) {
+        if (windowList[i] == this) {
+            activeWindowId = MenuId(int(OSMenubar::StandardItem::kWindow1) + i);
+        }
+    }
 
     for (auto* menu : Application::instance().menubar().menus()) {
         MenuIterator it(menu);
         while (!it.done()) {
             // noop if not a standard item, also allows user to override standard items
-            updateStandardItem(*this, &it.menuItem());
+            updateStandardItem(*this, &it.menuItem(), activeWindowId);
 
             if (mImpl->onMenuItemNeedsUpdate) {
                 mImpl->onMenuItemNeedsUpdate(it.menuItem());
