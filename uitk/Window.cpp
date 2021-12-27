@@ -58,7 +58,7 @@ std::vector<Window*> sortedWindowList();
 
 void onMenuRaiseWindow(int n)
 {
-    auto &windowList = sortedWindowList();
+    auto windowList = sortedWindowList();
     if (int(windowList.size()) >= n) {  // n is [1, ...)
         windowList[n - 1]->raiseToTop();
     }
@@ -110,9 +110,9 @@ void addStandardMenuHandlers(Window &w)
     w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kRedo), onRedo);
     w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kPreferences), onPreferences);
 
-    // We set all 10 callbacks for windows. Most of them will never be called because
-    // those IDs will not even be in the menu, but this way we can guarantee that if they
-    // *are* in the menu, it will work.
+    // We set all 10 callbacks for windows. Most of them will never be called
+    // because those IDs will not even be in the menu, but this way we can
+    // guarantee that if they *are* in the menu, it will work.
     w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kWindow1), [](){ onMenuRaiseWindow(1); });
     w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kWindow2), [](){ onMenuRaiseWindow(2); });
     w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kWindow3), [](){ onMenuRaiseWindow(3); });
@@ -138,8 +138,8 @@ void addStandardMenuHandlers(Window &w)
     w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kMacOSZoom), onMacMaximize);
 
 #if defined(__APPLE__)
-    // Note that we might not have an actual MacOSApplication: might be iOS, might
-    // be a non-windowed app.
+    // Note that we might not have an actual MacOSApplication: might be iOS,
+    // might be a non-windowed app.
     auto onMacHideApp = [](){
         if (auto *macApp = dynamic_cast<MacOSApplication*>(&Application::instance().osApplication())) {
             macApp->hideApplication();
@@ -180,10 +180,10 @@ std::vector<Window*> sortedWindowList()
     auto titleLess = [](Window* x, Window* y) -> bool {
         auto &xTitle = x->title();
         auto &yTitle = y->title();
-        // Don't just use std::string::operator<, we need some way to keep windows with
-        // identical names consistently sorted. The address is not guaranteed to work,
-        // as a new window could show up at an earlier address, but at least it will be
-        // consistent until afterwards.
+        // Don't just use std::string::operator<, we need some way to keep
+        // windows with identical names consistently sorted. The address is not
+        // guaranteed to work, as a new window could show up at an earlier
+        // address, but at least it will be consistent until afterwards.
         if (xTitle == yTitle) {
             return &xTitle < &yTitle;
         }
@@ -196,8 +196,8 @@ std::vector<Window*> sortedWindowList()
 
 void updateWindowList()
 {
-    // Find the Window menu. We do not know its name (it might be internationalized),
-    // so search for evidence of the window list.
+    // Find the Window menu. We do not know its name (it might be
+    // internationalized), so search for evidence of the window list.
     Menu *windowMenu = nullptr;
     int startIdx = -1;
     auto menus = Application::instance().menubar().menus();  // returns vector, not vector&
@@ -219,11 +219,12 @@ void updateWindowList()
     }
 
     // If we have a Window menu, update the window list.
-    // On macOS this is alphabetized, Linux has no native menus so we might as well
-    // use the macOS behavior there. Windows is unclear; I've always thought it is
-    // either stacking order / most recently used, but not only is this less usable,
-    // but it's not clear what a good way of associating the window pointer with the
-    // menu id, as it has to be done for all windows, so alphabetized is easier here.
+    // On macOS this is alphabetized, Linux has no native menus so we might as
+    // well use the macOS behavior there. Windows is unclear; I've always thought
+    // it is either stacking order / most recently used, but not only is this
+    // less usable, but it's not clear what a good way of associating the window
+    // pointer with the menu id, as it has to be done for all windows,
+    // so alphabetized is easier here.
     if (windowMenu) {
         for (int idx = windowMenu->size() - 1;  idx >= startIdx;  --idx) {
             windowMenu->removeItem(idx);
@@ -372,8 +373,10 @@ Window::Window(const std::string& title, int x, int y, int width, int height,
 
     addStandardMenuHandlers(*this);
 
-    Application::instance().addWindow(this);
-    updateWindowList();
+    if (!(flags & Flags::kPopup)) {
+        Application::instance().addWindow(this);
+        updateWindowList();
+    }
 }
 
 Window::~Window()
@@ -622,9 +625,9 @@ void Window::onMouse(const MouseEvent& eOrig)
         }
         // Some systems (at least macOS) send mouse events outside the window to
         // the parent window of a borderless window. If this happens, convert
-        // move/drag events to the popup and send them on. Unless we are in the menubar,
-        // in which case we need to pass the events in case the user mouses over a
-        // different menu and we need to change the open menu.
+        // move/drag events to the popup and send them on. Unless we are in the
+        // menubar, in which case we need to pass the events in case the user
+        // mouses over a different menu and we need to change the open menu.
         bool isMouseMoveOverMenubar = false;
         if (eOrig.type == MouseEvent::Type::kMove || eOrig.type == MouseEvent::Type::kDrag) {
             isMouseMoveOverMenubar = (mImpl->menubarWidget
@@ -884,13 +887,14 @@ void Window::onMenuWillShow()
 {
     assert(Application::instance().activeWindow() == this);
 
-    // We cannot change the menus in Window::onMenuWillShow() on systems like Windows,
-    // since it requires the menu to be recreated, but the menu will already be tracking
-    // by the time we know we need to update it. So we can only update the window list
-    // at other points. To avoid doing it too frequently we sort the window list by
-    // title (which is macOS behavior) and update the menus whenever the window
-    // title changes (limited to window creation, destruction, and document needs-save changed
-    // in most applications).
+    // We cannot change the menus in Window::onMenuWillShow() on systems like
+    // Windows, since it requires the menu to be recreated, but the menu will
+    // already be tracking by the time we know we need to update it. So we can
+    // only update the window list at other points. To avoid doing it too
+    // frequently we sort the window list by title (which is macOS behavior) and
+    // update the menus whenever the window title changes (limited to window
+    // creation, destruction, and document needs-save changed in most
+    // applications).
     auto windowList = sortedWindowList();
     MenuId activeWindowId = Menu::kInvalidId;
     for (int i = 0;  i < int(windowList.size());  ++i) {

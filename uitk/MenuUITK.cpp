@@ -255,6 +255,11 @@ public:
 
     EventResult mouse(const MouseEvent& e) override
     {
+        // If we are blinking (e.g. double-click) eat the event and ignore it
+        if (mBlinkState != BlinkState::kNone) {
+            return EventResult::kConsumed;
+        }
+
         auto retval = Super::mouse(e);
 
         // Cancel any submenu if we mouseover a disabled item (which does not
@@ -289,6 +294,11 @@ public:
 
     void mouseExited() override
     {
+        // If we are blinking eat the event and ignore it
+        if (mBlinkState != BlinkState::kNone) {
+            return;
+        }
+
         // Since the appearance of the submenu being selected is done via
         // the mouseover code, when a submenu is active, we do not want to set
         // the state away from mouse over if the mouse exits the window,
@@ -304,14 +314,20 @@ public:
 
     void key(const KeyEvent& e) override
     {
+        // If we are blinking eat the event and ignore it
+        if (mBlinkState != BlinkState::kNone) {
+            return;
+        }
+
         bool handled = false;
         if (e.type == KeyEvent::Type::kKeyDown) {
             switch (e.key) {
                 case Key::kUp:
                 case Key::kDown:
-                    // if opened submenu with right, then closed with left, then move up or down
-                    // we don't want the selection created with right to persist (and show two
-                    // highlighted items), so clear.
+                    // if opened submenu with right, then closed with left, then
+                    // move up or down we don't want the selection created with
+                    // right to persist (and show two highlighted items), so
+                    // clear.
                     clearSelection();
                     handled = false;  // want to call super!
                     break;
@@ -412,9 +428,15 @@ public:
                     if (mOnBlinkDone) {
                         mOnBlinkDone();
                     }
-                    mBlinkState = BlinkState::kNone;
                     mBlinkIndex = -1;
                     mOnBlinkDone = nullptr;
+                    // Do not reset blink state, otherwise we can double-click
+                    // on a menu entry with click coming after we have ended,
+                    // but before the menu has disappeared. We want to ignore
+                    // anything after the first click, and we definitely do not
+                    // want to crash by having the menu set a callback just
+                    // before the menu window gets destroyed.
+                    //mBlinkState = BlinkState::kNone;  // do not uncomment!
                     break;
             }
         }
@@ -588,6 +610,18 @@ void MenuUITK::insertSeparator(int index)
 void MenuUITK::removeItem(int index)
 {
     if (index >= 0 && index < int(mImpl->items.size())) {
+        auto id = kInvalidId;
+        for (auto it = mImpl->id2item.begin();  it != mImpl->id2item.end();  ++it) {
+            if (it->second.item == mImpl->items[index]) {
+                id = it->first;
+                mImpl->id2item.erase(it);
+                break;
+            }
+        }
+        if (id != kInvalidId) {
+            Application::instance().keyboardShortcuts().remove(id);
+        }
+
         if (mImpl->listView) {
             mImpl->listView->removeCellAtIndex(index);
         }
@@ -598,6 +632,7 @@ void MenuUITK::removeItem(int index)
 
 void MenuUITK::removeItem(MenuId id)
 {
+    Application::instance().keyboardShortcuts().remove(id);
     auto it = mImpl->id2item.find(id);
     if (it != mImpl->id2item.end()) {
         for (auto itemsIt = mImpl->items.begin();  itemsIt != mImpl->items.end();  ++itemsIt) {
@@ -609,7 +644,6 @@ void MenuUITK::removeItem(MenuId id)
             }
         }
     }
-    Application::instance().keyboardShortcuts().remove(id);
 }
 
 Menu* MenuUITK::removeMenu(int index)

@@ -32,12 +32,48 @@
 
 namespace uitk {
 
+namespace {
+
+static const char kNetWMHidden[] = "_NET_WM_STATE_HIDDEN";
+static const char kNetWMMaximizedVert[] = "_NET_WM_STATE_MAXIMIZED_VERT";
+static const char kNetWMMaximizedHorz[] = "_NET_WM_STATE_MAXIMIZED_HORZ";
+static const int _NET_WM_STATE_REMOVE = 0;
+static const int _NET_WM_STATE_ADD = 1;
+static const int _NET_WM_STATE_TOGGLE = 2;
+
+bool hasWMProperty(Display *d, ::Window xwin, const char *prop)
+{
+    long maxLen = 64;
+    Atom actualType;
+    int actualFormat;
+    unsigned long bytesRemaining, nStates = 0;
+    Atom* states = NULL;
+
+    Atom wmState = XInternAtom(d, "_NET_WM_STATE", False);
+    Atom wmProp = XInternAtom(d, prop, False);
+
+    if (XGetWindowProperty(d, xwin, wmState, 0, maxLen, False /* don't delete*/,
+                           XA_ATOM, &actualType, &actualFormat,
+                           &nStates, &bytesRemaining,
+                           (unsigned char**)&states) == Success) {
+        for (unsigned long i = 0;  i < nStates;  ++i) {
+            if (states[i] == wmProp) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+}  // namespace
+
 static X11Window* gActiveWindow = nullptr;
     
 struct X11Window::Impl {
     IWindowCallbacks& callbacks;
     Display *display;
     ::Window xwindow = 0;
+    int xscreenNo = 0;
     int width;
     int height;
     int flags = 0;
@@ -55,9 +91,9 @@ struct X11Window::Impl {
         XGetWindowAttributes(this->display, this->xwindow, &attrs);
         this->width = attrs.width;
         this->height = attrs.height;
-        int screenNo = XScreenNumberOfScreen(attrs.screen);
+        this->xscreenNo = XScreenNumberOfScreen(attrs.screen);
         X11Application& x11app = static_cast<X11Application&>(Application::instance().osApplication());
-        this->dpi = x11app.dpiForScreen(screenNo);
+        this->dpi = x11app.dpiForScreen(this->xscreenNo);
 
         this->dc = DrawContext::fromX11(this->display, &this->xwindow,
                                         this->width, this->height, this->dpi);
@@ -177,12 +213,53 @@ void X11Window::show(bool show,
     mImpl->showing = show;
 }
 
+void X11Window::toggleMinimize()
+{
+    if (hasWMProperty(mImpl->display, mImpl->xwindow, kNetWMHidden)) {
+        XMapRaised(mImpl->display, mImpl->xwindow);
+    } else {
+        XIconifyWindow(mImpl->display, mImpl->xwindow, mImpl->xscreenNo);
+    }
+}
+
+void X11Window::toggleMaximize()
+{
+    int change;
+    if (hasWMProperty(mImpl->display, mImpl->xwindow, kNetWMMaximizedVert)
+        || hasWMProperty(mImpl->display, mImpl->xwindow, kNetWMMaximizedHorz)) {
+        change = _NET_WM_STATE_REMOVE;
+    } else {
+        change = _NET_WM_STATE_ADD;
+    }
+
+    Atom wmState = XInternAtom(mImpl->display, "_NET_WM_STATE", False);
+    if (wmState == None) {
+        return;
+    }
+
+    XClientMessageEvent e;
+    memset(&e, 0, sizeof(e));
+    e.type = ClientMessage;
+    e.window = mImpl->xwindow;
+    e.message_type = wmState;
+    e.format = 32;
+    e.data.l[0] = change;
+    e.data.l[1] = XInternAtom(mImpl->display, kNetWMMaximizedVert, False);
+    e.data.l[2] = XInternAtom(mImpl->display, kNetWMMaximizedHorz, False);
+    e.data.l[3] = 1;  // 1 = normal applications (2 = pagers and others)
+    e.data.l[4] = 0;
+    XSendEvent(mImpl->display, RootWindow(mImpl->display, mImpl->xscreenNo),
+               False, SubstructureRedirectMask | SubstructureNotifyMask,
+               (XEvent *)&e);
+    XFlush(mImpl->display);
+}
+
 void X11Window::close()
 {
     if (mImpl->xwindow) {
         if (onWindowShouldClose()) {
             onWindowWillClose();
-            mImpl->destroyWindow();
+            XUnmapWindow(mImpl->display, mImpl->xwindow);
         }
     }
 }

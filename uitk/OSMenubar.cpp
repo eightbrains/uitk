@@ -161,10 +161,10 @@ void OSMenubar::addStandardItems(Menu **file, Menu **edit, Menu **window, Menu *
     addItem(*edit, StandardItem::kCut, &ccpIdx);
     addItem(*edit, StandardItem::kCopy, &ccpIdx);
     addItem(*edit, StandardItem::kPaste, &ccpIdx);
-    addSeparator(*edit, &idx, (ccpIdx > idx));
+    addSeparator(*edit, &ccpIdx, (ccpIdx > idx));
 
     idx = (*edit)->size();
-    addSeparator(*edit, &idx, itemsHas(StandardItem::kPreferences));
+    addSeparator(*edit, &idx, itemsHas(StandardItem::kPreferences) && idx > ccpIdx);
     addItem(*edit, StandardItem::kPreferences, &idx);
 
     idx = 0;

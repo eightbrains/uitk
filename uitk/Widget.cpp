@@ -224,6 +224,7 @@ Widget* Widget::removeChild(Widget *w)
     for (auto it = mImpl->children.begin();  it != mImpl->children.end();  ++it) {
         if (*it == w) {
             mImpl->children.erase(it);
+            w->mImpl->parent = nullptr;
             return w;
         }
     }
@@ -238,6 +239,7 @@ void Widget::removeAllChildren()
     for (auto *child : mImpl->children) {
         child->setState(MouseState::kNormal);
         child->resetThemeState();
+        child->mImpl->parent = nullptr;
     }
     mImpl->children.clear();
 }
