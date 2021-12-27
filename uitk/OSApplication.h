@@ -43,6 +43,8 @@ public:
 
     virtual void scheduleLater(Window* w, std::function<void()> f) = 0;
 
+    virtual std::string applicationName() const = 0;
+
     virtual void beep() = 0;
 
     virtual bool isOriginInUpperLeft() const = 0;

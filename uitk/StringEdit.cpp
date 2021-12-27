@@ -179,6 +179,11 @@ void StringEdit::setOnValueChanged(std::function<void(StringEdit*)> onChanged)
     mImpl->onValueChanged = onChanged;
 }
 
+CutPasteable * StringEdit::asCutPasteable()
+{
+    return &mImpl->editor;
+}
+
 Size StringEdit::preferredSize(const LayoutContext& context) const
 {
     return context.theme.calcPreferredTextEditSize(context.dc, context.theme.params().labelFont);

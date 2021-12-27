@@ -223,21 +223,6 @@ bool TextEditorLogic::handleKeyEvent(const KeyEvent& e)
             }
             break;
         default:
-            if (e.keymods == KeyModifier::kCtrl
-                && (int(e.key) >= int(Key::kA) && int(e.key) <= int(Key::kZ))) {
-                // Handle copy/paste in case the menu is not used. If it is used,
-                // the shortcut handling should grab the event and we should not even
-                // see it.
-                if (Menu::isShortcutFor(Menu::StandardItem::kCopy, e)) {
-                    copyToClipboard();
-                } else if (Menu::isShortcutFor(Menu::StandardItem::kCut, e)) {
-                    cutToClipboard();
-                    if (onTextChanged) { onTextChanged(); }
-                } else if (Menu::isShortcutFor(Menu::StandardItem::kPaste, e)) {
-                    pasteFromClipboard();
-                    if (onTextChanged) { onTextChanged(); }
-                }
-            }
             break;
     }
     return true;
@@ -440,6 +425,12 @@ void TextEditorLogic::moveToLocation(Index i, SelectionMode mode)
             }
         }
     }
+}
+
+bool TextEditorLogic::canCopyNow() const
+{
+    auto sel = selection();
+    return (sel.start < sel.end && sel.start >= 0);
 }
 
 void TextEditorLogic::copyToClipboard()

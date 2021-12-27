@@ -23,6 +23,7 @@
 #include "Win32Application.h"
 
 #include "Win32Clipboard.h"
+#include "Win32Utils.h"
 #include "../Window.h"
 #include "../themes/EmpireTheme.h"
 
@@ -32,6 +33,7 @@
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <psapi.h>  // for GetProcessImageFileName()
 #include <shellscalingapi.h>  // for SetProcessDpiAwareness()
 #include <wrl.h>
 #include <windows.ui.viewmanagement.h>
@@ -137,6 +139,14 @@ void Win32Application::scheduleLater(Window *w, std::function<void()> f)
     }
 
     PostMessage((HWND)w->nativeHandle(), kCheckPostedFunctionsMsg, 0, 0);
+}
+
+std::string Win32Application::applicationName() const
+{
+    WCHAR path[MAX_PATH];
+    path[0] = 0;
+    GetProcessImageFileNameW(NULL, path, MAX_PATH);
+    return utf8FromWin32Unicode(path);
 }
 
 void Win32Application::beep()

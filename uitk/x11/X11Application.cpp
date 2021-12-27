@@ -40,6 +40,16 @@
 #include <mutex>
 #include <unordered_map>
 
+// How do we get the binary name? argv[0] may actually be null or incorrect
+// (assuming someone is being nasty or ignoring the Posix convention with an
+// execve(pathToBinary, NULL, NULL)). The BSDs have get getprogname() and
+// GNU libc has the program_invocation_name global. However,
+// program_invocation_name gives the full path (basically, argv[0]), which is
+// actually not what we want for this. __progname gives just the binary name.
+// This is non-standard, but seems well-supported.
+extern char *__progname;
+const char *gBinaryName = __progname;
+
 namespace {
 static const char *kDB_XftDPI = "Xft.dpi";
 static const char *kDB_XftDPI_alt = "Xft.Dpi";
@@ -271,6 +281,11 @@ void X11Application::setExitWhenLastWindowCloses(bool exits)
 {
     // Do nothing, this is pretty much always true on Linux, as there would
     // be no way to open a new window after the last one closes.
+}
+
+std::string X11Application::applicationName() const
+{
+    return std::string(gBinaryName);
 }
 
 void X11Application::beep()

@@ -513,6 +513,16 @@ void MacOSWindow::show(bool show, std::function<void(const DrawContext&)> onWill
     }
 }
 
+void MacOSWindow::toggleMinimize()
+{
+    [mImpl->window miniaturize:NSApp];
+}
+
+void MacOSWindow::toggleMaximize()
+{
+    [mImpl->window zoom:NSApp];
+}
+
 void MacOSWindow::close()
 {
     if (mImpl->contentView.inEvent) {

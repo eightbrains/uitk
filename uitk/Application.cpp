@@ -39,6 +39,7 @@
 #endif
 
 #include <assert.h>
+#include <algorithm>
 
 namespace uitk {
 
@@ -50,7 +51,7 @@ struct Application::Impl
     std::shared_ptr<Theme> theme;
     std::unique_ptr<OSMenubar> menubar;
     std::unique_ptr<Shortcuts> shortcuts;
-    std::set<Window*> windows;  // we do not own these
+    std::vector<Window*> windows;  // we do not own these
     Window* activeWindow = nullptr;  // we do not own this
 };
 Application* Application::Impl::instance = nullptr;
@@ -118,6 +119,11 @@ bool Application::quit()
 void Application::scheduleLater(Window* w, std::function<void()> f)
 {
     return mImpl->osApp->scheduleLater(w, f);
+}
+
+std::string Application::applicationName() const
+{
+    return mImpl->osApp->applicationName();
 }
 
 void Application::beep()
@@ -203,18 +209,36 @@ void Application::onSystemThemeChanged()
     }
 }
 
-std::set<Window*>& Application::windowSet() const
+const std::vector<Window*>& Application::windows() const { return mImpl->windows; }
+
+void Application::addWindow(Window *w)
 {
-    return mImpl->windows;
+    auto it = std::find(mImpl->windows.begin(), mImpl->windows.end(), w);
+    if (it == mImpl->windows.end()) {
+        mImpl->windows.push_back(w);
+    }
 }
 
-const std::set<Window*>& Application::windows() const { return mImpl->windows; }
+void Application::removeWindow(Window *w)
+{
+    auto it = std::find(mImpl->windows.begin(), mImpl->windows.end(), w);
+    if (it != mImpl->windows.end()) {
+        mImpl->windows.erase(it);
+    }
+}
 
 Window* Application::activeWindow() const { return mImpl->activeWindow; }
 
 void Application::setActiveWindow(Window *w)
 {
     mImpl->activeWindow = w;
+    if (mImpl->windows.size() >= 2 && mImpl->windows.back() != w) {
+        auto it = std::find(mImpl->windows.begin(), mImpl->windows.end(), w);
+        if (it != mImpl->windows.end()) {
+            mImpl->windows.erase(it);
+            mImpl->windows.push_back(w);
+        }
+    }
 }
 
 } // namespace uitk

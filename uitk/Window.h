@@ -75,6 +75,8 @@ public:
 
     bool isShowing() const;
     Window* show(bool show);
+    void toggleMinimize();
+    void toggleMaximize();
 
     bool isActive() const;
 
@@ -90,7 +92,7 @@ public:
     /// callback. (Delete is not safe, as it may delete lambda that is executing.)
     void deleteLater();
 
-    std::string title() const;
+    const std::string& title() const;
     Window* setTitle(const std::string& title);
 
     /// Resizes the window so that the content rect is of the specified size.

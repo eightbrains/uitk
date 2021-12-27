@@ -40,6 +40,39 @@ public:
     OSMenubar(const OSMenubar&) = delete;
     virtual ~OSMenubar() {}
 
+    enum class StandardItem : MenuId {
+        kAbout = 65000,  // can increase this if MenuId becomes 32-bit
+        kQuit,
+        kCut, kCopy, kPaste,
+        kUndo, kRedo,
+        kPreferences,
+        kWindowList,  /// gets converted into kWindow1 ... kWindowN internally
+
+        kMacOSHideApp, kMacOSHideOtherApps, kMacOSShowOtherApps, // app menu
+        kMacOSMinimize, kMacOSZoom, kMacOSBringAllToFront, // window menu
+
+        /// These are automatically added and removed, do not use
+        kWindow1, kWindow2, kWindow3, kWindow4, kWindow5,
+        kWindow6, kWindow7, kWindow8, kWindow9, kWindow10
+    };
+
+    /// Adds the standard menu items (Quit, About..., Preferences..., etc.)
+    /// in the places appropriate for the current platform. A vector of specific
+    /// items to exclude can be passed as the final argument. While most apps
+    /// will want all of them, apps without a configuration panel will not want
+    /// kPreferences, for instance. The menus are passed by reference. If the
+    /// pointer is null, or the value being pointed to is null, the menu will be
+    /// created if needed, and the value returned (if the pointer is non-null.
+    /// Note that not all menus will be used on all platforms (e.g. macOS puts
+    /// About in the app menu, not help). On macOS, this function will fully
+    /// populate the application menu.
+    void addStandardItems(Menu **file, Menu **edit, Menu **window, Menu **help,
+                          const std::vector<StandardItem>& excluded = {});
+
+    /// Adds the item to the menu. This is called by addStandardItems(), but
+    /// is useful if you want the item but in a different location.
+    void addStandardItem(Menu *menu, StandardItem item, int index);
+
     /// Creates a new Menu and adds to the menubar. Retains ownership.
     virtual Menu* newMenu(const std::string& name) = 0;
 

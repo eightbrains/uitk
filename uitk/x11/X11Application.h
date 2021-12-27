@@ -43,6 +43,8 @@ public:
 
     void scheduleLater(Window* w, std::function<void()> f) override;
 
+    std::string applicationName() const override;
+
     void beep() override;
 
     bool isOriginInUpperLeft() const override;

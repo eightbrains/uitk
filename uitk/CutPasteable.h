@@ -20,50 +20,21 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_WIN32_APPLICATION_H
-#define UITK_WIN32_APPLICATION_H
-
-#include "../OSApplication.h"
-
-#include <memory>
+#ifndef UITK_CUTPASTABLE_H
+#define UITK_CUTPASTABLE_H
 
 namespace uitk {
 
-class Win32Window;
-
-class Win32Application : public OSApplication
+class CutPasteable
 {
 public:
-    Win32Application();
-    ~Win32Application();
+    virtual ~CutPasteable() {}
 
-    void setExitWhenLastWindowCloses(bool exits) override;
-    int run() override;
-    void exitRun() override;
-
-    void scheduleLater(Window* w, std::function<void()> f) override;
-
-    std::string applicationName() const override;
-
-    void beep() override;
-
-    bool isOriginInUpperLeft() const override;
-    bool shouldHideScrollbars() const override;
-    bool platformHasMenubar() const override;
-
-    Clipboard& clipboard() const override;
-
-    Theme::Params themeParams() const override;
-
-public:
-    // HWND is void* to keep Windows headers out
-    void registerWindow(void* hwnd, Win32Window* w);
-    void unregisterWindow(void* hwnd);
-
-private:
-    struct Impl;
-    std::unique_ptr<Impl> mImpl;
+    virtual bool canCopyNow() const = 0;
+    virtual void copyToClipboard() = 0;
+    virtual void cutToClipboard() = 0;
+    virtual void pasteFromClipboard() = 0;
 };
 
-} // namespace uitk
-#endif // UITK_WIN32_APPLICATION_H
+}  // namespace uitk
+#endif // UITK_CUTPASTABLE_H

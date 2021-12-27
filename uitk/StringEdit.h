@@ -47,6 +47,8 @@ public:
     /// single line widgets.
     StringEdit* setAlignment(int alignment);
 
+    CutPasteable * asCutPasteable() override;
+
     Size preferredSize(const LayoutContext& context) const override;
     void layout(const LayoutContext& context) override;
 
