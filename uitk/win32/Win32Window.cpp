@@ -23,7 +23,9 @@
 #include "Win32Window.h"
 
 #include "../Application.h"
+#include "../Cursor.h"
 #include "../Events.h"
+#include "../OSCursor.h"
 #include "Win32Application.h"
 #include "Win32Menubar.h"
 #include "Win32Utils.h"
@@ -141,6 +143,7 @@ struct Win32Window::Impl {
     HWND hwnd = 0;
     Window::Flags::Value flags;
     std::string title;
+    Cursor cursor;
     std::shared_ptr<DrawContext> dc;
     ClickCounter clickCounter;
     bool needsUpdateMenu = false;
@@ -191,7 +194,17 @@ Win32Window::Win32Window(IWindowCallbacks& callbacks,
         wcex.hInstance     = HINST_THISCOMPONENT;
         wcex.hbrBackground = NULL;
         wcex.lpszMenuName  = NULL;
-        wcex.hCursor       = LoadCursor(NULL, IDI_APPLICATION);
+        // If we set a cursor, Windows will reset the cursor back to
+        // this every time the mouse moves, which is annoying if you
+        // want a different cursor. On the other hand, you need the
+        // same code handling the WM_SETCURSOR message anyway, otherwise
+        // the cursor will remain the resize cursor when the mouse moves
+        // over the border and into the client area. I does not seem to
+        // reduce the number of times the message is called, but one can
+        // hope, anyway. (If we did not want to support changing cursors,
+        // we should do wcex.hCursor = LoadCursor(NULL, IDI_APPLICATION)
+        // so that the cursor would be the application cursor.)
+        wcex.hCursor       = NULL;
         wcex.lpszClassName = Impl::wndclass;
         RegisterClassEx(&wcex);
     }
@@ -317,6 +330,19 @@ void Win32Window::setTitle(const std::string& title)
     auto wtitle = win32UnicodeFromUTF8(title);
     SetWindowTextW(mImpl->hwnd, wtitle.c_str());
     mImpl->title = title;
+}
+
+void Win32Window::setCursor(const Cursor& cursor)
+{
+    mImpl->cursor = cursor;
+    updateCursor();
+}
+
+void Win32Window::updateCursor() const
+{
+    if (auto* osCursor = mImpl->cursor.osCursor()) {
+        osCursor->set();
+    }
 }
 
 Rect Win32Window::contentRect() const
@@ -628,6 +654,12 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
         case WM_DISPLAYCHANGE:  // display resolution changed
             w->onResize();
             return 0;  // docs do not say what should be returned
+        case WM_SETCURSOR:
+            if (LOWORD(lParam) == HTCLIENT) {
+                w->updateCursor();
+                return TRUE;  // halt further processing of the cursor change request
+            }
+            return DefWindowProc(hwnd, message, wParam, lParam);
         case WM_MOUSEMOVE:
             w->onMouse(makeMouseEvent(MouseEvent::Type::kMove,
                                       MouseButton::kNone, 0, wParam),

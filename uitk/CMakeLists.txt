@@ -107,12 +107,14 @@ if (APPLE)
 elseif (WIN32)
     list(APPEND UITK_HEADERS win32/Win32Application.h
                              win32/Win32Clipboard.h
+                             win32/Win32Cursor.h
                              win32/Win32Menu.h
                              win32/Win32Menubar.h
                              win32/Win32Utils.h
                              win32/Win32Window.h)
     list(APPEND UITK_SOURCES win32/Win32Application.cpp
                              win32/Win32Clipboard.cpp
+                             win32/Win32Cursor.cpp
                              win32/Win32Menu.cpp
                              win32/Win32Menubar.cpp
                              win32/Win32Utils.cpp

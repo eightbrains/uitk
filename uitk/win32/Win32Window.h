@@ -51,6 +51,8 @@ public:
 
     void setTitle(const std::string& title) override;
 
+    void setCursor(const Cursor& cursor) override;
+
     Rect contentRect() const override;
     OSRect osContentRect() const override;
 
@@ -75,6 +77,7 @@ public:
 
 public:  // these are public so that WndProc (which cannot be a member function) can use them
     ClickCounter& clickCounter();
+    void updateCursor() const;
     bool menubarNeedsUpdate() const;
     void updateMenubar();
 
