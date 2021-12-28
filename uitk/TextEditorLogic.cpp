@@ -24,8 +24,10 @@
 
 #include "Application.h"
 #include "Clipboard.h"
+#include "Cursor.h"
 #include "Events.h"
 #include "Menu.h"
+#include "Window.h"
 
 namespace uitk {
 
@@ -42,6 +44,16 @@ TextEditorLogic::TextEditorLogic()
 
 TextEditorLogic::~TextEditorLogic()
 {
+}
+
+void TextEditorLogic::handleMouseEntered(Window *w)
+{
+    w->setCursor(Cursor::iBeam());
+}
+
+void TextEditorLogic::handleMouseExited(Window *w)
+{
+    w->setCursor(Cursor::arrow());
 }
 
 bool TextEditorLogic::handleMouseEvent(const MouseEvent& e)

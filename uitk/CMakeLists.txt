@@ -5,6 +5,7 @@ set(UITK_HEADERS Application.h
                  Checkbox.h
                  Clipboard.h
                  ComboBox.h
+                 Cursor.h
                  CutPasteable.h
                  Events.h
                  Global.h
@@ -17,6 +18,7 @@ set(UITK_HEADERS Application.h
                  NumberEdit.h
                  NumericModel.h
                  OSApplication.h
+                 OSCursor.h
                  OSMenu.h
                  OSMenubar.h
                  OSWindow.h
@@ -27,6 +29,7 @@ set(UITK_HEADERS Application.h
                  ShortcutKey.h
                  Slider.h
                  SliderLogic.h
+                 StackedWidget.h
                  StringEdit.h
                  StringEditorLogic.h
                  TextEditorLogic.h
@@ -43,6 +46,7 @@ set(UITK_SOURCES Application.cpp
                  Button.cpp
                  Checkbox.cpp
                  ComboBox.cpp
+                 Cursor.cpp
                  IncDecWidget.cpp
                  Label.cpp
                  ListView.cpp
@@ -59,6 +63,7 @@ set(UITK_SOURCES Application.cpp
                  ShortcutKey.cpp
                  Slider.cpp
                  SliderLogic.cpp
+                 StackedWidget.cpp
                  StringEdit.cpp
                  StringEditorLogic.cpp
                  TextEditorLogic.cpp
@@ -86,11 +91,13 @@ list(APPEND UITK_LIBS nativedraw)
 if (APPLE)
     list(APPEND UITK_HEADERS macos/MacOSApplication.h
                              macos/MacOSClipboard.h
+                             macos/MacOSCursor.h
                              macos/MacOSMenu.h
                              macos/MacOSMenubar.h
                              macos/MacOSWindow.h)
     list(APPEND UITK_SOURCES macos/MacOSApplication.mm
                              macos/MacOSClipboard.mm
+                             macos/MacOSCursor.mm
                              macos/MacOSMenu.mm
                              macos/MacOSMenubar.mm
                              macos/MacOSWindow.mm)

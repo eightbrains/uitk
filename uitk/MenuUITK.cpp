@@ -904,7 +904,7 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
     mImpl->listView = list;
     mImpl->menuWindow->addChild(list);
 
-    mImpl->menuWindow->setOnWindowWillShow([this, list, id](Window& w, const LayoutContext& context) {
+    mImpl->menuWindow->setOnWindowLayout([this, list, id](Window& w, const LayoutContext& context) {
         auto contentSize = list->preferredContentSize(context);
         auto vertMargin = context.theme.calcPreferredMenuVerticalMargin();
         list->setFrame(Rect(PicaPt::kZero, vertMargin, contentSize.width, contentSize.height));

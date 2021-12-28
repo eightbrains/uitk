@@ -50,6 +50,9 @@ struct Widget::Impl {
 
     void updateDrawsFrame(const Widget *w)
     {
+        int userSetBorderMask = (int(Theme::WidgetStyle::kBorderWidthSet) |
+                                 int(Theme::WidgetStyle::kBorderColorSet) |
+                                 int(Theme::WidgetStyle::kBorderRadiusSet));
         // typeid() == typeid() should be fast, see
         //     https://stackoverflow.com/a/13894738/218226
         // but it is (hopefully) faster to only do the check when a
@@ -57,7 +60,7 @@ struct Widget::Impl {
         // true Widget with a frame (but it should still work).
         // Note that typeid(w) == typeid(Widget*) is always true, and is not
         // a usable check that we are an actual base class.
-        if (typeid(*w) == typeid(Widget)) {
+        if (typeid(*w) == typeid(Widget) || (this->styles[0].flags & userSetBorderMask)) {
             this->drawsFrame = true;
         }
     }

@@ -37,6 +37,7 @@ struct Point;
 struct KeyEvent;
 struct MouseEvent;
 struct LayoutContext;
+class Cursor;
 class MenuItem;
 class MenuUITK;
 class OSMenubar;
@@ -95,6 +96,26 @@ public:
     const std::string& title() const;
     Window* setTitle(const std::string& title);
 
+    // Design note:
+    // Q: Why not have the Widget own a cursor, and automatically set it
+    //    in mouseEntered() and mouseExited()?
+    // A: This works fine for simplet widgets, like a numeric control, but
+    //    it does not work well for something like a vector graphics canvas,
+    //    where the cursor changes to sizing controls at the edges and corners
+    //    of an object. In this case, the canvas widget would need to set
+    //    the cursor of the object, which would have to set it on the window
+    //    anyway, so why not make it clearer? Besides, mouseEntered() and
+    //    mouseExited() do other things besides setting the cursor, so if
+    //    inherited classes wanted to override the behavior they would not
+    //    be able to do so easily. This way offers more flexibility, and it
+    //    not that difficult for the few widgets that need a different cursor.
+
+    /// Sets the cursor for the window. The usual pattern is for widgets that
+    /// want a particular cursor to set that cursor in Widget::mouseEntered()
+    /// and reset in Widget::mouseExited(), or for specific areas within the
+    /// widget, in the mouse move event.
+    void setCursor(const Cursor& cursor);
+
     /// Resizes the window so that the content rect is of the specified size.
     /// The actual window may be larger due to the title bar (if the size of the
     /// window includes the title bar on the OS) and the menubar (if a menubar is
@@ -121,8 +142,13 @@ public:
     /// platforms where UITK draws the menus it is offset by the size of the menu.
     const Rect& contentRect() const;
 
-    /// Adds the child to the Window. Returns pointer this window.
-    Window* addChild(Widget *child);
+    /// Takes ownership of the widget and adds as a child to the Window.
+    /// Returns pointer the child added so that adding and assignment for later
+    /// can be in one convenient step. If setOnWindowLayout() has set a
+    /// callback function that will be called when the window resizes, otherwise
+    /// all the children will be set to the visible area of the window (obviously
+    /// this is most useful if there is only one child).
+    Widget* addChild(Widget *child);
 
     /// Schedules a redraw.
     void setNeedsDraw();
@@ -162,10 +188,11 @@ public:
     /// in a big switch statement.
     void setOnMenuActivated(MenuId id, std::function<void()> onActivated);
 
-    void setOnWindowWillShow(std::function<void(Window& w, const LayoutContext& context)> onWillShow);
-    void setOnWindowDidDeactivate(std::function<void(Window& w)> onDidDeactivate);
-    void setOnWindowShouldClose(std::function<bool(Window& w)> onShouldClose);
-    void setOnWindowWillClose(std::function<void(Window& w)> onWillClose);
+    void setOnWindowWillShow(std::function<void(Window&)> onWillShow);
+    void setOnWindowLayout(std::function<void(Window&, const LayoutContext&)> onLayout);
+    void setOnWindowDidDeactivate(std::function<void(Window&)> onDidDeactivate);
+    void setOnWindowShouldClose(std::function<bool(Window&)> onShouldClose);
+    void setOnWindowWillClose(std::function<void(Window&)> onWillClose);
 
 public:
     /// Directs mouse events directly to the widget specified until mouse up.

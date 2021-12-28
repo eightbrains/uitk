@@ -53,6 +53,8 @@ public:
     void layout(const LayoutContext& context) override;
 
     EventResult mouse(const MouseEvent& e) override;
+    void mouseEntered() override;
+    void mouseExited() override;
     void key(const KeyEvent& e) override;
     void text(const TextEvent& e) override;
     void keyFocusEnded() override;

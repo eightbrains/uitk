@@ -20,59 +20,38 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_MACOS_WINDOW_H
-#define UITK_MACOS_WINDOW_H
+#ifndef UITK_STACKED_WIDGET_H
+#define UITK_STACKED_WIDGET_H
 
-#include "../OSWindow.h"
-#include "../Window.h"
+#include "Widget.h"
 
 namespace uitk {
 
-class MacOSWindow : public OSWindow
+/// This holds a "stack" of widgets (often called "panels") on top of each
+/// other, but only displays one child at a time. When a widget becomes
+/// visible, it is resized to the size of the owning stacked widget.
+class StackedWidget : public Widget
 {
+    using Super = Widget;
 public:
-    MacOSWindow(IWindowCallbacks& callbacks,
-                const std::string& title, int width, int height,
-                Window::Flags::Value flags);
-    MacOSWindow(IWindowCallbacks& callbacks,
-                const std::string& title, int x, int y, int width, int height,
-                Window::Flags::Value flags);
-    virtual ~MacOSWindow();
+    static constexpr int kNoIndex = -1;
 
-    bool isShowing() const override;
-    void show(bool show, std::function<void(const DrawContext&)> onWillShow) override;
-    void toggleMinimize() override;
-    void toggleMaximize() override;
+    StackedWidget();
+    ~StackedWidget();
 
-    void close() override;
+    Widget* addPanel(Widget *w);
+    Widget* removePanel(Widget *w);
 
-    void setTitle(const std::string& title) override;
+    int indexShowing() const;
+    /// Sets the child that is displayed. Set to kNoIndex to display no child.
+    void setIndexShowing(int index);
 
-    void setCursor(const Cursor& cursor) override;
+    void layout(const LayoutContext& context) override;
 
-    Rect contentRect() const override;
-    OSRect osContentRect() const override;
-
-    float dpi() const override;
-    OSRect osFrame() const override;
-    void setOSFrame(float x, float y, float width, float height) override;
-
-    PicaPt borderWidth() const override;
-
-    void postRedraw() const override;
-
-    void raiseToTop() const override;
-
-    Point currentMouseLocation() const override;
-
-    void* nativeHandle() override;
-    IWindowCallbacks& callbacks() override;
-
-public:
+private:
     struct Impl;
     std::unique_ptr<Impl> mImpl;
 };
 
 }  // namespace uitk
-#endif // UITK_OSWINDOW_H
-
+#endif // UITK_STACKED_WIDGET_H
