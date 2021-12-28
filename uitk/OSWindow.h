@@ -36,6 +36,8 @@ struct KeyEvent;
 struct MouseEvent;
 struct TextEvent;
 
+class Cursor;
+
 class IWindowCallbacks
 {
 public:
@@ -87,6 +89,8 @@ public:
     virtual void close() = 0;
 
     virtual void setTitle(const std::string& title) = 0;
+
+    virtual void setCursor(const Cursor& cursor) = 0;
 
     // This is the drawable rectangle. It may or may not have upper left at (0, 0)
     virtual Rect contentRect() const = 0;

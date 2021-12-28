@@ -23,7 +23,9 @@
 #include "X11Window.h"
 
 #include "../Application.h"
+#include "../Cursor.h"
 #include "../Events.h"
+#include "../OSCursor.h"
 #include "X11Application.h"
 
 #include <string.h>  // for memset()
@@ -275,6 +277,13 @@ void X11Window::setTitle(const std::string& title)
                     XInternAtom(mImpl->display, "UTF8_STRING", False),
                     8, PropModeReplace, (const unsigned char*)title.c_str(),
                     int(title.size()));
+}
+
+void X11Window::setCursor(const Cursor& cursor)
+{
+    if (auto *osCursor = cursor.osCursor()) {
+        osCursor->set((void*)mImpl->xwindow, mImpl->display);
+    }
 }
 
 Rect X11Window::contentRect() const

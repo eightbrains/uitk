@@ -20,35 +20,38 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
+#ifndef UITK_OS_CURSOR_H
+#define UITK_OS_CURSOR_H
 
-#define ND_NAMESPACE uitk
-
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
-
-#include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "Clipboard.h"
-#include "ComboBox.h"
 #include "Cursor.h"
-#include "Events.h"
-#include "Label.h"
-#include "ListView.h"
-#include "NumberEdit.h"
-#include "Menu.h"
-#include "OSMenubar.h"
-#include "ProgressBar.h"
-#include "ScrollView.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
-#include "StackedWidget.h"
-#include "StringEdit.h"
-#include "UIContext.h"
-#include "Window.h"
 
-#include <nativedraw.h>
+namespace uitk {
 
-#endif // UITK_H
+class OSCursor
+{
+public:
+    enum class System {
+        kArrow = 0,
+        kIBeam,
+        kCrosshair,
+        kOpenHand,
+        kClosedHand,
+        kPointingHand,
+        kResizeLeftRight,
+        kResizeUpDown,
+        kResizeNWSE,
+        kResizeNESW,
+        kForbidden,
+        kLast
+    };
+
+    virtual ~OSCursor() {}
+
+    // The cursor functions on Windows and macOS do not require a window or
+    // window system, but some platforms like X11 do. Systems that do not
+    // require these parameters should use the defaults.
+    virtual void set(void *window = nullptr, void *windowSystem = nullptr) const = 0;
+};
+
+}  // namespace uitk
+#endif // UITK_OS_CURSOR_H

@@ -27,7 +27,9 @@
 #include "MacOSWindow.h"
 
 #include "../Application.h"
+#include "../Cursor.h"
 #include "../Events.h"
+#include "../OSCursor.h"
 #include <nativedraw.h>
 
 #import <Cocoa/Cocoa.h>
@@ -420,6 +422,7 @@ struct MacOSWindow::Impl {
     UITKWindowDelegate* winDelegate;  // NSWindow doesn't retain the delegate
     ContentView* contentView;
     Window::Flags::Value flags;
+    Cursor cursor;
 };
 
 MacOSWindow::MacOSWindow(IWindowCallbacks& callbacks,
@@ -545,6 +548,14 @@ void MacOSWindow::close()
 void MacOSWindow::setTitle(const std::string& title)
 {
     mImpl->window.title = [NSString stringWithUTF8String:title.c_str()];
+}
+
+void MacOSWindow::setCursor(const Cursor& cursor)
+{
+    mImpl->cursor = cursor;
+    if (auto *osCursor = mImpl->cursor.osCursor()) {
+        osCursor->set();
+    }
 }
 
 Rect MacOSWindow::contentRect() const

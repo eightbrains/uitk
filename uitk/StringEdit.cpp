@@ -196,6 +196,18 @@ void StringEdit::layout(const LayoutContext& context)
                                                                    context.theme.params().labelFont);
 }
 
+void StringEdit::mouseEntered()
+{
+    Super::mouseEntered();
+    mImpl->editor.handleMouseEntered(window());
+}
+
+void StringEdit::mouseExited()
+{
+    Super::mouseExited();
+    mImpl->editor.handleMouseExited(window());
+}
+
 Widget::EventResult StringEdit::mouse(const MouseEvent& e)
 {
     bool consumed = false;

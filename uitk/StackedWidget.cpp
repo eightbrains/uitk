@@ -20,35 +20,69 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
-
-#define ND_NAMESPACE uitk
-
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
-
-#include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "Clipboard.h"
-#include "ComboBox.h"
-#include "Cursor.h"
-#include "Events.h"
-#include "Label.h"
-#include "ListView.h"
-#include "NumberEdit.h"
-#include "Menu.h"
-#include "OSMenubar.h"
-#include "ProgressBar.h"
-#include "ScrollView.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
 #include "StackedWidget.h"
-#include "StringEdit.h"
-#include "UIContext.h"
-#include "Window.h"
 
-#include <nativedraw.h>
+#include <algorithm>
 
-#endif // UITK_H
+namespace uitk {
+
+struct StackedWidget::Impl
+{
+    int index = kNoIndex;
+};
+
+StackedWidget::StackedWidget()
+    : mImpl(new Impl())
+{
+}
+
+StackedWidget::~StackedWidget()
+{
+}
+
+Widget* StackedWidget::addPanel(Widget *w)
+{
+    Super::addChild(w);
+    if (children().size() == 1) {
+        setIndexShowing(0);
+    } else {
+        w->setVisible(false);
+    }
+    return w;
+}
+
+Widget* StackedWidget::removePanel(Widget *w)
+{
+    w->setVisible(true);
+    Super::removeChild(w);
+    setIndexShowing(mImpl->index);
+    return w;
+}
+
+int StackedWidget::indexShowing() const { return mImpl->index; }
+
+void StackedWidget::setIndexShowing(int index)
+{
+    auto &panels = children();
+    index = std::min(index, int(panels.size()));
+
+    for (size_t i = 0;  i < panels.size();  ++i) {
+        auto *p = panels[i];
+        if (i == size_t(index)) {
+            p->setVisible(true);
+        } else {
+            p->setVisible(false);
+        }
+    }
+}
+
+void StackedWidget::layout(const LayoutContext& context)
+{
+    auto &panels = children();
+    for (auto *p : panels) {
+        p->setFrame(bounds());
+    }
+    Super::layout(context);
+}
+
+}  // namespace uitk

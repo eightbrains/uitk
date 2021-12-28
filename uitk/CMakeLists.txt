@@ -5,6 +5,7 @@ set(UITK_HEADERS Application.h
                  Checkbox.h
                  Clipboard.h
                  ComboBox.h
+                 Cursor.h
                  CutPasteable.h
                  Events.h
                  Global.h
@@ -17,6 +18,7 @@ set(UITK_HEADERS Application.h
                  NumberEdit.h
                  NumericModel.h
                  OSApplication.h
+                 OSCursor.h
                  OSMenu.h
                  OSMenubar.h
                  OSWindow.h
@@ -27,6 +29,7 @@ set(UITK_HEADERS Application.h
                  ShortcutKey.h
                  Slider.h
                  SliderLogic.h
+                 StackedWidget.h
                  StringEdit.h
                  StringEditorLogic.h
                  TextEditorLogic.h
@@ -43,6 +46,7 @@ set(UITK_SOURCES Application.cpp
                  Button.cpp
                  Checkbox.cpp
                  ComboBox.cpp
+                 Cursor.cpp
                  IncDecWidget.cpp
                  Label.cpp
                  ListView.cpp
@@ -59,6 +63,7 @@ set(UITK_SOURCES Application.cpp
                  ShortcutKey.cpp
                  Slider.cpp
                  SliderLogic.cpp
+                 StackedWidget.cpp
                  StringEdit.cpp
                  StringEditorLogic.cpp
                  TextEditorLogic.cpp
@@ -86,11 +91,13 @@ list(APPEND UITK_LIBS nativedraw)
 if (APPLE)
     list(APPEND UITK_HEADERS macos/MacOSApplication.h
                              macos/MacOSClipboard.h
+                             macos/MacOSCursor.h
                              macos/MacOSMenu.h
                              macos/MacOSMenubar.h
                              macos/MacOSWindow.h)
     list(APPEND UITK_SOURCES macos/MacOSApplication.mm
                              macos/MacOSClipboard.mm
+                             macos/MacOSCursor.mm
                              macos/MacOSMenu.mm
                              macos/MacOSMenubar.mm
                              macos/MacOSWindow.mm)
@@ -100,20 +107,27 @@ if (APPLE)
 elseif (WIN32)
     list(APPEND UITK_HEADERS win32/Win32Application.h
                              win32/Win32Clipboard.h
+                             win32/Win32Cursor.h
                              win32/Win32Menu.h
                              win32/Win32Menubar.h
                              win32/Win32Utils.h
                              win32/Win32Window.h)
     list(APPEND UITK_SOURCES win32/Win32Application.cpp
                              win32/Win32Clipboard.cpp
+                             win32/Win32Cursor.cpp
                              win32/Win32Menu.cpp
                              win32/Win32Menubar.cpp
                              win32/Win32Utils.cpp
                              win32/Win32Window.cpp)
     list(APPEND UITK_LIBS d3d11 d2d1 dwrite shcore WindowsApp)
 elseif (UNIX)  # note that APPLE is UNIX, so need to check that first
+    list(APPEND UITK_HEADERS x11/X11Application.h
+                             x11/X11Clipboard.h
+                             x11/X11Cursor.h
+                             x11/X11Window.h)
     list(APPEND UITK_SOURCES x11/X11Application.cpp
                              x11/X11Clipboard.cpp
+                             x11/X11Cursor.cpp
                              x11/X11Window.cpp)
     find_package(X11)
     find_path(CAIRO_INCLUDE_DIRS
@@ -173,6 +187,7 @@ elseif (UNIX)  # note that APPLE is UNIX, so need to check that first
     include_directories(${X11_INCLUDE_DIRS} ${CAIRO_INCLUDE_DIRS})
     list(APPEND UITK_LIBS ${CAIRO_LIBRARIES}
                           ${PANGO_LIBRARIES}
+                          ${X11_Xcursor_LIB}
                           ${X11_Xrender_LIB}
                           ${X11_LIBRARIES})
 endif()

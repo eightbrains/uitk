@@ -20,59 +20,27 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_MACOS_WINDOW_H
-#define UITK_MACOS_WINDOW_H
+#ifndef UITK_MACOS_CURSOR_H
+#define UITK_MACOS_CURSOR_H
 
-#include "../OSWindow.h"
-#include "../Window.h"
+#include "../OSCursor.h"
+
+#include <memory>
 
 namespace uitk {
 
-class MacOSWindow : public OSWindow
+class MacOSCursor : public OSCursor
 {
 public:
-    MacOSWindow(IWindowCallbacks& callbacks,
-                const std::string& title, int width, int height,
-                Window::Flags::Value flags);
-    MacOSWindow(IWindowCallbacks& callbacks,
-                const std::string& title, int x, int y, int width, int height,
-                Window::Flags::Value flags);
-    virtual ~MacOSWindow();
+    MacOSCursor(OSCursor::System cursor);
+    ~MacOSCursor();
 
-    bool isShowing() const override;
-    void show(bool show, std::function<void(const DrawContext&)> onWillShow) override;
-    void toggleMinimize() override;
-    void toggleMaximize() override;
+    void set(void *window = nullptr, void *windowSystem = nullptr) const override;
 
-    void close() override;
-
-    void setTitle(const std::string& title) override;
-
-    void setCursor(const Cursor& cursor) override;
-
-    Rect contentRect() const override;
-    OSRect osContentRect() const override;
-
-    float dpi() const override;
-    OSRect osFrame() const override;
-    void setOSFrame(float x, float y, float width, float height) override;
-
-    PicaPt borderWidth() const override;
-
-    void postRedraw() const override;
-
-    void raiseToTop() const override;
-
-    Point currentMouseLocation() const override;
-
-    void* nativeHandle() override;
-    IWindowCallbacks& callbacks() override;
-
-public:
+private:
     struct Impl;
     std::unique_ptr<Impl> mImpl;
 };
 
 }  // namespace uitk
-#endif // UITK_OSWINDOW_H
-
+#endif // UITK_MACOS_CURSOR_H

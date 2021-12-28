@@ -23,6 +23,7 @@
 #include "Window.h"
 
 #include "Application.h"
+#include "Cursor.h"
 #include "Events.h"
 #include "OSMenubar.h"
 #include "OSWindow.h"
@@ -304,6 +305,7 @@ struct Window::Impl
     std::shared_ptr<Theme> theme;
     std::unique_ptr<OSWindow> window;
     std::string title;
+    std::vector<Cursor> cursorStack;
     int flags;
     std::unique_ptr<Widget> menubarWidget;
     std::unique_ptr<Widget> rootWidget;
@@ -314,10 +316,11 @@ struct Window::Impl
     PopupState popupState = PopupState::kNone;
     std::function<void(MenuItem&)> onMenuItemNeedsUpdate;
     std::unordered_map<MenuId, std::function<void()>> onMenuActivatedCallbacks;
-    std::function<void(Window& w, const LayoutContext& context)> onWillShow;
-    std::function<void(Window& w)> onDidDeactivate;
-    std::function<bool(Window& w)> onShouldClose;
-    std::function<void(Window& w)> onWillClose;
+    std::function<void(Window&)> onWillShow;
+    std::function<void(Window&, const LayoutContext&)> onLayout;
+    std::function<void(Window&)> onDidDeactivate;
+    std::function<bool(Window&)> onShouldClose;
+    std::function<void(Window&)> onWillClose;
     bool isActive = false;
     bool inResize = false;
     bool inMouse = false;
@@ -371,6 +374,7 @@ Window::Window(const std::string& title, int x, int y, int width, int height,
     mImpl->window = std::make_unique<X11Window>(*this, title, x, y, width, height, flags);
 #endif
 
+    pushCursor(Cursor::arrow());
     addStandardMenuHandlers(*this);
 
     if (!(flags & Flags::kPopup)) {
@@ -407,8 +411,7 @@ Window* Window::show(bool show)
 {
     auto onWillShow = [this](const DrawContext& dc) {
         if (mImpl->onWillShow) {
-            LayoutContext context = { *mImpl->theme, dc };
-            mImpl->onWillShow(*this, context);
+            mImpl->onWillShow(*this);
         }
     };
     mImpl->window->show(show, onWillShow);
@@ -451,6 +454,32 @@ Window* Window::setTitle(const std::string& title)
     mImpl->window->setTitle(title);
     updateWindowList();
     return this;
+}
+
+void Window::setCursor(const Cursor& cursor)
+{
+    // Interestingly, the three major operating systems set the cursor
+    // completely differently. MacOS sets it by application, Windows
+    // sets it for just this instant and resets to the cursor in the
+    // window class when the mouse moves (unless you intercept WM_SETCURSOR,
+    // and X11 sets it on the window.
+    mImpl->window->setCursor(cursor);
+}
+
+void Window::pushCursor(const Cursor& cursor)
+{
+    mImpl->cursorStack.push_back(cursor);
+    mImpl->window->setCursor(cursor);
+}
+
+void Window::popCursor()
+{
+    mImpl->cursorStack.pop_back();
+    assert(!mImpl->cursorStack.empty());  // should always have arrow on bottom from Window()
+    if (mImpl->cursorStack.empty()) {
+        mImpl->cursorStack.push_back(Cursor::arrow());
+    }
+    mImpl->window->setCursor(mImpl->cursorStack.back());
 }
 
 void Window::resize(const Size& contentSize)
@@ -520,11 +549,11 @@ void Window::raiseToTop() const { mImpl->window->raiseToTop(); }
 
 const Rect& Window::contentRect() const { return mImpl->rootWidget->frame(); }
 
-Window* Window::addChild(Widget *child)
+Widget* Window::addChild(Widget *child)
 {
     mImpl->rootWidget->addChild(child);
     setNeedsDraw();
-    return this;
+    return child;
 }
 
 void Window::setOnMenuItemNeedsUpdate(std::function<void(MenuItem&)> onNeedsUpdate)
@@ -537,22 +566,27 @@ void Window::setOnMenuActivated(MenuId id, std::function<void()> onActivated)
     mImpl->onMenuActivatedCallbacks[id] = onActivated;
 }
 
-void Window::setOnWindowWillShow(std::function<void(Window& w, const LayoutContext& context)> onWillShow)
+void Window::setOnWindowWillShow(std::function<void(Window&)> onWillShow)
 {
     mImpl->onWillShow = onWillShow;
 }
 
-void Window::setOnWindowDidDeactivate(std::function<void(Window& w)> onDidDeactivate)
+void Window::setOnWindowLayout(std::function<void(Window&, const LayoutContext&)> onLayout)
+{
+    mImpl->onLayout = onLayout;
+}
+
+void Window::setOnWindowDidDeactivate(std::function<void(Window&)> onDidDeactivate)
 {
     mImpl->onDidDeactivate = onDidDeactivate;
 }
 
-void Window::setOnWindowShouldClose(std::function<bool(Window& w)> onShouldClose)
+void Window::setOnWindowShouldClose(std::function<bool(Window&)> onShouldClose)
 {
     mImpl->onShouldClose = onShouldClose;
 }
 
-void Window::setOnWindowWillClose(std::function<void(Window& w)> onWillClose)
+void Window::setOnWindowWillClose(std::function<void(Window&)> onWillClose)
 {
     mImpl->onWillClose = onWillClose;
 }
@@ -823,6 +857,14 @@ void Window::onLayout(const DrawContext& dc)
     assert(y == dc.roundToNearestPixel(y));
     mImpl->rootWidget->setFrame(Rect(contentRect.x, y,
                                      contentRect.width, contentRect.height - y));
+    if (mImpl->onLayout) {
+        mImpl->onLayout(*this, context);
+    } else {
+        auto &children = mImpl->rootWidget->children();
+        for (auto *child : children) {
+            child->setFrame(mImpl->rootWidget->bounds());
+        }
+    }
     mImpl->rootWidget->layout(context);
 }
 

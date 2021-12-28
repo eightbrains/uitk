@@ -37,6 +37,7 @@ class Font;
 struct PicaPt;
 struct Point;
 class TextLayout;
+class Window;
 
 struct KeyEvent;
 struct MouseEvent;
@@ -127,6 +128,8 @@ public:
 
     /// Handles mouse events, except for right-click for context menu.
     /// Returns true if consumed the event.
+    virtual void handleMouseEntered(Window *w);
+    virtual void handleMouseExited(Window *w);
     virtual bool handleMouseEvent(const MouseEvent& e);
     virtual bool handleKeyEvent(const KeyEvent& e);  // returns true if consumed event
     virtual void handleTextEvent(const TextEvent& e);
