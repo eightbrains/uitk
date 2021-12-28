@@ -305,7 +305,7 @@ struct Window::Impl
     std::shared_ptr<Theme> theme;
     std::unique_ptr<OSWindow> window;
     std::string title;
-    Cursor cursor;
+    std::vector<Cursor> cursorStack;
     int flags;
     std::unique_ptr<Widget> menubarWidget;
     std::unique_ptr<Widget> rootWidget;
@@ -374,7 +374,7 @@ Window::Window(const std::string& title, int x, int y, int width, int height,
     mImpl->window = std::make_unique<X11Window>(*this, title, x, y, width, height, flags);
 #endif
 
-    setCursor(Cursor::arrow());
+    pushCursor(Cursor::arrow());
     addStandardMenuHandlers(*this);
 
     if (!(flags & Flags::kPopup)) {
@@ -464,6 +464,22 @@ void Window::setCursor(const Cursor& cursor)
     // window class when the mouse moves (unless you intercept WM_SETCURSOR,
     // and X11 sets it on the window.
     mImpl->window->setCursor(cursor);
+}
+
+void Window::pushCursor(const Cursor& cursor)
+{
+    mImpl->cursorStack.push_back(cursor);
+    mImpl->window->setCursor(cursor);
+}
+
+void Window::popCursor()
+{
+    mImpl->cursorStack.pop_back();
+    assert(!mImpl->cursorStack.empty());  // should always have arrow on bottom from Window()
+    if (mImpl->cursorStack.empty()) {
+        mImpl->cursorStack.push_back(Cursor::arrow());
+    }
+    mImpl->window->setCursor(mImpl->cursorStack.back());
 }
 
 void Window::resize(const Size& contentSize)

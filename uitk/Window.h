@@ -110,10 +110,21 @@ public:
     //    be able to do so easily. This way offers more flexibility, and it
     //    not that difficult for the few widgets that need a different cursor.
 
-    /// Sets the cursor for the window. The usual pattern is for widgets that
-    /// want a particular cursor to set that cursor in Widget::mouseEntered()
-    /// and reset in Widget::mouseExited(), or for specific areas within the
-    /// widget, in the mouse move event.
+    /// Pushes the cursor for the window. The usual pattern is for widgets that
+    /// want a particular cursor to pushCursor() in Widget::mouseEntered()
+    /// and popCursor() in Widget::mouseExited().
+    void pushCursor(const Cursor& cursor);
+    void popCursor();
+    /// Changes the cursor at the top of the stack. Generally you should use
+    /// pushCursor() and popCursor(), as they will handle child objects that
+    /// change the cursor better, but setCursor() is useful if you need to
+    /// change the cursor after the mouse is already in the widget but is
+    /// not over a child. For instance, a vector graphics canvas might use this
+    /// to change the cursor inside an object to indicate it can be selected,
+    /// resized, rotated, etc. A canvas might not use child objects to
+    /// represent each graphic element. A good rule of thumb is that
+    /// pushCursor() belongs in mouseEntered(), popCursor() belongs in
+    /// mouseExited(), and then if necessary setCursor() can be used in mouse().
     void setCursor(const Cursor& cursor);
 
     /// Resizes the window so that the content rect is of the specified size.

@@ -335,7 +335,7 @@ CutPasteable* Widget::asCutPasteable() { return nullptr; }
 
 Widget::MouseState Widget::state() const { return mImpl->state; }
 
-void Widget::setState(MouseState state)
+void Widget::setState(MouseState state, bool fromExited /*= false*/)
 {
     if (!mImpl->enabled) {
         // Need to specifically set in case setEnabled(false) calls setState() after
@@ -353,7 +353,7 @@ void Widget::setState(MouseState state)
 
     if (oldState == MouseState::kNormal && state != MouseState::kNormal) {
         mouseEntered();
-    } else if (oldState != MouseState::kNormal && state == MouseState::kNormal) {
+    } else if (oldState != MouseState::kNormal && state == MouseState::kNormal && !fromExited) {
         mouseExited();
     }
 
@@ -479,7 +479,7 @@ void Widget::mouseExited()
     // be a key event, this event will be generated but obviously the mouse will not
     // have moved.
     if (state() != MouseState::kNormal) {
-        setState(MouseState::kNormal);
+        setState(MouseState::kNormal, true);
     }
 
     for (auto *child : mImpl->children) {

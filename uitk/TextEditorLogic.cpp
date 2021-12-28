@@ -48,12 +48,12 @@ TextEditorLogic::~TextEditorLogic()
 
 void TextEditorLogic::handleMouseEntered(Window *w)
 {
-    w->setCursor(Cursor::iBeam());
+    w->pushCursor(Cursor::iBeam());
 }
 
 void TextEditorLogic::handleMouseExited(Window *w)
 {
-    w->setCursor(Cursor::arrow());
+    w->popCursor();
 }
 
 bool TextEditorLogic::handleMouseEvent(const MouseEvent& e)

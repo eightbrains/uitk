@@ -37,13 +37,13 @@ public:
     void mouseEntered() override
     {
         Super::mouseEntered();
-        window()->setCursor(mCursor);
+        window()->pushCursor(mCursor);
     }
 
     void mouseExited() override
     {
         Super::mouseExited();
-        window()->setCursor(Cursor::arrow());
+        window()->popCursor();
     }
 
     void draw(UIContext& context) override
@@ -144,28 +144,47 @@ class Panel : public Widget
 public:
     Panel()
     {
+        Color phandColor(0.3f, 0.3f, 1.0f);
+        Color crosshairColor(0.0f, 1.0f, 0.25f);
+        Color forbiddenColor(1.0f, 0.0f, 0.0f);
+
         mEdit = new StringEdit();
         mEdit->setPlaceholderText("StringEdit for I-beam");
         addChild(mEdit);
 
         mForbidden = new CursorObj(Cursor::forbidden(), "forbidden");
-        mForbidden->setBorderColor(Color(1.0f, 0.0f, 0.0f));
+        mForbidden->setBorderColor(forbiddenColor);
         mForbidden->setBorderWidth(PicaPt(1));
         addChild(mForbidden);
 
         mCrosshair = new CursorObj(Cursor::crosshair(), "crosshair");
-        mCrosshair->setBorderColor(Color(0.0f, 1.0f, 0.25f));
+        mCrosshair->setBorderColor(crosshairColor);
         mCrosshair->setBorderWidth(PicaPt(1));
         addChild(mCrosshair);
 
         mPointingHand = new CursorObj(Cursor::pointingHand(), "pointing hand");
-        mPointingHand->setBorderColor(Color(0.3f, 0.3f, 1.0f));
+        mPointingHand->setBorderColor(phandColor);
         mPointingHand->setBorderWidth(PicaPt(1));
         addChild(mPointingHand);
 
         mMainObj = new DraggableObj(Cursor::openHand(), Cursor::closedHand(),
                                     "hand\n(click to drag)");
         addChild(mMainObj);
+
+        mNestedLabel = new Label("Nested cursors test (move mouse horiz and vert)");
+        addChild(mNestedLabel);
+        mNested = new CursorObj(Cursor::crosshair());
+        mNested->setBorderColor(crosshairColor);
+        mNested->setBorderWidth(PicaPt(1));
+        mNested1 = new CursorObj(Cursor::pointingHand());
+        mNested1->setBorderColor(phandColor);
+        mNested1->setBorderWidth(PicaPt(1));
+        mNested->addChild(mNested1);
+        mNested2 = new CursorObj(Cursor::forbidden());
+        mNested2->setBorderColor(forbiddenColor);
+        mNested2->setBorderWidth(PicaPt(1));
+        mNested1->addChild(mNested2);
+        addChild(mNested);
     }
 
     void layout(const LayoutContext& context) override
@@ -178,6 +197,11 @@ public:
         mMainObj->setFrame(Rect(10.f * em, 10.f * em, 10.0f * em, 7.5 * em));
         mMainObj->setBorderColor(context.theme.params().textColor);
         mMainObj->setBorderWidth(PicaPt(1));
+        auto size = mNestedLabel->preferredSize(context);
+        mNestedLabel->setFrame(Rect(em, mMainObj->frame().maxY() + 4.0 * em, size.width, size.height));
+        mNested->setFrame(Rect(em, mNestedLabel->frame().maxY() + 0.5f * em, 6.0f * em, 5.0f * em));
+        mNested1->setFrame(Rect(mNested->bounds().midX() - 1.0f * em, PicaPt::kZero, 3.0f * em, 3.0f * em));
+        mNested2->setFrame(Rect(mNested1->bounds().maxX() - 2.0f * em, PicaPt::kZero, 2.0f * em, 1.5f * em));
         Super::layout(context);
     }
 
@@ -192,6 +216,10 @@ private:
     CursorObj *mCrosshair;
     CursorObj *mPointingHand;
     CursorObj *mMainObj;
+    Label *mNestedLabel;
+    CursorObj *mNested;
+    CursorObj *mNested1;
+    CursorObj *mNested2;
 };
 
 }  // namespace cursor

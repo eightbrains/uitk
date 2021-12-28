@@ -177,7 +177,7 @@ protected:
 
     void setWindow(Window* window);  // for Window
 
-    void setState(MouseState state);
+    void setState(MouseState state, bool fromExited = false);
 
     EventResult mouseChild(const MouseEvent& e, Widget *child, EventResult result); // e is child's parent's event
     void drawChild(UIContext& context, Widget *child);
