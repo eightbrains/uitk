@@ -35,7 +35,7 @@ public:
     Win32Cursor(OSCursor::System id);
     ~Win32Cursor();
 
-    void set() const override;
+    void set(void *window = nullptr, void *windowSystem = nullptr) const override;
 
 private:
     struct Impl;

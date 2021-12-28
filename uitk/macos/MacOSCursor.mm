@@ -82,7 +82,7 @@ MacOSCursor::~MacOSCursor()
     mImpl->cursor = nil;  // release
 }
 
-void MacOSCursor::set() const
+void MacOSCursor::set(void */*window = nullptr*/, void */*windowSystem = nullptr*/) const
 {
     [mImpl->cursor set];
 }

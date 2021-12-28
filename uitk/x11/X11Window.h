@@ -51,6 +51,8 @@ public:
 
     void setTitle(const std::string& title) override;
 
+    void setCursor(const Cursor& cursor) override;
+
     Rect contentRect() const override;
     OSRect osContentRect() const override;
 

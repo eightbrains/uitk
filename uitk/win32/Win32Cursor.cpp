@@ -48,10 +48,10 @@ Win32Cursor::Win32Cursor(OSCursor::System id)
 			mImpl->cursor = LoadCursor(NULL, IDC_CROSS);
 			break;
 		case OSCursor::System::kOpenHand:
-			mImpl->cursor = LoadCursor(NULL, IDI_APPLICATION);  // Windows has no open hand cursor
+			mImpl->cursor = LoadCursor(NULL, IDC_SIZEALL);  // Windows has no open hand cursor
 			break;
 		case OSCursor::System::kClosedHand:
-			mImpl->cursor = LoadCursor(NULL, IDI_APPLICATION);  // Windows has no closed hand cursor
+			mImpl->cursor = LoadCursor(NULL, IDC_SIZEALL);  // Windows has no closed hand cursor
 			break;
 		case OSCursor::System::kPointingHand:
 			mImpl->cursor = LoadCursor(NULL, IDC_HAND);
@@ -82,7 +82,7 @@ Win32Cursor::~Win32Cursor()
 	}
 }
 
-void Win32Cursor::set() const
+void Win32Cursor::set(void */*window = nullptr*/, void */*windowSystem = nullptr*/) const
 {
 	SetCursor(mImpl->cursor);
 }

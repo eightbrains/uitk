@@ -37,8 +37,14 @@ public:
     static Cursor arrow();          /// default cursor
     static Cursor iBeam();          /// for text
     static Cursor crosshair();
-    static Cursor openHand();       /// usually indicates object or canvas can be grabbed
-    static Cursor closedHand();     /// object or canvas is grabbed
+    /// Usually indicates object or canvas can be grabbed. Windows and some
+    /// cursor themes in Linux do not support this, in which case a cursor
+    /// that roughly means "grabbable, movable" will be used.
+    static Cursor openHand();
+    /// Usually indicates object or canvas is grabbed and can be moved.
+    /// Windows and some cursor themes in Linux do not support this, in which
+    /// case a cursor that roughly means "grabbed, moving" will be used.
+    static Cursor closedHand();
     static Cursor pointingHand();
     static Cursor resizeUpDown();
     static Cursor resizeLeftRight();

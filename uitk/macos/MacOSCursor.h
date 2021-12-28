@@ -35,7 +35,7 @@ public:
     MacOSCursor(OSCursor::System cursor);
     ~MacOSCursor();
 
-    void set() const override;
+    void set(void *window = nullptr, void *windowSystem = nullptr) const override;
 
 private:
     struct Impl;

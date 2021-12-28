@@ -121,8 +121,13 @@ elseif (WIN32)
                              win32/Win32Window.cpp)
     list(APPEND UITK_LIBS d3d11 d2d1 dwrite shcore WindowsApp)
 elseif (UNIX)  # note that APPLE is UNIX, so need to check that first
+    list(APPEND UITK_HEADERS x11/X11Application.h
+                             x11/X11Clipboard.h
+                             x11/X11Cursor.h
+                             x11/X11Window.h)
     list(APPEND UITK_SOURCES x11/X11Application.cpp
                              x11/X11Clipboard.cpp
+                             x11/X11Cursor.cpp
                              x11/X11Window.cpp)
     find_package(X11)
     find_path(CAIRO_INCLUDE_DIRS
@@ -182,6 +187,7 @@ elseif (UNIX)  # note that APPLE is UNIX, so need to check that first
     include_directories(${X11_INCLUDE_DIRS} ${CAIRO_INCLUDE_DIRS})
     list(APPEND UITK_LIBS ${CAIRO_LIBRARIES}
                           ${PANGO_LIBRARIES}
+                          ${X11_Xcursor_LIB}
                           ${X11_Xrender_LIB}
                           ${X11_LIBRARIES})
 endif()

@@ -20,38 +20,27 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_OS_CURSOR_H
-#define UITK_OS_CURSOR_H
+#ifndef UITK_X11_CURSOR_H
+#define UITK_X11_CURSOR_H
 
-#include "Cursor.h"
+#include "../OSCursor.h"
+
+#include <memory>
 
 namespace uitk {
 
-class OSCursor
+class X11Cursor : public OSCursor
 {
 public:
-    enum class System {
-        kArrow = 0,
-        kIBeam,
-        kCrosshair,
-        kOpenHand,
-        kClosedHand,
-        kPointingHand,
-        kResizeLeftRight,
-        kResizeUpDown,
-        kResizeNWSE,
-        kResizeNESW,
-        kForbidden,
-        kLast
-    };
+    X11Cursor(OSCursor::System id);
+    ~X11Cursor();
 
-    virtual ~OSCursor() {}
+    void set(void *window = nullptr, void *windowSystem = nullptr) const override;
 
-    // The cursor functions on Windows and macOS do not require a window or
-    // window system, but some platforms like X11 do. Systems that do not
-    // require these parameters should use the defaults.
-    virtual void set(void *window = nullptr, void *windowSystem = nullptr) const = 0;
+private:
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
 };
 
 }  // namespace uitk
-#endif // UITK_OS_CURSOR_H
+#endif // UITK_X11_CURSOR_H
