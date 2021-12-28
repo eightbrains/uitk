@@ -82,7 +82,7 @@ Win32Cursor::~Win32Cursor()
 	}
 }
 
-void Win32Cursor::set(void */*window = nullptr*/, void */*windowSystem = nullptr*/) const
+void Win32Cursor::set(void* /*window = nullptr*/, void* /*windowSystem = nullptr*/) const
 {
 	SetCursor(mImpl->cursor);
 }
