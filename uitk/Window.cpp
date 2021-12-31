@@ -24,6 +24,7 @@
 
 #include "Application.h"
 #include "Cursor.h"
+#include "Dialog.h"
 #include "Events.h"
 #include "OSMenubar.h"
 #include "OSWindow.h"
@@ -312,7 +313,8 @@ struct Window::Impl
     Widget *grabbedWidget = nullptr;
     Widget *focusedWidget = nullptr;
     MenuUITK *activePopup = nullptr;
-    void *dialog = nullptr;  // placeholder for later
+    Dialog *dialog = nullptr;
+    std::unique_ptr<Window> dialogWindow;
     PopupState popupState = PopupState::kNone;
     std::function<void(MenuItem&)> onMenuItemNeedsUpdate;
     std::unordered_map<MenuId, std::function<void()>> onMenuActivatedCallbacks;
@@ -484,14 +486,7 @@ void Window::popCursor()
 
 void Window::resize(const Size& contentSize)
 {
-    auto dpi = mImpl->window->dpi();
-    auto f = mImpl->window->osFrame();
-    if (Application::instance().isOriginInUpperLeft()) {
-        setOSFrame(f.x, f.y, contentSize.width.toPixels(dpi), contentSize.height.toPixels(dpi));
-    } else {
-        auto hPx = contentSize.height.toPixels(dpi);
-        setOSFrame(f.x, f.y + f.height - hPx, contentSize.width.toPixels(dpi), hPx);
-    }
+    mImpl->window->setContentSize(contentSize);
 }
 
 void Window::move(const PicaPt& dx, const PicaPt& dy)
@@ -552,6 +547,13 @@ const Rect& Window::contentRect() const { return mImpl->rootWidget->frame(); }
 Widget* Window::addChild(Widget *child)
 {
     mImpl->rootWidget->addChild(child);
+    setNeedsDraw();
+    return child;
+}
+
+Widget* Window::removeChild(Widget *child)
+{
+    mImpl->rootWidget->removeChild(child);
     setNeedsDraw();
     return child;
 }
@@ -649,6 +651,47 @@ void Window::setPopupMenu(MenuUITK *menu)
             setNeedsDraw();
         }
     }
+}
+
+bool Window::beginModalDialog(Dialog *d)
+{
+    if (mImpl->dialog) {
+        return false;
+    }
+
+    mImpl->dialog = d;
+    mImpl->dialogWindow.reset(new Window(d->title(), 10, 10, Flags::kDialog));
+    mImpl->dialogWindow->addChild(d);
+    mImpl->dialogWindow->setOnWindowLayout([this](Window &w, const LayoutContext &context) {
+        auto pref = mImpl->dialog->preferredSize(context);
+        mImpl->dialog->setFrame(Rect(PicaPt::kZero, PicaPt::kZero, pref.width, pref.height));
+        if (mImpl->dialogWindow->nativeWindow()->osContentRect().width <= 15) {
+            // Don't resize now, we are in the middle of a layout.
+            // Also, wait to begin the modal dialog until we are the
+            // size we want to be, otherwise the sheet-opening animation
+            // on macOS does not work correctly.
+            Application::instance().scheduleLater(mImpl->dialogWindow.get(), [this, pref]() {
+                mImpl->dialogWindow->resize(pref);
+                mImpl->window->beginModalDialog(mImpl->dialogWindow->nativeWindow());
+            });
+        }
+    });
+    return true;
+}
+
+// Ends display of the dialog and returns ownership to the caller.
+Dialog* Window::endModalDialog()
+{
+    mImpl->window->endModalDialog(mImpl->dialogWindow->nativeWindow());
+    auto *dialog = mImpl->dialog;
+    mImpl->dialogWindow->removeChild(dialog);
+    mImpl->dialog = nullptr;
+    // We are probably in an event, most likely a button event, so we cannot
+    // delete the dialog window now.
+    mImpl->dialogWindow->deleteLater();
+    mImpl->dialogWindow.release();
+
+    return dialog;
 }
 
 void Window::onMouse(const MouseEvent& eOrig)
@@ -799,8 +842,16 @@ void Window::onKey(const KeyEvent &e)
         mImpl->activePopup->window()->onKey(e);
     } else {
         mImpl->inKey = true;
+        // Send the key to the focused widget if there is one
         if (mImpl->focusedWidget) {
             mImpl->focusedWidget->key(e);
+        // If no focused widget AND we are a dialog, send the key to the dialog
+        // widget so that Esc, Enter, etc. can be handled.
+        } else if (mImpl->flags & Flags::kDialog) {
+            auto roots = mImpl->rootWidget->children();
+            if (!roots.empty()) {
+                roots[0]->key(e);
+            }
         }
         mImpl->inKey = false;
         if (mImpl->needsDraw) {

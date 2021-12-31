@@ -34,6 +34,7 @@
 #include "Clipboard.h"
 #include "ComboBox.h"
 #include "Cursor.h"
+#include "Dialog.h"
 #include "Events.h"
 #include "Label.h"
 #include "ListView.h"

@@ -38,8 +38,25 @@ public:
     const std::string& text() const;
     Label* setText(const std::string& text);
 
+    /// Returns true if word-wrapping is enabled, false otherwise.
+    /// Default is false (disabled).
+    bool wordWrapEnabled() const;
+    /// Sets word wrapping. Default is false (disabled).
+    Label* setWordWrapEnabled(bool enabled);
+
     int alignment() const;
     Label* setAlignment(int align);
+
+    /// Returns the font. Note that it is frequently convenient to set the
+    /// the font size or style (e.g. smaller, or bold) when the label is
+    /// created. This function will report the application theme's label
+    /// font if a font has not been set. In most cases this is fine, but
+    /// if the window has its own theme, you should get the font from the
+    /// theme.
+    Font font() const;
+    /// Sets the font. Note that calling this makes the font static;
+    /// the default font will change if the theme changes.
+    Label* setFont(const Font& font);
 
     const Color& textColor() const;
     /// Sets the text color. If the color is Color(0, 0, 0, 0), the color

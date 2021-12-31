@@ -66,6 +66,9 @@ class LabelTest : public Widget
 {
     using Super = Widget;
 public:
+    static constexpr char kShortText[] = "Agillion AVAST fill triffling";
+    static constexpr char kLongText[] = "Agillion AVAST fill triffling flings tiny brittle Egypt";
+
     LabelTest()
     {
         mDefaultLabel = new Label("Shy Gypsy 投桃报李");
@@ -73,9 +76,16 @@ public:
         mDefaultLabel->setBorderWidth(PicaPt(1.0f));
         addChild(mDefaultLabel);
 
-        mLabel = new Label("Agillion AVAST fill triffling");
+        mWrapped = new Label("This is some lovely text, adroitly wrapped");
+        mWrapped->setWordWrapEnabled(true);
+        mWrapped->setBorderColor(Color(0.5f, 0.5f, 0.5f));
+        mWrapped->setBorderWidth(PicaPt(1.0f));
+        addChild(mWrapped);
+
+        mLabel = new Label(kShortText);
         mLabel->setBorderColor(Color(0.5f, 0.5f, 0.5f));
         mLabel->setBorderWidth(PicaPt(1));
+        mLabel->setWordWrapEnabled(true);
         addChild(mLabel);
 
         mHoriz = new SegmentedControl({ "L", "C", "R" });
@@ -105,12 +115,22 @@ public:
             }
         });
         addChild(mVert);
+
+        mWrapLabel = new Checkbox("Wrap text");
+        mWrapLabel->setOnClicked([this](Button *cb) {
+            if (cb->isOn()) {
+                mLabel->setText(kLongText);
+            } else {
+                mLabel->setText(kShortText);
+            }
+        });
+        addChild(mWrapLabel);
     }
 
     Size preferredSize(const LayoutContext& context) const override
     {
         auto em = context.theme.params().labelFont.metrics(context.dc).lineHeight;
-        return Size(20.0f * em, 7.0f * em);
+        return Size(20.0f * em, 9.0f * em);
     }
 
     void layout(const LayoutContext& context) override
@@ -124,11 +144,18 @@ public:
             setToPref(child);
         }
 
+        auto em = context.theme.params().labelFont.pointSize();
+        auto wrappedWidth = 12.0f * em;
+        mWrapped->setSize(Size(wrappedWidth,
+                               mWrapped->preferredSize(context.withWidth(wrappedWidth)).height));
+
         PicaPt y(8);
         mDefaultLabel->setPosition(Point(PicaPt(8), y));
-        y += mDefaultLabel->frame().height + PicaPt(8);
+        mWrapped->setPosition(mDefaultLabel->frame().upperRight() + Point(PicaPt(8), PicaPt::kZero));
+        y += mWrapped->frame().height + PicaPt(8);
         mHoriz->setPosition(Point(PicaPt(8), y));
         mVert->setPosition(Point(mHoriz->frame().maxX() + PicaPt(8), y));
+        mWrapLabel->setPosition(Point(mVert->frame().maxX() + PicaPt(8), y));
 
         mLabel->setFrame(Rect(mHoriz->frame().x, mHoriz->frame().maxY() + PicaPt(8),
                               15.0f * mHoriz->frame().height,
@@ -151,9 +178,11 @@ public:
 
 private:
     Label *mDefaultLabel;
+    Label *mWrapped;
     Label *mLabel;
     SegmentedControl *mHoriz;
     SegmentedControl *mVert;
+    Checkbox *mWrapLabel;
 };
 
 class ButtonTest : public Widget

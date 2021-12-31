@@ -22,7 +22,9 @@
 
 #include "Label.h"
 
+#include "Application.h"
 #include "UIContext.h"
+#include "Window.h"
 #include "themes/Theme.h"
 
 #include <nativedraw.h>
@@ -34,8 +36,11 @@ namespace uitk {
 struct Label::Impl
 {
     std::string text;
+    bool wordWrap = false;
     int alignment = Alignment::kLeft | Alignment::kTop;
     Color textColor = Color(0.0f, 0.0f, 0.0f, 0.0f);
+    bool usesThemeFont = true;
+    Font customFont;
 };
 
 Label::Label(const std::string& text)
@@ -57,12 +62,37 @@ Label* Label::setText(const std::string& text)
     return this;
 }
 
+bool Label::wordWrapEnabled() const { return mImpl->wordWrap; }
+
+Label* Label::setWordWrapEnabled(bool enabled)
+{
+    mImpl->wordWrap = enabled;
+    setNeedsDraw();
+    return this;
+}
+
 int Label::alignment() const { return mImpl->alignment; }
 
 Label* Label::setAlignment(int align)
 {
     mImpl->alignment = align;
     setNeedsDraw();
+    return this;
+}
+
+Font Label::font() const
+{
+    if (mImpl->usesThemeFont) {
+        return Application::instance().theme()->params().labelFont;
+    } else {
+        return mImpl->customFont;
+    }
+}
+
+Label* Label::setFont(const Font& font)
+{
+    mImpl->usesThemeFont = false;
+    mImpl->customFont = font;
     return this;
 }
 
@@ -84,13 +114,23 @@ Size Label::preferredSize(const LayoutContext& context) const
 {
     auto &font = context.theme.params().labelFont;
     auto fm = context.dc.fontMetrics(font);
-    auto tm = context.dc.textMetrics(mImpl->text.c_str(), font, kPaintFill);
     // Because the descent acts as the lower margin visually, all the other
     // margins should be the descent.
     auto margin = context.dc.ceilToNearestPixel(fm.descent);
-
-    return Size(context.dc.ceilToNearestPixel(tm.width) + 2.0f * margin,
-                context.dc.ceilToNearestPixel(fm.capHeight) + 2.0f * margin);
+    auto constrainedWidth = kDimGrow;
+    if (mImpl->wordWrap) {
+        constrainedWidth = context.constraints.width;
+    }
+    auto tm = context.dc.createTextLayout(mImpl->text.c_str(), font, Color::kRed,
+                                          constrainedWidth)->metrics();
+    bool isOneLine = (tm.height < 1.5f * fm.lineHeight);
+    if (isOneLine) {
+        return Size(context.dc.ceilToNearestPixel(tm.width) + 2.0f * margin,
+                    context.dc.ceilToNearestPixel(fm.capHeight) + 2.0f * margin);
+    } else {
+        return Size(context.dc.ceilToNearestPixel(tm.width) + 2.0f * margin,
+                    context.dc.ceilToNearestPixel(tm.height - (fm.ascent - fm.capHeight)) + 2.0f * margin);
+    }
 }
 
 void Label::draw(UIContext& ui)
@@ -105,7 +145,7 @@ void Label::draw(UIContext& ui)
     auto &themeStyle = style(themeState());
     ui.theme.drawFrame(ui, r, themeStyle);
 
-    auto &font = ui.theme.params().labelFont;
+    auto font = (mImpl->usesThemeFont ? ui.theme.params().labelFont : mImpl->customFont);
     auto metrics = font.metrics(ui.dc);
     auto margin = ui.dc.ceilToNearestPixel(metrics.descent);
     Point pt;
@@ -115,7 +155,8 @@ void Label::draw(UIContext& ui)
     } else {
         ui.dc.setFillColor(mImpl->textColor);
     }
-    ui.dc.drawText(mImpl->text.c_str(), r.insetted(margin, margin), mImpl->alignment, font, kPaintFill);
+    auto wrap = (mImpl->wordWrap ? TextWrapMode::kWordWrap : TextWrapMode::kNoWrap);
+    ui.dc.drawText(mImpl->text.c_str(), r.insetted(margin, margin), mImpl->alignment, wrap, font, kPaintFill);
 
 #if DEBUG_BASELINE
     auto onePx = ui.dc.onePixel();

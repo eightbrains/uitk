@@ -118,11 +118,24 @@ public:
     /// as much space as possible in that dimension.
     static const PicaPt kDimGrow;
 
+    struct Constraints
+    {
+        PicaPt width;
+        PicaPt height;
+        Constraints() : width(kDimGrow), height(kDimGrow) {}
+        Constraints(const PicaPt& w, const PicaPt& h) : width(w), height(h) {}
+    };
+
     /// Returns the preferred size of the widget. If a dimension is
     /// >= kDimGrow, the widget wants as much space as it can get in that
-    /// dimension. If you override this function, use
-    /// context.dc.ceilToNearestPixel() to make sure that the size is
-    /// a whole pixel.
+    /// dimension. The prefered size of most widgets is always the same,
+    /// but some widgets may adjust their height if the width is fixed,
+    /// or vice-versa (for instance, large amounts of text, or a large
+    /// image). Passing a constraint with the fixed size will signal the
+    /// widget to return a more customized size. If you override this
+    /// function, use context.dc.ceilToNearestPixel() to make sure that
+    /// the size is a whole pixel so that downstream widgets are aligned
+    /// nicely to pixel boundaries.
     virtual Size preferredSize(const LayoutContext& context) const;
 
     /// Lays out children according to the frame. Not intended to be called

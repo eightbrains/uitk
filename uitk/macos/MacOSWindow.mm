@@ -545,6 +545,11 @@ void MacOSWindow::close()
     }
 }
 
+void MacOSWindow::raiseToTop() const
+{
+    [mImpl->window makeKeyAndOrderFront:nil];
+}
+
 void MacOSWindow::setTitle(const std::string& title)
 {
     mImpl->window.title = [NSString stringWithUTF8String:title.c_str()];
@@ -576,6 +581,12 @@ OSWindow::OSRect MacOSWindow::osContentRect() const
                   f.y,
                   float(mImpl->contentView.frame.size.width),
                   float(mImpl->contentView.frame.size.height)};
+}
+
+void MacOSWindow::setContentSize(const Size& size)
+{
+    [mImpl->window setContentSize:NSMakeSize(size.width.toPixels(dpi()),
+                                             size.height.toPixels(dpi()))];
 }
 
 float MacOSWindow::dpi() const
@@ -610,9 +621,24 @@ void MacOSWindow::postRedraw() const
     mImpl->contentView.needsDisplay = YES;
 }
 
-void MacOSWindow::raiseToTop() const
+void MacOSWindow::beginModalDialog(OSWindow *w)
 {
-    [mImpl->window makeKeyAndOrderFront:nil];
+    if (auto *macWindow = dynamic_cast<MacOSWindow*>(w)) {
+        mImpl->callbacks.onDeactivated();  // -beginSheet doesn't seem to do this
+        [mImpl->window beginSheet:macWindow->mImpl->window
+                completionHandler:^(NSModalResponse returnCode) {}];
+    } else {
+        assert(false);
+    }
+}
+
+void MacOSWindow::endModalDialog(OSWindow *w)
+{
+    if (auto *macWindow = dynamic_cast<MacOSWindow*>(w)) {
+        [mImpl->window endSheet:macWindow->mImpl->window];
+    } else {
+        assert(false);
+    }
 }
 
 Point MacOSWindow::currentMouseLocation() const

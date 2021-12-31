@@ -88,12 +88,17 @@ public:
 
     virtual void close() = 0;
 
+    virtual void raiseToTop() const = 0;
+
     virtual void setTitle(const std::string& title) = 0;
 
     virtual void setCursor(const Cursor& cursor) = 0;
 
     // This is the drawable rectangle. It may or may not have upper left at (0, 0)
     virtual Rect contentRect() const = 0;
+    // This sets the size of the content area;  the actual OS frame will
+    // probably be larger.
+    virtual void setContentSize(const Size& size) = 0;
 
     // This is the contentRect in OS coordinates, same as osFrame().
     virtual OSRect osContentRect() const = 0;
@@ -106,7 +111,8 @@ public:
 
     virtual void postRedraw() const = 0;
 
-    virtual void raiseToTop() const = 0;
+    virtual void beginModalDialog(OSWindow *w) = 0;
+    virtual void endModalDialog(OSWindow *w) = 0;
 
     // The current mouse location, in window coordinates. Note that the current
     // mouse location may not actually be in this window;  the window might not
