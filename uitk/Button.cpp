@@ -31,9 +31,10 @@ namespace uitk {
 
 struct Button::Impl {
     Label *label;
+    DrawStyle drawStyle = DrawStyle::kNormal;
+    std::function<void(Button*)> onClicked = nullptr;
     bool isOn = false;
     bool isToggleable = false;
-    std::function<void(Button*)> onClicked = nullptr;
 };
 
 Button::Button(const std::string& text)
@@ -73,6 +74,22 @@ Button* Button::setOnClicked(std::function<void(Button*)> onClicked)
 }
 
 Label* Button::label() const { return mImpl->label; }
+
+Button::DrawStyle Button::drawStyle() const { return mImpl->drawStyle; }
+
+// Design note:
+// This is clunky, since it cannot really apply to derived classes.
+// Cocoa's solution is for a checkbox to be a draw style of NSButton,
+// but that is also a little clunky, and checkbox->isChecked() reads
+// better and is more memorable than checkbox->isOn(). Inheritance-happy
+// designs have Button and Checkbox inherit from a BaseButton class,
+// which seems a bit overkill, but might be cleaner.
+Button* Button::setDrawStyle(DrawStyle s)
+{
+    mImpl->drawStyle = s;
+    setNeedsDraw();
+    return this;
+}
 
 Size Button::preferredSize(const LayoutContext& context) const
 {
@@ -122,7 +139,16 @@ Widget::EventResult Button::mouse(const MouseEvent &e)
 void Button::draw(UIContext& context)
 {
     auto themeState = this->themeState();
-    context.theme.drawButton(context, bounds(), style(themeState), themeState, isOn());
+    Theme::ButtonDrawStyle bdStyle;
+    switch (mImpl->drawStyle) {
+        case DrawStyle::kNormal:
+            bdStyle = Theme::ButtonDrawStyle::kNormal;
+            break;
+        case DrawStyle::kDialogDefault:
+            bdStyle = Theme::ButtonDrawStyle::kDialogDefault;
+            break;
+    }
+    context.theme.drawButton(context, bounds(), bdStyle, style(themeState), themeState, isOn());
     mImpl->label->setThemeState(themeState);
     auto ws = context.theme.buttonTextStyle(themeState, mImpl->isOn);
     mImpl->label->setTextColorNoRedraw(ws.fgColor);

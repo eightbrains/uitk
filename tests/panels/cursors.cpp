@@ -52,7 +52,8 @@ public:
         if (!mInfo.empty()) {
             context.dc.setFillColor(borderColor());
             context.dc.drawText(mInfo.c_str(), bounds(), Alignment::kCenter,
-                                context.theme.params().labelFont, kPaintFill);
+                                TextWrapMode::kNoWrap,
+                                context.theme.params().labelFont,  kPaintFill);
         }
     }
 

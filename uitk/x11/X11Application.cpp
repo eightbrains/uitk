@@ -256,7 +256,7 @@ X11Application::X11Application()
         XrmDestroyDatabase(db);
     };
 
-    // Read the global resources. Docs say NOT to free the string.
+    // Read the global resources. Docs say to NOT free the string.
     auto resourceString = XResourceManagerString(mImpl->display);
     readDatabase(resourceString, mImpl->xrdbStrings);
 
@@ -310,14 +310,33 @@ void X11Application::scheduleLater(uitk::Window* w, std::function<void()> f)
     mImpl->postedFunctions.push_back(f);
     }
 
-    XEvent xe;
-    xe.type = ClientMessage;
-    xe.xclient.type = ClientMessage;  // maybe X server sets this?
-    xe.xclient.window = (::Window)w->nativeHandle();
-    xe.xclient.message_type = mImpl->postedFuncAtom;
-    xe.xclient.format = 32;  // 8, 16, 32 (size of xclient.data), we do not
-                             // use that, so this does not matter
-    XSendEvent(mImpl->display, xe.xclient.window, False, NoEventMask, &xe);
+    bool canSend = true;
+    ::Window to;
+    if (w) {
+        to = (::Window)w->nativeHandle();
+    } else {
+        // Any window will do, we just want an event so that the event loop
+        // handles the message soon. We know that we have at least one
+        // window, otherwise we would no longer be runing.
+        auto it = mImpl->xwin2window.begin();
+        if (it != mImpl->xwin2window.end()) {  // check, just in case...
+            to = it->first;
+        } else {
+            canSend = false;
+        }
+    }
+
+    if (canSend) {
+        XEvent xe;
+        xe.type = ClientMessage;
+        xe.xclient.type = ClientMessage;  // maybe X server sets this?
+        xe.xclient.window = to;
+        xe.xclient.message_type = mImpl->postedFuncAtom;
+        xe.xclient.format = 32;  // 8, 16, 32 (size of xclient.data), we do
+                                 // not use that, so this does not matter
+        XSendEvent(mImpl->display, xe.xclient.window, False, NoEventMask, &xe);
+    }
+    // Else: the function is still posted, we just have no way to send an event
 }
 
 int X11Application::run()

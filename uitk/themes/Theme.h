@@ -132,7 +132,11 @@ public:
     virtual void clipFrame(UIContext& ui, const Rect& frame,
                            const WidgetStyle& style) const = 0;
     virtual WidgetStyle labelStyle(const WidgetStyle& style, WidgetState state) const = 0;
-    virtual void drawButton(UIContext& ui, const Rect& frame,
+    enum class ButtonDrawStyle
+    {
+        kNormal, kDialogDefault
+    };
+    virtual void drawButton(UIContext& ui, const Rect& frame, ButtonDrawStyle buttonStyle,
                             const WidgetStyle& style, WidgetState state,
                             bool isOn) const = 0;
     virtual const WidgetStyle& buttonTextStyle(WidgetState state, bool isOn) const = 0;

@@ -24,6 +24,7 @@
 
 #include "Application.h"
 #include "Cursor.h"
+#include "Dialog.h"
 #include "Events.h"
 #include "OSMenubar.h"
 #include "OSWindow.h"
@@ -312,8 +313,12 @@ struct Window::Impl
     Widget *grabbedWidget = nullptr;
     Widget *focusedWidget = nullptr;
     MenuUITK *activePopup = nullptr;
-    void *dialog = nullptr;  // placeholder for later
     PopupState popupState = PopupState::kNone;
+    struct {
+        Dialog* dialog = nullptr;
+        std::unique_ptr<Window> window;
+        bool needsInitialSize = true;
+    } dialog;
     std::function<void(MenuItem&)> onMenuItemNeedsUpdate;
     std::unordered_map<MenuId, std::function<void()>> onMenuActivatedCallbacks;
     std::function<void(Window&)> onWillShow;
@@ -359,7 +364,9 @@ Window::Window(const std::string& title, int x, int y, int width, int height,
     mImpl->title = title;
 
     auto &menubar = Application::instance().menubar();
-    if (!(flags & Flags::kPopup) && !Application::instance().supportsNativeMenus()) {
+    if (!(flags & Flags::kPopup) &&
+        !(flags & Flags::kDialog) &&
+        !Application::instance().supportsNativeMenus()) {
         if (auto* uitkMenubar = dynamic_cast<MenubarUITK*>(&Application::instance().menubar())) {
             mImpl->menubarWidget = uitkMenubar->createWidget();
             mImpl->menubarWidget->setWindow(this);
@@ -377,7 +384,7 @@ Window::Window(const std::string& title, int x, int y, int width, int height,
     pushCursor(Cursor::arrow());
     addStandardMenuHandlers(*this);
 
-    if (!(flags & Flags::kPopup)) {
+    if (!(flags & Flags::kPopup) && !(flags & Flags::kDialog)) {
         Application::instance().addWindow(this);
         updateWindowList();
     }
@@ -484,14 +491,7 @@ void Window::popCursor()
 
 void Window::resize(const Size& contentSize)
 {
-    auto dpi = mImpl->window->dpi();
-    auto f = mImpl->window->osFrame();
-    if (Application::instance().isOriginInUpperLeft()) {
-        setOSFrame(f.x, f.y, contentSize.width.toPixels(dpi), contentSize.height.toPixels(dpi));
-    } else {
-        auto hPx = contentSize.height.toPixels(dpi);
-        setOSFrame(f.x, f.y + f.height - hPx, contentSize.width.toPixels(dpi), hPx);
-    }
+    mImpl->window->setContentSize(contentSize);
 }
 
 void Window::move(const PicaPt& dx, const PicaPt& dy)
@@ -543,7 +543,15 @@ void Window::setNeedsDraw()
     }
 }
 
-void Window::postRedraw() const { mImpl->window->postRedraw(); }
+void Window::postRedraw() const
+{
+    // We sometimes get deactivate messages from dialogs whose window has been
+    // destroyed. The deactivate is reasonable, but we do not want post the
+    // redraw!
+    if (mImpl->window != NULL) {
+        mImpl->window->postRedraw();
+    }
+}
 
 void Window::raiseToTop() const { mImpl->window->raiseToTop(); }
 
@@ -552,6 +560,13 @@ const Rect& Window::contentRect() const { return mImpl->rootWidget->frame(); }
 Widget* Window::addChild(Widget *child)
 {
     mImpl->rootWidget->addChild(child);
+    setNeedsDraw();
+    return child;
+}
+
+Widget* Window::removeChild(Widget *child)
+{
+    mImpl->rootWidget->removeChild(child);
     setNeedsDraw();
     return child;
 }
@@ -651,8 +666,68 @@ void Window::setPopupMenu(MenuUITK *menu)
     }
 }
 
+bool Window::beginModalDialog(Dialog *d)
+{
+    if (mImpl->dialog.dialog) {
+        return false;
+    }
+
+    mImpl->dialog.needsInitialSize = true;
+    mImpl->dialog.dialog = d;
+    mImpl->dialog.window.reset(new Window(d->title(), 10, 10, Flags::kDialog));
+    mImpl->dialog.window->addChild(d);
+    mImpl->dialog.window->setOnWindowShouldClose([this](Window&) {
+        Application::instance().scheduleLater(mImpl->dialog.window.get(), [this]() {
+            mImpl->dialog.dialog->cancel();
+        });
+        return false;
+    });
+    mImpl->dialog.window->setOnWindowLayout([this](Window &w, const LayoutContext &context) {
+        auto pref = mImpl->dialog.dialog->preferredSize(context);
+        mImpl->dialog.dialog->setFrame(Rect(PicaPt::kZero, PicaPt::kZero, pref.width, pref.height));
+        auto dbg = mImpl->dialog.window->nativeWindow()->osContentRect();
+        if (mImpl->dialog.needsInitialSize) {
+            mImpl->dialog.needsInitialSize = false;
+            // Don't resize now, we are in the middle of a layout.
+            // Also, wait to begin the modal dialog until we are the
+            // size we want to be, otherwise the sheet-opening animation
+            // on macOS does not work correctly.
+            Application::instance().scheduleLater(mImpl->dialog.window.get(), [this, pref]() {
+                mImpl->dialog.window->resize(pref);
+                mImpl->window->beginModalDialog(mImpl->dialog.window->nativeWindow());
+            });
+        }
+    });
+    return true;
+}
+
+// Ends display of the dialog and returns ownership to the caller.
+Dialog* Window::endModalDialog()
+{
+    auto *dialog = mImpl->dialog.dialog;
+    mImpl->dialog.window->removeChild(dialog);
+    mImpl->dialog.dialog = nullptr;
+    // Makes sure we call this AFTER dialog.dialog is nulled, so that we can
+    // tell between an onActivate() from someone trying to click away from the
+    // dialog and the dialog is closing (but has not quite finished, e.g. on
+    // Windows) and so this window is actually activating.
+    mImpl->window->endModalDialog(mImpl->dialog.window->nativeWindow());
+    // We are probably in an event, most likely a button event, so we cannot
+    // delete the dialog window now.
+    mImpl->dialog.window->deleteLater();
+    mImpl->dialog.window.release();
+
+    return dialog;
+}
+
 void Window::onMouse(const MouseEvent& eOrig)
 {
+    // macOS and Windows do not send events to a window under a dialog, but
+    // X11 does.
+    if (mImpl->dialog.dialog || mImpl->dialog.window) {
+        return;
+    }
+
     if (mImpl->activePopup) {
         if (eOrig.type == MouseEvent::Type::kButtonDown) {
             mImpl->cancelPopup();
@@ -781,7 +856,7 @@ void Window::onMouse(const MouseEvent& eOrig)
 void Window::onKey(const KeyEvent &e)
 {
     int menuId;
-    if (!mImpl->dialog && e.type == KeyEvent::Type::kKeyDown && Application::instance().keyboardShortcuts().hasShortcut(e, &menuId)) {
+    if (!mImpl->dialog.dialog && e.type == KeyEvent::Type::kKeyDown && Application::instance().keyboardShortcuts().hasShortcut(e, &menuId)) {
         onMenuWillShow();  // make sure items are enabled/disabled for *this current* window
         Application::instance().menubar().activateItemId(menuId);
         // We need to flash the menu that got activated, but the menubar
@@ -799,8 +874,16 @@ void Window::onKey(const KeyEvent &e)
         mImpl->activePopup->window()->onKey(e);
     } else {
         mImpl->inKey = true;
+        // Send the key to the focused widget if there is one
         if (mImpl->focusedWidget) {
             mImpl->focusedWidget->key(e);
+        // If no focused widget AND we are a dialog, send the key to the dialog
+        // widget so that Esc, Enter, etc. can be handled.
+        } else if (mImpl->flags & Flags::kDialog) {
+            auto roots = mImpl->rootWidget->children();
+            if (!roots.empty()) {
+                roots[0]->key(e);
+            }
         }
         mImpl->inKey = false;
         if (mImpl->needsDraw) {
@@ -895,6 +978,19 @@ void Window::onDraw(DrawContext& dc)
 
 void Window::onActivated(const Point& currentMousePos)
 {
+    // Some platforms, like Windows, do not allow a window as a dialog, so we
+    // have to force the modality ourselves. Note that we need to check both
+    // dialog.dialog and dialog.window, since we will get an onActivated() call
+    // when the dialog's window is closing, but has not finished closing
+    // (dialog.dialog == nullptr, dialog.window != nullptr). At least on
+    // Windows, since there are some other messages that get sent before the
+    // close message when DestroyWindow() is called.
+    if (mImpl->dialog.dialog && mImpl->dialog.window) {
+        mImpl->dialog.window->raiseToTop();
+        Application::instance().beep();
+        return;
+    }
+
     mImpl->isActive = true;
     mImpl->cancelPopup();
     if (!(mImpl->flags & Flags::kPopup)) {
@@ -971,6 +1067,12 @@ void Window::onMenuActivated(MenuId id)
 
 bool Window::onWindowShouldClose()
 {
+    // Some X11 window managers let you click the close button even if it has 
+    // a transient, modal window.
+    if (mImpl->dialog.dialog || mImpl->dialog.window) {
+        return false;
+    }
+
     if (mImpl->onShouldClose) {
         return mImpl->onShouldClose(*this);
     }

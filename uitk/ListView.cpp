@@ -68,10 +68,11 @@ PicaPt layoutItems(const uitk::LayoutContext& context, LayoutMode mode,
     auto em = fm.ascent + fm.descent;
 
     auto width = frame.width - 2.0f * padding.width;
+    auto contextWithWidth = context.withWidth(width);
     auto x = padding.width; // inset a little left and right in case cell draw bg and obscures the selection
     auto y = padding.height;
     for (auto *child : children) {
-        auto pref = child->preferredSize(context);
+        auto pref = child->preferredSize(contextWithWidth);
         if (mode == LayoutMode::kLayout) {
             if (pref.height < Widget::kDimGrow) {
                 child->setFrame(Rect(x, y, width, pref.height));

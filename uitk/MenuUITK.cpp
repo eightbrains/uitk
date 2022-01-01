@@ -908,19 +908,21 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
         auto contentSize = list->preferredContentSize(context);
         auto vertMargin = context.theme.calcPreferredMenuVerticalMargin();
         list->setFrame(Rect(PicaPt::kZero, vertMargin, contentSize.width, contentSize.height));
-        w.resize(Size(contentSize.width, contentSize.height + 2.0f * vertMargin));
+        Application::instance().scheduleLater(&w, [this, w=&w, list, id, contentSize, vertMargin]() {
+            w->resize(Size(contentSize.width, contentSize.height + 2.0f * vertMargin));
 
-        if (id != kInvalidId) {
-            auto osf = w.osFrame();
-            for (auto &kv : mImpl->id2item) {
-                if (kv.first == id) {
-                    auto p = kv.second.item->frame().upperLeft();
-                    w.move(PicaPt::kZero, -p.y);
+            if (id != kInvalidId) {
+                auto osf = w->osFrame();
+                for (auto& kv : mImpl->id2item) {
+                    if (kv.first == id) {
+                        auto p = kv.second.item->frame().upperLeft();
+                        w->move(PicaPt::kZero, -p.y);
+                    }
                 }
             }
-        }
 
-        w.setFocusWidget(list);
+            w->setFocusWidget(list);
+         });
     });
 
     list->setOnSelectionChanged([this](ListView *lv) {

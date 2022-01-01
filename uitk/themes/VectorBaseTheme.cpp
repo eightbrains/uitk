@@ -597,15 +597,22 @@ Theme::WidgetStyle VectorBaseTheme::labelStyle(const WidgetStyle& style, WidgetS
     return mLabelStyles[int(state)].merge(style);
 }
 
-void VectorBaseTheme::drawButton(UIContext& ui, const Rect& frame,
+void VectorBaseTheme::drawButton(UIContext& ui, const Rect& frame, ButtonDrawStyle buttonStyle,
                                  const WidgetStyle& style, WidgetState state,
                                  bool isOn) const
 {
     const WidgetStyle *bs;
-    if (isOn) {
-        bs = &mButtonOnStyles[int(state)];
-    } else {
-        bs = &mButtonStyles[int(state)];
+    switch (buttonStyle) {
+        case Theme::ButtonDrawStyle::kNormal:
+            if (isOn) {
+                bs = &mButtonOnStyles[int(state)];
+            } else {
+                bs = &mButtonStyles[int(state)];
+            }
+            break;
+        case Theme::ButtonDrawStyle::kDialogDefault:
+            bs = &mButtonOnStyles[int(state)];
+            break;
     }
     drawFrame(ui, frame, bs->merge(style));
 }
@@ -983,7 +990,7 @@ void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaP
         if (!placeholder.empty()) {
             ui.dc.setFillColor(mTextEditStyles[int(WidgetState::kDisabled)].fgColor);
             ui.dc.drawText(placeholder.c_str(), textRect, horizAlign | Alignment::kVCenter,
-                           mParams.labelFont, kPaintFill);
+                           TextWrapMode::kNoWrap, mParams.labelFont, kPaintFill);
         }
     } else {
         // The layout incorporates the color, so we cannot set it.
@@ -1083,8 +1090,8 @@ void VectorBaseTheme::drawMenuItem(UIContext& ui, const Rect& frame, const PicaP
         drawCheckmark(ui, checkmarkRect, s);
     }
     ui.dc.setFillColor(s.fgColor);
-    ui.dc.drawText(text.c_str(), textRect, Alignment::kLeft | Alignment::kVCenter, mParams.labelFont,
-                   kPaintFill);
+    ui.dc.drawText(text.c_str(), textRect, Alignment::kLeft | Alignment::kVCenter,
+                   TextWrapMode::kNoWrap, mParams.labelFont, kPaintFill);
     if (itemAttr == MenuItemAttribute::kSubmenu) {
         auto itemMetrics = calcPreferredMenuItemMetrics(ui.dc, frame.height);
         Rect r(shortcutRect.maxX() - itemMetrics.submenuIconSize.width,
@@ -1094,7 +1101,7 @@ void VectorBaseTheme::drawMenuItem(UIContext& ui, const Rect& frame, const PicaP
         drawSubmenuIcon(ui, r, s);
     } else {
         ui.dc.drawText(shortcutKey.c_str(), shortcutRect, Alignment::kRight | Alignment::kVCenter,
-                       mParams.labelFont, kPaintFill);
+                       TextWrapMode::kNoWrap, mParams.labelFont, kPaintFill);
     }
 }
 
@@ -1139,7 +1146,8 @@ void VectorBaseTheme::drawMenubarItem(UIContext& ui, const Rect& frame, const st
     auto s = mMenubarItemStyles[int(state)];
     drawFrame(ui, frame, s);
     ui.dc.setFillColor(s.fgColor);
-    ui.dc.drawText(text.c_str(), frame, Alignment::kCenter, mParams.nonNativeMenubarFont, kPaintFill);
+    ui.dc.drawText(text.c_str(), frame, Alignment::kCenter, TextWrapMode::kNoWrap,
+                   mParams.nonNativeMenubarFont, kPaintFill);
 }
 
 }  // namespace uitk

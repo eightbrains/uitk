@@ -29,6 +29,7 @@ using namespace uitk;
 // identical .h files.
 #include "panels/widgets.cpp"
 #include "panels/cursors.cpp"
+#include "panels/dialogs.cpp"
 
 class RootWidget : public Widget
 {
@@ -151,6 +152,7 @@ public:
         auto *root = new RootWidget();
         root->addPanel("Widgets", new widgets::AllWidgetsPanel());
         root->addPanel("Cursors", new cursor::Panel());
+        root->addPanel("Dialogs", new dialogs::Panel());
         addChild(root);
 
         show(true);

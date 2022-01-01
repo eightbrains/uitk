@@ -35,6 +35,33 @@ struct LayoutContext
 {
     const Theme& theme;
     const DrawContext& dc;
+
+    /// Used by Widget::preferredSized() to return the preferred size in
+    /// a constrained condition, for example a large image displayed with
+    /// a fixed width, or a long piece of text, may return a different height
+    /// if the width is constrained. Note that these are not necessarily set
+    /// in Widget::layout(), which should use Widget::bounds() to retrieve
+    /// sizes.
+    struct {
+        PicaPt width = PicaPt(10000);
+        PicaPt height = PicaPt(10000);
+    } constraints;
+
+    LayoutContext withWidth(const PicaPt& w) const {
+        auto copy = *this;
+        if (copy.constraints.width > w) {  // don't use std::min() in headers
+            copy.constraints.width = w;
+        }
+        return copy;
+    }
+
+    LayoutContext withHeight(const PicaPt& h) const {
+        auto copy = *this;
+        if (copy.constraints.height > h) {  // don't use std::min() in headers
+            copy.constraints.height = h;
+        }
+        return copy;
+    }
 };
 
 struct UIContext

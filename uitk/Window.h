@@ -38,6 +38,7 @@ struct KeyEvent;
 struct MouseEvent;
 struct LayoutContext;
 class Cursor;
+class Dialog;
 class MenuItem;
 class MenuUITK;
 class OSMenubar;
@@ -58,8 +59,9 @@ public:
     struct Flags {  // the struct provides scoping like enum class
         enum Value {
             kNormal = 0,
-            kPopup = (1 << 0),
-            kMenuEdges = (1 << 1),  // used internally for menus: makes the top corners square
+            kDialog = (1 << 0),
+            kPopup = (2 << 0),
+            kMenuEdges = (3 << 1),  // used internally for menus: makes the top corners square
         };
     };
 
@@ -161,6 +163,9 @@ public:
     /// this is most useful if there is only one child).
     Widget* addChild(Widget *child);
 
+    /// Remove child (if it is a child), and returns ownership to the caller.
+    Widget* removeChild(Widget *child);
+
     /// Schedules a redraw.
     void setNeedsDraw();
 
@@ -221,6 +226,14 @@ public:
     void setPopupMenu(MenuUITK *menu);
     /// Returns the active popup menu, or nullptr
     MenuUITK* popupMenu() const;
+
+    // Takes ownership of the dialog and displays modal to this window,
+    // returning true. If a dialog is already displaying, returns false and does
+    // not take ownership. This is for use in implementing dialogs; use
+    // Dialog::showModal() instead.
+    bool beginModalDialog(Dialog *d);
+    // Ends display of the dialog and returns ownership to the caller.
+    Dialog* endModalDialog();
 
     void onResize(const DrawContext& dc) override;
     void onLayout(const DrawContext& dc) override;
