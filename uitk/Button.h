@@ -48,6 +48,15 @@ public:
 
     Label* label() const;
 
+    enum class DrawStyle {
+        kNormal = 0,
+        kDialogDefault  /// this should be set by the dialog; you should not need to call this outside of a dialog
+    };
+    DrawStyle drawStyle() const;
+    /// Sets the drawing style of the button. Calling this on
+    /// derived classes is likely to have no effect.
+    Button* setDrawStyle(DrawStyle s);
+
     Size preferredSize(const LayoutContext& context) const override;
     void layout(const LayoutContext& context) override;
 

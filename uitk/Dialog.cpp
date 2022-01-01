@@ -76,6 +76,7 @@ void Dialog::showAlert(Window *w,
             if (mButtons.empty()) {
                 addButton("Ok");
             }
+            mButtons[0]->setDrawStyle(Button::DrawStyle::kDialogDefault);
             Super::showModal(w, onDone);
         }
 

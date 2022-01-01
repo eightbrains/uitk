@@ -597,15 +597,22 @@ Theme::WidgetStyle VectorBaseTheme::labelStyle(const WidgetStyle& style, WidgetS
     return mLabelStyles[int(state)].merge(style);
 }
 
-void VectorBaseTheme::drawButton(UIContext& ui, const Rect& frame,
+void VectorBaseTheme::drawButton(UIContext& ui, const Rect& frame, ButtonDrawStyle buttonStyle,
                                  const WidgetStyle& style, WidgetState state,
                                  bool isOn) const
 {
     const WidgetStyle *bs;
-    if (isOn) {
-        bs = &mButtonOnStyles[int(state)];
-    } else {
-        bs = &mButtonStyles[int(state)];
+    switch (buttonStyle) {
+        case Theme::ButtonDrawStyle::kNormal:
+            if (isOn) {
+                bs = &mButtonOnStyles[int(state)];
+            } else {
+                bs = &mButtonStyles[int(state)];
+            }
+            break;
+        case Theme::ButtonDrawStyle::kDialogDefault:
+            bs = &mButtonOnStyles[int(state)];
+            break;
     }
     drawFrame(ui, frame, bs->merge(style));
 }

@@ -69,7 +69,7 @@ public:
     void clipFrame(UIContext& ui, const Rect& frame,
                    const WidgetStyle& style) const override;
     WidgetStyle labelStyle(const WidgetStyle& style, WidgetState state) const override;
-    void drawButton(UIContext& ui, const Rect& frame,
+    void drawButton(UIContext& ui, const Rect& frame, ButtonDrawStyle buttonStyle,
                     const WidgetStyle& style, WidgetState state,
                     bool isOn) const override;
     const WidgetStyle& buttonTextStyle(WidgetState state, bool isOn) const override;
