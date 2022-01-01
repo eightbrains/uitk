@@ -180,6 +180,7 @@ void Dialog::showAlert(Window *w,
         }
         delete dlg;
     });
+    Application::instance().beep();
 }
 
 struct Dialog::Impl

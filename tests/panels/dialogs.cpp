@@ -60,8 +60,11 @@ private:
     void onAlert()
     {
         auto *w = window();
-        Dialog::showAlert(w, "Alert", "We need to ask for confirmation or a decision about something.",
-                          "Please click a button", {"Ok", "Cancel", "I'm feeling lucky!"},
+        Dialog::showAlert(w, "Alert", "This tests for multiple buttons and whether keys work properly.",
+                          "Pressing the Ok button or the Return key should say '1'\n"
+                          "Pressing the Cancel button, the Escape key, or clicking the close button should say 'cancelled'\n"
+                          "The other button should say '3'",
+                          {"Ok", "Cancel", "I'm feeling lucky!"},
                           [w](Dialog::Result r, int idx) {
             if (r == Dialog::Result::kFinished) {
                 Dialog::showAlert(w, "Result", std::string("Pressed button ") + std::to_string(idx + 1), "");

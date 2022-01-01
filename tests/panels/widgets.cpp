@@ -67,7 +67,7 @@ class LabelTest : public Widget
     using Super = Widget;
 public:
     static constexpr char kShortText[] = "Agillion AVAST fill triffling";
-    static constexpr char kLongText[] = "Agillion AVAST fill triffling flings tiny brittle Egypt";
+    static constexpr char kLongText[] = "Agillion AVAST fill triffling Toast flings tiny brittle Egypt";
 
     LabelTest()
     {

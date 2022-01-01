@@ -146,6 +146,7 @@ struct Win32Window::Impl {
     Cursor cursor;
     std::shared_ptr<DrawContext> dc;
     ClickCounter clickCounter;
+    bool isFinishedConstructing = false;  // wndproc callbacks can happen before constructor finishes
     bool needsUpdateMenu = false;
     bool needsLayout = true;
 
@@ -182,6 +183,12 @@ Win32Window::Win32Window(IWindowCallbacks& callbacks,
                          Window::Flags::Value flags)
     : mImpl(new Impl{callbacks})
 {
+    // You cannot show 0x0 windows, so force to at least one pixel.
+    // Note that @#$! windows.h #defines max and min, so you cannot use
+    // std::max().
+    width = max(1, width);
+    height = max(1, height);
+
     mImpl->flags = flags;
 
     if (!Impl::wndclass) {
@@ -222,21 +229,44 @@ Win32Window::Win32Window(IWindowCallbacks& callbacks,
             y |= CW_USEDEFAULT;
         }
     }
-    mImpl->hwnd = CreateWindow(Impl::wndclass,
-                               "",
-                               style,
-                               x, y,
-                               width, height,
-                               NULL,  // parent
-                               NULL,  // menu
-                               HINST_THISCOMPONENT,
-                               this); // passed to WM_CREATE message, useful for a this pointer
+    DWORD exStyle = 0;
+    if (flags & Window::Flags::kDialog) {
+        // Note that WS_DLGFRAME is used by normal windows (part of WS_CAPTION)
+        exStyle |= WS_EX_DLGMODALFRAME;
+    }
+
+    // CreateWindow() executes WM_GETMINMAXINFO, WM_NCCREATE, WM_NCCALCSIZE, WM_CREATE events
+    // synchronously before the function finishes.
+    mImpl->hwnd = CreateWindowEx(exStyle,
+                                 Impl::wndclass,
+                                 "",
+                                 style,
+                                 x, y,
+                                 width, height,
+                                 NULL,  // parent
+                                 NULL,  // menu
+                                 HINST_THISCOMPONENT,
+                                 this); // passed to WM_CREATE message, useful for a this pointer
     auto &win32app = static_cast<Win32Application&>(Application::instance().osApplication());
     win32app.registerWindow(mImpl->hwnd, this);
     mImpl->updateDrawContext();
     setTitle(title);
 
-    updateMenubar();
+    // We need to set the menubar, but do not do it now, because that will
+    // cause a bunch of events to get sent synchronously, and we want to get
+    // out of the constructor so that Window::mImpl::window actually has a value.
+    mImpl->needsUpdateMenu = true;
+
+    // Windows are not sent an initial size message. Normal windows will get one
+    // when the menu is updated (possibly when they become visible), but others
+    // will not.
+    // TODO: we probably need an onCalcPreferredSize() callback or something.
+    // HACK: this crashes if a window goes away too soon (since 'this' no longer exists).
+    if (flags & Window::Flags::kDialog) {
+        Application::instance().scheduleLater(nullptr, [this]() { this->onLayout(); });
+    }
+
+    mImpl->isFinishedConstructing = true;
 }
 
 Win32Window::~Win32Window()
@@ -261,7 +291,10 @@ void Win32Window::updateMenubar()
     // need to say we are updated before we get finished to avoid an infinite loop.
     mImpl->needsUpdateMenu = false;
 
-    if (!(GetWindowStyle(mImpl->hwnd) & WS_POPUP)) {  // WS_OVERLAPPEDWINDOW is 0x0, cannot compare with that
+    // WS_OVERLAPPEDWINDOW is 0x0, cannot compare with that
+    bool isNormalStyle = !((GetWindowStyle(mImpl->hwnd) & WS_POPUP) ||
+                           (GetWindowExStyle(mImpl->hwnd) & WS_EX_DLGMODALFRAME));
+    if (isNormalStyle) {
         if (auto* win32menubar = dynamic_cast<Win32Menubar*>(&Application::instance().menubar())) {
             // The docs for CreateMenu() state that "resources associated with a menu
             // that is assigned to a window are freed automatically". Otherwise we need
@@ -276,7 +309,9 @@ void Win32Window::updateMenubar()
 
 bool Win32Window::isShowing() const
 {
-    return IsWindowVisible(mImpl->hwnd);
+    // Make sure this is callable after we have destroyed the window, but before the
+    // destroy message has removed the window from the list.
+    return (mImpl->hwnd != NULL && IsWindowVisible(mImpl->hwnd));
 }
 
 void Win32Window::show(bool show,
@@ -325,6 +360,11 @@ void Win32Window::close()
     }
 }
 
+void Win32Window::raiseToTop() const
+{
+    BringWindowToTop(mImpl->hwnd);
+}
+
 void Win32Window::setTitle(const std::string& title)
 {
     auto wtitle = win32UnicodeFromUTF8(title);
@@ -369,6 +409,25 @@ OSWindow::OSRect Win32Window::osContentRect() const
                   float(windowOS.right - windowOS.left), float(windowOS.bottom - windowOS.top)};
 }
 
+void Win32Window::setContentSize(const Size& size)
+{
+    auto style = GetWindowStyle(mImpl->hwnd);
+    auto exStyle = GetWindowExStyle(mImpl->hwnd);
+    auto contentRect = osContentRect();
+    RECT r = { LONG(contentRect.x),
+               LONG(contentRect.y),
+               LONG(contentRect.x + size.width.toPixels(dpi())),
+               LONG(contentRect.y + size.height.toPixels(dpi())) };
+    BOOL hasMenu = TRUE;
+    if (style & WS_CHILD) {  // docs say GetMenu() for child window is undefined
+        hasMenu = FALSE;
+    } else if (GetMenu(mImpl->hwnd) == NULL) {
+        hasMenu = FALSE;
+    }
+    AdjustWindowRectEx(&r, style, hasMenu, exStyle);
+    setOSFrame(float(r.left), float(r.top), float(r.right - r.left), float(r.bottom - r.top));
+}
+
 OSWindow::OSRect Win32Window::osFrame() const
 {
     RECT r;
@@ -391,9 +450,19 @@ void Win32Window::postRedraw() const
     InvalidateRect(mImpl->hwnd, NULL, TRUE /*erase background*/);
 }
 
-void Win32Window::raiseToTop() const
+void Win32Window::beginModalDialog(OSWindow* w)
 {
-    BringWindowToTop(mImpl->hwnd);
+    auto dlgFrame = w->osFrame();
+    auto f = osFrame();
+    dlgFrame.x = f.x + 0.5f * f.width - 0.5f * dlgFrame.width;
+    dlgFrame.y = f.y + 0.5f * f.height - 0.5f * dlgFrame.height;
+    w->setOSFrame(dlgFrame.x, dlgFrame.y, dlgFrame.width, dlgFrame.height);
+    w->show(true, [](const uitk::DrawContext&) {});
+}
+
+void Win32Window::endModalDialog(OSWindow* w)
+{
+    w->show(false, [](const uitk::DrawContext&) {});
 }
 
 PicaPt Win32Window::borderWidth() const
@@ -431,10 +500,27 @@ void Win32Window::onMoved()
 
 void Win32Window::onResize()
 {
-    mImpl->updateDrawContext();
+    // For popup menus a WM_SIZE message gets sent in CreateWindow(), event
+    // though it does not seem to for other types. And despite the constructor
+    // calling updateDrawContext() with no problem, it crashes if we call it a
+    // second time.
+    // TODO: figure out what is really going on here.
+    if (mImpl->isFinishedConstructing) {
+        mImpl->updateDrawContext();
+    }
+
     // We are probably going to get a series of resize messages in a row,
-    // so defer the layout until we actually try to draw.
-    mImpl->needsLayout = true;
+    // so defer the layout until we actually try to draw. However, if we
+    // are not visible, we are not going to draw (nor are we likely to
+    // get a series of resize messages from resizing via the mouse).
+    if (isShowing() || !mImpl->isFinishedConstructing) {
+        mImpl->needsLayout = true;
+    } else {
+        // WndProc events will happen before the constructor is finished.
+        // We cannot call back to Window functions, since Window::mImpl::window
+        // will not be set yet (since the Win32Window constructor is not finished).
+        onLayout();
+    }
 }
 
 void Win32Window::onLayout()
@@ -587,6 +673,10 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
     if (w && w->menubarNeedsUpdate()) {
         w->updateMenubar();
     }
+
+    //void *hex = (void*)message;
+    //DPrint() << "[debug] message: " << hex << ", w: " << w;
+
     switch (message) {
         case WM_CREATE: {
             auto *create = (CREATESTRUCT*)lParam;
@@ -648,6 +738,9 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
             w->onResize();
             return TRUE;
         }
+        case WM_SIZE:
+            w->onResize();
+            return 0;  // Note this is different from the return value for WM_SIZING!
         case WM_MOVE:
             w->onMoved();  // in case changed screens
             return 0;

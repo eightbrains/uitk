@@ -138,7 +138,13 @@ void Win32Application::scheduleLater(Window *w, std::function<void()> f)
     mImpl->postedFunctions.push_back(f);
     }
 
-    PostMessage((HWND)w->nativeHandle(), kCheckPostedFunctionsMsg, 0, 0);
+    if (w) {
+        PostMessage((HWND)w->nativeHandle(), kCheckPostedFunctionsMsg, 0, 0);
+    } else {
+        // Docs say this acts like PostThreadMessage(), which uses GetMessage()
+        // the same as our run loop, so this should be okay.
+        PostMessage(NULL, kCheckPostedFunctionsMsg, 0, 0);
+    }
 }
 
 std::string Win32Application::applicationName() const

@@ -313,9 +313,12 @@ struct Window::Impl
     Widget *grabbedWidget = nullptr;
     Widget *focusedWidget = nullptr;
     MenuUITK *activePopup = nullptr;
-    Dialog *dialog = nullptr;
-    std::unique_ptr<Window> dialogWindow;
     PopupState popupState = PopupState::kNone;
+    struct {
+        Dialog* dialog = nullptr;
+        std::unique_ptr<Window> window;
+        bool needsInitialSize = true;
+    } dialog;
     std::function<void(MenuItem&)> onMenuItemNeedsUpdate;
     std::unordered_map<MenuId, std::function<void()>> onMenuActivatedCallbacks;
     std::function<void(Window&)> onWillShow;
@@ -538,7 +541,15 @@ void Window::setNeedsDraw()
     }
 }
 
-void Window::postRedraw() const { mImpl->window->postRedraw(); }
+void Window::postRedraw() const
+{
+    // We sometimes get deactivate messages from dialogs whose window has been
+    // destroyed. The deactivate is reasonable, but we do not want post the
+    // redraw!
+    if (mImpl->window != NULL) {
+        mImpl->window->postRedraw();
+    }
+}
 
 void Window::raiseToTop() const { mImpl->window->raiseToTop(); }
 
@@ -655,24 +666,33 @@ void Window::setPopupMenu(MenuUITK *menu)
 
 bool Window::beginModalDialog(Dialog *d)
 {
-    if (mImpl->dialog) {
+    if (mImpl->dialog.dialog) {
         return false;
     }
 
-    mImpl->dialog = d;
-    mImpl->dialogWindow.reset(new Window(d->title(), 10, 10, Flags::kDialog));
-    mImpl->dialogWindow->addChild(d);
-    mImpl->dialogWindow->setOnWindowLayout([this](Window &w, const LayoutContext &context) {
-        auto pref = mImpl->dialog->preferredSize(context);
-        mImpl->dialog->setFrame(Rect(PicaPt::kZero, PicaPt::kZero, pref.width, pref.height));
-        if (mImpl->dialogWindow->nativeWindow()->osContentRect().width <= 15) {
+    mImpl->dialog.needsInitialSize = true;
+    mImpl->dialog.dialog = d;
+    mImpl->dialog.window.reset(new Window(d->title(), 10, 10, Flags::kDialog));
+    mImpl->dialog.window->addChild(d);
+    mImpl->dialog.window->setOnWindowShouldClose([this](Window&) {
+        Application::instance().scheduleLater(mImpl->dialog.window.get(), [this]() {
+            mImpl->dialog.dialog->cancel();
+        });
+        return false;
+    });
+    mImpl->dialog.window->setOnWindowLayout([this](Window &w, const LayoutContext &context) {
+        auto pref = mImpl->dialog.dialog->preferredSize(context);
+        mImpl->dialog.dialog->setFrame(Rect(PicaPt::kZero, PicaPt::kZero, pref.width, pref.height));
+        auto dbg = mImpl->dialog.window->nativeWindow()->osContentRect();
+        if (mImpl->dialog.needsInitialSize) {
+            mImpl->dialog.needsInitialSize = false;
             // Don't resize now, we are in the middle of a layout.
             // Also, wait to begin the modal dialog until we are the
             // size we want to be, otherwise the sheet-opening animation
             // on macOS does not work correctly.
-            Application::instance().scheduleLater(mImpl->dialogWindow.get(), [this, pref]() {
-                mImpl->dialogWindow->resize(pref);
-                mImpl->window->beginModalDialog(mImpl->dialogWindow->nativeWindow());
+            Application::instance().scheduleLater(mImpl->dialog.window.get(), [this, pref]() {
+                mImpl->dialog.window->resize(pref);
+                mImpl->window->beginModalDialog(mImpl->dialog.window->nativeWindow());
             });
         }
     });
@@ -682,14 +702,18 @@ bool Window::beginModalDialog(Dialog *d)
 // Ends display of the dialog and returns ownership to the caller.
 Dialog* Window::endModalDialog()
 {
-    mImpl->window->endModalDialog(mImpl->dialogWindow->nativeWindow());
-    auto *dialog = mImpl->dialog;
-    mImpl->dialogWindow->removeChild(dialog);
-    mImpl->dialog = nullptr;
+    auto *dialog = mImpl->dialog.dialog;
+    mImpl->dialog.window->removeChild(dialog);
+    mImpl->dialog.dialog = nullptr;
+    // Makes sure we call this AFTER dialog.dialog is nulled, so that we can
+    // tell between an onActivate() from someone trying to click away from the
+    // dialog and the dialog is closing (but has not quite finished, e.g. on
+    // Windows) and so this window is actually activating.
+    mImpl->window->endModalDialog(mImpl->dialog.window->nativeWindow());
     // We are probably in an event, most likely a button event, so we cannot
     // delete the dialog window now.
-    mImpl->dialogWindow->deleteLater();
-    mImpl->dialogWindow.release();
+    mImpl->dialog.window->deleteLater();
+    mImpl->dialog.window.release();
 
     return dialog;
 }
@@ -824,7 +848,7 @@ void Window::onMouse(const MouseEvent& eOrig)
 void Window::onKey(const KeyEvent &e)
 {
     int menuId;
-    if (!mImpl->dialog && e.type == KeyEvent::Type::kKeyDown && Application::instance().keyboardShortcuts().hasShortcut(e, &menuId)) {
+    if (!mImpl->dialog.dialog && e.type == KeyEvent::Type::kKeyDown && Application::instance().keyboardShortcuts().hasShortcut(e, &menuId)) {
         onMenuWillShow();  // make sure items are enabled/disabled for *this current* window
         Application::instance().menubar().activateItemId(menuId);
         // We need to flash the menu that got activated, but the menubar
@@ -946,6 +970,18 @@ void Window::onDraw(DrawContext& dc)
 
 void Window::onActivated(const Point& currentMousePos)
 {
+    // Some platforms, like Windows, do not allow a window as a dialog, so we have to
+    // force the modality ourselves. Note that we need to check both dialog.dialog and
+    // dialog.window, since we will get an onActivated() call when the dialog's window
+    // is closing, but has not finished closing (dialog.dialog == nullptr,
+    // dialog.window != nullptr). At least on Windows, since there are some other messages
+    // that get sent before the close message when DestroyWindow() is called.
+    if (mImpl->dialog.dialog && mImpl->dialog.window) {
+        mImpl->dialog.window->raiseToTop();
+        Application::instance().beep();
+        return;
+    }
+
     mImpl->isActive = true;
     mImpl->cancelPopup();
     if (!(mImpl->flags & Flags::kPopup)) {
