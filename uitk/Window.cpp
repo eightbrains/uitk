@@ -364,7 +364,9 @@ Window::Window(const std::string& title, int x, int y, int width, int height,
     mImpl->title = title;
 
     auto &menubar = Application::instance().menubar();
-    if (!(flags & Flags::kPopup) && !Application::instance().supportsNativeMenus()) {
+    if (!(flags & Flags::kPopup) &&
+        !(flags & Flags::kDialog) &&
+        !Application::instance().supportsNativeMenus()) {
         if (auto* uitkMenubar = dynamic_cast<MenubarUITK*>(&Application::instance().menubar())) {
             mImpl->menubarWidget = uitkMenubar->createWidget();
             mImpl->menubarWidget->setWindow(this);
@@ -382,7 +384,7 @@ Window::Window(const std::string& title, int x, int y, int width, int height,
     pushCursor(Cursor::arrow());
     addStandardMenuHandlers(*this);
 
-    if (!(flags & Flags::kPopup)) {
+    if (!(flags & Flags::kPopup) && !(flags & Flags::kDialog)) {
         Application::instance().addWindow(this);
         updateWindowList();
     }
@@ -720,6 +722,12 @@ Dialog* Window::endModalDialog()
 
 void Window::onMouse(const MouseEvent& eOrig)
 {
+    // macOS and Windows do not send events to a window under a dialog, but
+    // X11 does.
+    if (mImpl->dialog.dialog || mImpl->dialog.window) {
+        return;
+    }
+
     if (mImpl->activePopup) {
         if (eOrig.type == MouseEvent::Type::kButtonDown) {
             mImpl->cancelPopup();
@@ -970,12 +978,13 @@ void Window::onDraw(DrawContext& dc)
 
 void Window::onActivated(const Point& currentMousePos)
 {
-    // Some platforms, like Windows, do not allow a window as a dialog, so we have to
-    // force the modality ourselves. Note that we need to check both dialog.dialog and
-    // dialog.window, since we will get an onActivated() call when the dialog's window
-    // is closing, but has not finished closing (dialog.dialog == nullptr,
-    // dialog.window != nullptr). At least on Windows, since there are some other messages
-    // that get sent before the close message when DestroyWindow() is called.
+    // Some platforms, like Windows, do not allow a window as a dialog, so we
+    // have to force the modality ourselves. Note that we need to check both
+    // dialog.dialog and dialog.window, since we will get an onActivated() call
+    // when the dialog's window is closing, but has not finished closing
+    // (dialog.dialog == nullptr, dialog.window != nullptr). At least on
+    // Windows, since there are some other messages that get sent before the
+    // close message when DestroyWindow() is called.
     if (mImpl->dialog.dialog && mImpl->dialog.window) {
         mImpl->dialog.window->raiseToTop();
         Application::instance().beep();
@@ -1058,6 +1067,12 @@ void Window::onMenuActivated(MenuId id)
 
 bool Window::onWindowShouldClose()
 {
+    // Some X11 window managers let you click the close button even if it has 
+    // a transient, modal window.
+    if (mImpl->dialog.dialog || mImpl->dialog.window) {
+        return false;
+    }
+
     if (mImpl->onShouldClose) {
         return mImpl->onShouldClose(*this);
     }

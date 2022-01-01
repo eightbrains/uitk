@@ -49,11 +49,14 @@ public:
 
     void close() override;
 
+    void raiseToTop() const override;
+
     void setTitle(const std::string& title) override;
 
     void setCursor(const Cursor& cursor) override;
 
     Rect contentRect() const override;
+    void setContentSize(const Size& size) override;
     OSRect osContentRect() const override;
 
     float dpi() const override;
@@ -64,7 +67,8 @@ public:
 
     void postRedraw() const override;
 
-    void raiseToTop() const override;
+    void beginModalDialog(OSWindow *w) override;
+    void endModalDialog(OSWindow *w) override;
 
     Point currentMouseLocation() const override;
 

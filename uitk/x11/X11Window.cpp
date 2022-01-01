@@ -266,6 +266,12 @@ void X11Window::close()
     }
 }
 
+void X11Window::raiseToTop() const
+{
+    XRaiseWindow(mImpl->display, mImpl->xwindow);
+    gActiveWindow = (X11Window*)this;
+}
+
 void X11Window::setTitle(const std::string& title)
 {
     mImpl->title = title;
@@ -296,6 +302,13 @@ Rect X11Window::contentRect() const
 OSWindow::OSRect X11Window::osContentRect() const
 {
     return osFrame();
+}
+
+void X11Window::setContentSize(const Size& size)
+{
+    auto f = osFrame();
+    setOSFrame(f.x, f.y,
+               size.width.toPixels(dpi()), size.height.toPixels(dpi()));
 }
 
 float X11Window::dpi() const { return mImpl->dpi; }
@@ -372,10 +385,26 @@ void X11Window::postRedraw() const
     }
 }
 
-void X11Window::raiseToTop() const
+void X11Window::beginModalDialog(OSWindow *w)
 {
-    XRaiseWindow(mImpl->display, mImpl->xwindow);
-    gActiveWindow = (X11Window*)this;
+    Atom type = XInternAtom(mImpl->display, "_NET_WM_WINDOW_TYPE", False);
+    long value = XInternAtom(mImpl->display, "_NET_WM_WINDOW_TYPE_DIALOG", False);
+    XChangeProperty(mImpl->display, (::Window)w->nativeHandle(), type, XA_ATOM,
+                    32, PropModeReplace, (unsigned char *)&value, 1);
+    XSetTransientForHint(mImpl->display, (::Window)w->nativeHandle(),
+                         (::Window)this->nativeHandle());
+
+    w->show(true, [](const uitk::DrawContext&) {});
+
+    type = XInternAtom(mImpl->display, "_NET_WM_STATE", False);
+    value = XInternAtom(mImpl->display, "_NET_WM_STATE_MODAL", False);
+    XChangeProperty(mImpl->display, (::Window)w->nativeHandle(), type, XA_ATOM,
+                    32, PropModeReplace, (unsigned char *)&value, 1);
+}
+
+void X11Window::endModalDialog(OSWindow *w)
+{
+    w->show(false, [](const uitk::DrawContext&) {});
 }
 
 Point X11Window::currentMouseLocation() const
