@@ -29,6 +29,8 @@
 
 namespace uitk {
 
+class Button;
+
 // Design note
 // Q: Why aren't finish()/cancel() protected? It does not make sense for
 //    outsiders to exit the dialog.
@@ -64,10 +66,16 @@ public:
     /// Dialogs should call this to indicate that they are cancelled
     void cancel();
 
-    /// Shows the dialog asynchronously. When the dialog is finished, the callback
-    /// is called with onDone(result, value), where value is what was passed
+    /// Shows the dialog asynchronously, sized to preferredSize().
+    /// When the dialog is finished, the callback is called with
+    /// onDone(result, value), where value is what was passed
     /// to finish(), or if the dialog was cancelled, indeterminate.
     virtual void showModal(Window *w, std::function<void(Result, int)> onDone);
+
+    /// Sets the button as default, and its action will be taken if
+    /// Return/Enter is pressed. Note that this does NOT add the button,
+    /// which is assumed to exist in the child hierarchy.
+    void setAsDefaultButton(Button *button);
 
     void key(const KeyEvent& e) override;
 

@@ -47,6 +47,9 @@ public:
     /// Ensures that the widget is redrawn
     void setNeedsDraw();
 
+    /// Ensures that the widget is re-laidout.
+    void setNeedsLayout();
+
     virtual const Rect& frame() const;
     /// The frame's coordinates are relative to its parent
     virtual Widget* setFrame(const Rect& frame);

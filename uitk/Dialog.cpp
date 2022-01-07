@@ -76,6 +76,7 @@ void Dialog::showAlert(Window *w,
             if (mButtons.empty()) {
                 addButton("Ok");
             }
+            setAsDefaultButton(mButtons[0]);
             mButtons[0]->setDrawStyle(Button::DrawStyle::kDialogDefault);
             Super::showModal(w, onDone);
         }
@@ -119,8 +120,7 @@ void Dialog::showAlert(Window *w,
                                        std::min(sixtyChars, infoPref.width)));
             w = std::max(w, buttonWidth);
             w = std::max(20.0f * em, w);
-            auto h = 2.0f * margin +
-                     (mMessage->text().empty()
+            auto h = (mMessage->text().empty()
                         ? PicaPt::kZero
                         : mMessage->preferredSize(context.withWidth(w)).height) +
                      (mInfo->text().empty()
@@ -128,14 +128,14 @@ void Dialog::showAlert(Window *w,
                         : em + mInfo->preferredSize(context.withWidth(w)).height) +
                      margin +
                      (mButtons.empty() ? em : mButtons[0]->preferredSize(context).height);
-            return Size(w + 2.0f * margin, h);
+            return Size(w + 2.0f * margin, h + 2.0f * margin);
         }
 
         void layout(const LayoutContext& context) override
         {
             auto em = context.theme.params().labelFont.pointSize();
             const auto margin = 2.0f * em;
-            auto w = bounds().width - 2.0f * em;
+            auto w = bounds().width - 2.0f * margin;
 
             if (!mMessage->text().empty()) {
                 auto pref = mMessage->preferredSize(context.withWidth(w));
@@ -190,6 +190,7 @@ struct Dialog::Impl
     Window *owningWindow = nullptr;  // we do not own this
     Window *ourWindow = nullptr;  // we own this (if not null)
     std::function<void(Result, int)> onDone;
+    Button *defaultButton = nullptr;  // we do not own this
 };
 
 Dialog::Dialog()
@@ -207,6 +208,12 @@ Dialog* Dialog::setTitle(const std::string& title)
 {
     mImpl->title = title;
     return this;
+}
+
+void Dialog::setAsDefaultButton(Button *button)
+{
+    mImpl->defaultButton = button;
+    button->setDrawStyle(Button::DrawStyle::kDialogDefault);
 }
 
 void Dialog::showModal(Window *w, std::function<void(Result, int)> onDone)
@@ -250,7 +257,9 @@ void Dialog::key(const KeyEvent& e)
 {
     if (e.key == Key::kReturn || e.key == Key::kEnter) {
         if (e.type == KeyEvent::Type::kKeyDown) {
-            finish(0);
+            if (mImpl->defaultButton) {
+                mImpl->defaultButton->performClick();
+            }
         }
     } else if (e.key == Key::kEscape) {
         if (e.type == KeyEvent::Type::kKeyDown) {

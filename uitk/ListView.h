@@ -73,6 +73,7 @@ public:
     std::vector<int> selectedIndices() const;
 
     ListView* setOnSelectionChanged(std::function<void(ListView*)> onChanged);
+    ListView* setOnSelectionDoubleClicked(std::function<void(ListView*, int)> onDblClicked);
 
     void clearSelection();
     void setSelectedIndex(int index);

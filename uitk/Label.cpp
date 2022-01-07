@@ -58,6 +58,7 @@ const std::string& Label::text() const { return mImpl->text; }
 Label* Label::setText(const std::string& text)
 {
     mImpl->text = text;
+    setNeedsLayout();
     setNeedsDraw();
     return this;
 }

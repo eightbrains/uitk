@@ -107,7 +107,7 @@ public:
 
     bool isShowing() const;
     void show(Window *w, const Point& upperLeftWindowCoord, MenuId id = OSMenu::kInvalidId,
-              int extraWindowFlags = 0);
+              const PicaPt& minWidth = PicaPt::kZero, int extraWindowFlags = 0);
     void cancel();
     void cancelHierarchy(); /// Cancels the menu and any parent menus
 

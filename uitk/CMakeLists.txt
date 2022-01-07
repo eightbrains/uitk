@@ -9,6 +9,7 @@ set(UITK_HEADERS Application.h
                  CutPasteable.h
                  Dialog.h
                  Events.h
+                 FileDialog.h
                  Global.h
                  IncDecWidget.h
                  Label.h
@@ -49,6 +50,7 @@ set(UITK_SOURCES Application.cpp
                  ComboBox.cpp
                  Cursor.cpp
                  Dialog.cpp
+                 FileDialog.cpp
                  IncDecWidget.cpp
                  Label.cpp
                  ListView.cpp

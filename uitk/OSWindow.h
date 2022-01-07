@@ -121,6 +121,7 @@ public:
 
     virtual void* nativeHandle() = 0;
     virtual IWindowCallbacks& callbacks() = 0;
+    virtual void callWithLayoutContext(std::function<void(const DrawContext&)> f) = 0;
 };
 
 }  // namespace uitk

@@ -64,6 +64,8 @@ ComboBox::~ComboBox()
 void ComboBox::clear()
 {
     mImpl->menu->clear();
+    mImpl->items.clear();
+    mImpl->selectedIndex = -1;
 }
 
 ComboBox* ComboBox::addItem(const std::string& text, int value /*= 0*/)
@@ -125,7 +127,7 @@ ComboBox* ComboBox::setSelectedIndex(int index)
 {
     int oldIdx = mImpl->selectedIndex;
 
-    if (index >= 0 || index < int(mImpl->items.size())) {
+    if (index >= 0 && index < int(mImpl->items.size())) {
         if (mImpl->menu->isSeparatorAt(index)) {
             return this;
         }
@@ -138,7 +140,7 @@ ComboBox* ComboBox::setSelectedIndex(int index)
     mImpl->selectedIndex = index;  // could be -1
     setNeedsDraw();
 
-    if (index >= 0 || index < int(mImpl->items.size())) {
+    if (index >= 0 && index < int(mImpl->items.size())) {
         mImpl->menu->setItemChecked(mImpl->items[index].id, true);
     }
 
@@ -209,10 +211,11 @@ Widget::EventResult ComboBox::mouse(const MouseEvent& e)
             // The menu has a checkmark next to the currently selected item, and since
             // we offset the menu item when drawing the selected item in the combobox,
             // we also need to offset the menu similarly. This is Mac behavior.
-            auto menuUL = frame().upperLeft();
+            auto menuUL = Point::kZero;  // upper left in combobox's coord system
             menuUL.x -= mImpl->itemDrawOffset;
             menuUL.y -= mImpl->popupOffsetY;
-            mImpl->menu->show(window(), convertToWindowFromLocal(menuUL), id);
+            mImpl->menu->show(window(), convertToWindowFromLocal(menuUL), id,
+                              frame().width + 1.0f * frame().height /* height ~= em */);
 #ifdef __APPLE__
             // macOS draws the window border inside the window, instead of decorating
             // the exterior of the window like Win32 and Xlib. show() outsets for this,

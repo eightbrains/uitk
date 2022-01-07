@@ -137,6 +137,7 @@ protected:
     WidgetStyle mLabelStyles[5];
     WidgetStyle mButtonStyles[5];
     WidgetStyle mButtonOnStyles[5];
+    WidgetStyle mButtonDefaultDialogStyles[5];
     WidgetStyle mCheckboxStyles[5];
     WidgetStyle mCheckboxOnStyles[5];
     WidgetStyle mSegmentedControlStyles[5];  // style for the background
