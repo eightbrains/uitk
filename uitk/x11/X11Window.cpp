@@ -423,6 +423,11 @@ Point X11Window::currentMouseLocation() const
 void* X11Window::nativeHandle() { return (void*)mImpl->xwindow; }
 IWindowCallbacks& X11Window::callbacks() { return mImpl->callbacks;}
 
+void X11Window::callWithLayoutContext(std::function<void(const DrawContext&)> f)
+{
+    f(*mImpl->dc);
+}
+
 void X11Window::onResize()
 {
     mImpl->updateDrawContext();
