@@ -30,8 +30,141 @@
 #include "Window.h"
 #include "themes/Theme.h"
 
+#if defined(__APPLE__)
+#include "macos/MacOSDialog.h"
+#elif defined(_WIN32) || defined(_WIN64)
+#else
+#endif
+
 namespace uitk {
 
+namespace {
+class Alert : public Dialog
+{
+    using Super = Dialog;
+public:
+    Alert(const std::string& message, const std::string& info)
+    {
+        mMessage = new Label(message);
+        mMessage->setWordWrapEnabled(true);
+        addChild(mMessage);
+
+        mInfo = new Label(info);
+        mInfo->setWordWrapEnabled(true);
+        mInfo->setFont(mInfo->font().fontWithScaledPointSize(0.85f));
+        addChild(mInfo);
+    }
+
+    void addButton(const std::string& text)
+    {
+        auto *b = new Button(text);
+        b->setOnClicked([this](Button *b) { this->onButton(b); });
+        addChild(b);
+        mButtons.push_back(b);
+    }
+
+    void showModal(Window *w, std::function<void(Dialog::Result, int)> onDone) override
+    {
+        if (mButtons.empty()) {
+            addButton("Ok");
+        }
+        setAsDefaultButton(mButtons[0]);
+        mButtons[0]->setDrawStyle(Button::DrawStyle::kDialogDefault);
+        Super::showModal(w, onDone);
+    }
+
+    void onButton(Button *b)
+    {
+        for (size_t i = 0;  i < mButtons.size();  ++i) {
+            if (mButtons[i] == b) {
+                if (i == 1) {
+                    cancel();
+                } else {
+                    finish(i);
+                }
+            }
+        }
+    }
+
+    Size preferredSize(const LayoutContext& context) const override
+    {
+        auto em = context.theme.params().labelFont.pointSize();
+        const auto margin = 2.0f * em;
+
+        // Text is most readable between 60 and 80 characters,
+        // which is roughly 40 - 45 ems.
+        auto sixtyChars = 40.0f * em;
+        auto messagePref = mMessage->preferredSize(context.withWidth(sixtyChars));
+        auto infoPref = mInfo->preferredSize(context.withWidth(sixtyChars));
+        auto buttonWidth = PicaPt::kZero;
+        for (auto *b : mButtons) {
+            buttonWidth += std::max(6.0f * em, b->preferredSize(context).width) + em;
+        }
+        if (!mButtons.empty()) {
+            buttonWidth -= em;
+        }
+        if (mButtons.size() > 2) {
+            buttonWidth += 2.0f * em;
+        }
+
+        auto w = std::min(sixtyChars,
+                          std::max(std::min(sixtyChars, messagePref.width),
+                                   std::min(sixtyChars, infoPref.width)));
+        w = std::max(w, buttonWidth);
+        w = std::max(20.0f * em, w);
+        auto h = (mMessage->text().empty()
+                    ? PicaPt::kZero
+                    : mMessage->preferredSize(context.withWidth(w)).height) +
+                 (mInfo->text().empty()
+                    ? PicaPt::kZero
+                    : em + mInfo->preferredSize(context.withWidth(w)).height) +
+                 margin +
+                 (mButtons.empty() ? em : mButtons[0]->preferredSize(context).height);
+        return Size(w + 2.0f * margin, h + 2.0f * margin);
+    }
+
+    void layout(const LayoutContext& context) override
+    {
+        auto em = context.theme.params().labelFont.pointSize();
+        const auto margin = 2.0f * em;
+        auto w = bounds().width - 2.0f * margin;
+
+        if (!mMessage->text().empty()) {
+            auto pref = mMessage->preferredSize(context.withWidth(w));
+            mMessage->setFrame(Rect(margin, margin, w, pref.height));
+        } else {
+            mMessage->setFrame(Rect(margin, margin, PicaPt::kZero, PicaPt::kZero));
+        }
+        if (!mInfo->text().empty()) {
+            auto pref = mInfo->preferredSize(context.withWidth(w));
+            mInfo->setFrame(Rect(margin, mMessage->frame().maxY() + em, w, pref.height));
+        } else {
+            mInfo->setFrame(Rect(margin, mMessage->frame().maxY(), PicaPt::kZero, PicaPt::kZero));
+        }
+        PicaPt x = bounds().maxX() - margin;
+        for (size_t i = 0;  i < mButtons.size();  ++i) {
+            auto *b = mButtons[i];
+            Size pref = b->preferredSize(context);
+            pref.width = std::max(6.0f * em, pref.width);
+            x -= pref.width;
+            b->setFrame(Rect(x, mInfo->frame().maxY() + margin, pref.width, pref.height));
+            if (i == 1) {
+                x -= 2.0f * em;
+            }
+            x -= em;
+        }
+        Super::layout(context);
+    }
+
+private:
+    Label *mMessage;
+    Label *mInfo;
+    std::vector<Button*> mButtons;
+};
+
+}  // namespace
+
+//-----------------------------------------------------------------------------
 void Dialog::showAlert(Window *w,
                       const std::string& title,
                       const std::string& message,
@@ -47,143 +180,31 @@ void Dialog::showAlert(Window *w,
                       const std::vector<std::string>& buttons,
                       std::function<void(Dialog::Result, int)> onDone)
 {
-    class Alert : public Dialog
-    {
-        using Super = Dialog;
-    public:
-        Alert(const std::string& message, const std::string& info)
-        {
-            mMessage = new Label(message);
-            mMessage->setWordWrapEnabled(true);
-            addChild(mMessage);
-
-            mInfo = new Label(info);
-            mInfo->setWordWrapEnabled(true);
-            mInfo->setFont(mInfo->font().fontWithScaledPointSize(0.85f));
-            addChild(mInfo);
+    if (Application::instance().supportsNativeDialogs()) {
+#if defined(__APPLE__)
+        MacOSDialog::showAlert(w, title, message, info, buttons, onDone);
+#elif defined(_WIN32) || defined(_WIN64)
+        assert(false);
+#else
+        assert(false);
+#endif
+    } else {
+        auto *dlg = new Alert(message, info);
+        dlg->setTitle(title);
+        for (auto &b : buttons) {
+            dlg->addButton(b);
         }
-
-        void addButton(const std::string& text)
-        {
-            auto *b = new Button(text);
-            b->setOnClicked([this](Button *b) { this->onButton(b); });
-            addChild(b);
-            mButtons.push_back(b);
-        }
-
-        void showModal(Window *w, std::function<void(Dialog::Result, int)> onDone) override
-        {
-            if (mButtons.empty()) {
-                addButton("Ok");
+        dlg->showModal(w, [dlg, onDone](Dialog::Result r, int idx) {
+            if (onDone) {
+                onDone(r, idx);
             }
-            setAsDefaultButton(mButtons[0]);
-            mButtons[0]->setDrawStyle(Button::DrawStyle::kDialogDefault);
-            Super::showModal(w, onDone);
-        }
-
-        void onButton(Button *b)
-        {
-            for (size_t i = 0;  i < mButtons.size();  ++i) {
-                if (mButtons[i] == b) {
-                    if (i == 1) {
-                        cancel();
-                    } else {
-                        finish(i);
-                    }
-                }
-            }
-        }
-
-        Size preferredSize(const LayoutContext& context) const override
-        {
-            auto em = context.theme.params().labelFont.pointSize();
-            const auto margin = 2.0f * em;
-
-            // Text is most readable between 60 and 80 characters,
-            // which is roughly 40 - 45 ems.
-            auto sixtyChars = 40.0f * em;
-            auto messagePref = mMessage->preferredSize(context.withWidth(sixtyChars));
-            auto infoPref = mInfo->preferredSize(context.withWidth(sixtyChars));
-            auto buttonWidth = PicaPt::kZero;
-            for (auto *b : mButtons) {
-                buttonWidth += std::max(6.0f * em, b->preferredSize(context).width) + em;
-            }
-            if (!mButtons.empty()) {
-                buttonWidth -= em;
-            }
-            if (mButtons.size() > 2) {
-                buttonWidth += 2.0f * em;
-            }
-
-            auto w = std::min(sixtyChars,
-                              std::max(std::min(sixtyChars, messagePref.width),
-                                       std::min(sixtyChars, infoPref.width)));
-            w = std::max(w, buttonWidth);
-            w = std::max(20.0f * em, w);
-            auto h = (mMessage->text().empty()
-                        ? PicaPt::kZero
-                        : mMessage->preferredSize(context.withWidth(w)).height) +
-                     (mInfo->text().empty()
-                        ? PicaPt::kZero
-                        : em + mInfo->preferredSize(context.withWidth(w)).height) +
-                     margin +
-                     (mButtons.empty() ? em : mButtons[0]->preferredSize(context).height);
-            return Size(w + 2.0f * margin, h + 2.0f * margin);
-        }
-
-        void layout(const LayoutContext& context) override
-        {
-            auto em = context.theme.params().labelFont.pointSize();
-            const auto margin = 2.0f * em;
-            auto w = bounds().width - 2.0f * margin;
-
-            if (!mMessage->text().empty()) {
-                auto pref = mMessage->preferredSize(context.withWidth(w));
-                mMessage->setFrame(Rect(margin, margin, w, pref.height));
-            } else {
-                mMessage->setFrame(Rect(margin, margin, PicaPt::kZero, PicaPt::kZero));
-            }
-            if (!mInfo->text().empty()) {
-                auto pref = mInfo->preferredSize(context.withWidth(w));
-                mInfo->setFrame(Rect(margin, mMessage->frame().maxY() + em, w, pref.height));
-            } else {
-                mInfo->setFrame(Rect(margin, mMessage->frame().maxY(), PicaPt::kZero, PicaPt::kZero));
-            }
-            PicaPt x = bounds().maxX() - margin;
-            for (size_t i = 0;  i < mButtons.size();  ++i) {
-                auto *b = mButtons[i];
-                Size pref = b->preferredSize(context);
-                pref.width = std::max(6.0f * em, pref.width);
-                x -= pref.width;
-                b->setFrame(Rect(x, mInfo->frame().maxY() + margin, pref.width, pref.height));
-                if (i == 1) {
-                    x -= 2.0f * em;
-                }
-                x -= em;
-            }
-            Super::layout(context);
-        }
-
-    private:
-        Label *mMessage;
-        Label *mInfo;
-        std::vector<Button*> mButtons;
-    };
-
-    auto *dlg = new Alert(message, info);
-    dlg->setTitle(title);
-    for (auto &b : buttons) {
-        dlg->addButton(b);
+            delete dlg;
+        });
+        Application::instance().beep();
     }
-    dlg->showModal(w, [dlg, onDone](Dialog::Result r, int idx) {
-        if (onDone) {
-            onDone(r, idx);
-        }
-        delete dlg;
-    });
-    Application::instance().beep();
 }
 
+//-----------------------------------------------------------------------------
 struct Dialog::Impl
 {
     std::string title;

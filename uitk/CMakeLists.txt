@@ -96,12 +96,14 @@ if (APPLE)
     list(APPEND UITK_HEADERS macos/MacOSApplication.h
                              macos/MacOSClipboard.h
                              macos/MacOSCursor.h
+                             macos/MacOSDialog.h
                              macos/MacOSMenu.h
                              macos/MacOSMenubar.h
                              macos/MacOSWindow.h)
     list(APPEND UITK_SOURCES macos/MacOSApplication.mm
                              macos/MacOSClipboard.mm
                              macos/MacOSCursor.mm
+                             macos/MacOSDialog.mm
                              macos/MacOSMenu.mm
                              macos/MacOSMenubar.mm
                              macos/MacOSWindow.mm)

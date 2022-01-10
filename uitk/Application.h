@@ -99,6 +99,16 @@ public:
     /// Returns true if the platform supports using native menus.
     bool supportsNativeMenus() const;
 
+    /// Returns true if the platform supports native alert and file dialogs.
+    bool supportsNativeDialogs() const;
+    
+    /// Sets or unsets using native dialogs for alerts and file dialogs.
+    /// The argument is ignored for platforms that do not support or do not
+    /// have native dialogs. Since the default is true (if native dialogs
+    /// can be supported), this is mostly useful for turning off native
+    /// support for testing.
+    void setSupportsNativeDialogs(bool supports);
+
     /// Returns the active window, or nullptr if no windows are active.
     Window* activeWindow() const;
 

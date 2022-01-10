@@ -24,6 +24,15 @@
 
 namespace uitk {
 
+std::string baseDirectoryOfPath(const std::string& path)
+{
+    auto idx = path.rfind('/');
+    if (idx == 0 || idx == std::string::npos) {
+        return "/";
+    }
+    return path.substr(0, idx - 1);
+}
+
 std::string removeMenuItemMnemonics(const std::string& s)
 {
 	auto noAmpersands = s;

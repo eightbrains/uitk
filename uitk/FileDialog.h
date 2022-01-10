@@ -53,6 +53,8 @@ public:
 
     /// Adds an allowed type. Use extension "" to allow all types.
     void addAllowedType(const std::string& extension, const std::string& description);
+    /// Adds multiple allowed types with one description (e.g. "Images"). This should
+    /// only be used for kOpen dialogs.
     void addAllowedType(const std::vector<std::string>& extensions, const std::string& description);
 
     bool canSelectDirectory() const;

@@ -31,6 +31,13 @@ class Panel : public Widget
 public:
     Panel()
     {
+        mUseNative = new Checkbox("Use native dialogs");
+        mUseNative->setOn(true);
+        addChild(mUseNative);
+        mUseNative->setOnClicked([](Button *cb){
+            Application::instance().setSupportsNativeDialogs(cb->isOn());
+        });
+
         mOkAlert = new Button("Simple alert");
         mOkAlert->setOnClicked([this](Button *) { onOkAlert(); });
         addChild(mOkAlert);
@@ -64,10 +71,15 @@ public:
     void layout(const LayoutContext& context)
     {
         auto em = context.theme.params().labelFont.pointSize();
-        auto pref = mOkAlert->preferredSize(context);
-        mOkAlert->setFrame(Rect(em, em, pref.width, pref.height));
+
+        auto pref = mUseNative->preferredSize(context);
+        mUseNative->setFrame(Rect(em, em, pref.width, pref.height));
+
+        pref = mOkAlert->preferredSize(context);
+        mOkAlert->setFrame(Rect(em, mUseNative->frame().maxY() + em, pref.width, pref.height));
         pref = mAlert->preferredSize(context);
-        mAlert->setFrame(Rect(mOkAlert->frame().maxX() + em, em, pref.width, pref.height));
+        mAlert->setFrame(Rect(mOkAlert->frame().maxX() + em, mUseNative->frame().maxY() + em,
+                              pref.width, pref.height));
 
         auto w = std::max(mOpen->preferredSize(context).width, mSave->preferredSize(context).width);
         auto labelPref = mOpenResult->preferredSize(context);
@@ -118,10 +130,15 @@ private:
             dlg->addAllowedType(std::vector<std::string>({"jpg", "jpeg"}), "JPEG Image");
             dlg->addAllowedType("png", "PNG Image");
             dlg->addAllowedType("", "All files");
+        } else {
+            dlg->addAllowedType("gif", "GIF Image");
+            dlg->addAllowedType("jpg", "JPEG Image");
+            dlg->addAllowedType("png", "PNG Image");
+            dlg->addAllowedType("", "All files");
         }
         dlg->showModal(w, [dlg, resultLabel](Dialog::Result, int) {
             resultLabel->setText(dlg->selectedPath());
-            Application::instance().scheduleLater(nullptr, [dlg]() { delete dlg; });
+            delete dlg;
         });
     }
 
@@ -132,11 +149,12 @@ private:
         dlg->setCanSelectMultipleFiles(true);
         dlg->showModal(w, [dlg, this](Dialog::Result, int) {
             mMultiOpenResults->setText(std::to_string(dlg->selectedPaths().size()));
-            Application::instance().scheduleLater(nullptr, [dlg]() { delete dlg; });
+            delete dlg;
         });
     }
 
 private:
+    Checkbox *mUseNative;
     Button *mOkAlert;
     Button *mAlert;
     Button *mOpen;

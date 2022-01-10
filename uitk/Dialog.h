@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -38,6 +38,20 @@ class Button;
 //    a new class and inherit from Dialog. This way you can simply connect
 //    the callback function of the button to the appropriate exit and be
 //    done.
+
+/// Base class for creating dialogs. Showing a dialog is usually done by
+///   void show() {
+///       auto *dlg = SomeDialog();
+///       ...
+///       dlg->showModal(w, [...](Dialog::Result r, int val) {
+///           if (r == Dialog::Result::kFinished) {
+///               // handle success
+///           } else {
+///               // handle cancelled
+///           }
+///           delete dlg;
+///       });
+///   }
 class Dialog : public Widget
 {
     using Super = Widget;

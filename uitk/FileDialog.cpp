@@ -22,6 +22,7 @@
 
 #include "FileDialog.h"
 
+#include "Application.h"
 #include "Button.h"
 #include "Checkbox.h"
 #include "ComboBox.h"
@@ -29,6 +30,13 @@
 #include "ListView.h"
 #include "StringEdit.h"
 #include "UIContext.h"
+#include "private/Utils.h"
+
+#if defined(__APPLE__)
+#include "macos/MacOSDialog.h"
+#elif defined(_WIN32) || defined(_WIN64)
+#else
+#endif
 
 #include <dirent.h>
 #if defined(_WIN32) || defined(_WIN64)
@@ -256,6 +264,52 @@ struct FileDialog::Impl
         }
         return false;
     }
+
+    // showNativeDialog() needs some setup; it must be called from
+    // FileDialog::showModal().
+#if defined(__APPLE__)
+    void showNativeDialog(Window *w, std::function<void(Dialog::Result, int)> onDone)
+    {
+        std::vector<MacOSDialog::FileType> ftypes;
+        for (size_t i = 0;  i < this->allowedTypes.size();  ++i) {
+            auto &desc = this->allowedTypes[i];
+            for (auto &e : desc.extensions) {
+                ftypes.push_back({ e, desc.description });
+            }
+        }
+
+        if (this->type == kSave) {
+            MacOSDialog::showSave(w, "", Impl::dirPath, ftypes,
+                                  [this, onDone](Dialog::Result r, const std::string& path) {
+                if (r != Dialog::Result::kCancelled) {
+                    Impl::dirPath = baseDirectoryOfPath(path);
+                }
+                this->results.push_back(path);
+                onDone(r, int(this->results.size()));
+            });
+        } else {
+            MacOSDialog::showOpen(w, "", Impl::dirPath, ftypes,
+                                  this->canSelectDirectory, this->canSelectMultipleFiles,
+                                  [this, onDone](Dialog::Result r, const std::vector<std::string>& paths) {
+                if (r != Dialog::Result::kCancelled && !paths.empty()) {
+                    Impl::dirPath = baseDirectoryOfPath(paths[0]);
+                }
+                this->results = paths;
+                onDone(r, int(this->results.size()));
+            });
+        }
+    }
+#elif defined(_WIN32) || defined(_WIN64)
+    void showNativeDialog(Window *w, std::function<void(Dialog::Result, int)> onDone)
+    {
+        assert(false);
+    }
+#else
+    void showNativeDialog(Window *w, std::function<void(Dialog::Result, int)> onDone)
+    {
+        assert(false);
+    }
+#endif
 };
 std::string FileDialog::Impl::dirPath;
 bool FileDialog::Impl::showDotFiles = false;
@@ -425,63 +479,67 @@ void FileDialog::showModal(Window *w, std::function<void(Result, int)> onDone)
         addAllowedType("", "All types");
     }
 
-    // Configure path component selector
-    mImpl->updatePathComponents(FileDialog::Impl::dirPath);
-
-    // Configure file types combobox
-    mImpl->panel.fileTypes->clear();
-    for (auto &t : mImpl->allowedTypes) {
-        if (!t.extensions.empty() && !(t.extensions.size() == 1 && t.extensions[0] == "")) {
-            std::string exts;
-            for (int i = 0;  i < t.extensions.size();  ++i) {
-                if (i > 0) {
-                    exts += ", ";
-                }
-                exts += "*.";
-                exts += t.extensions[i];
-            }
-            mImpl->panel.fileTypes->addItem(t.description + " (" + exts + ")");
-        } else {
-#if defined(_WIN32) || defined(_WIN64)
-            mImpl->panel.fileTypes->addItem(t.description + " (*.*)");
-#else
-            mImpl->panel.fileTypes->addItem(t.description);
-#endif // if windows
-        }
-    }
-
-    // Configure list view
-    if (mImpl->canSelectMultipleFiles) {
-        mImpl->panel.files->setSelectionModel(ListView::SelectionMode::kMultipleItems);
+    if (Application::instance().supportsNativeDialogs()) {
+        mImpl->showNativeDialog(w, onDone);
     } else {
-        mImpl->panel.files->setSelectionModel(ListView::SelectionMode::kSingleItem);
-    }
+        // Configure path component selector
+        mImpl->updatePathComponents(FileDialog::Impl::dirPath);
 
-    mImpl->updateDirectoryListing(FileDialog::Impl::dirPath);
-    
-    Super::showModal(w, [this, onDone](Dialog::Result r, int i) {
-        if (r != Dialog::Result::kCancelled) {
-            auto dir = mImpl->selectedDir();
-            FileDialog::Impl::dirPath = dir;
-            if (mImpl->canSelectMultipleFiles) {
-                assert(mImpl->type == kOpen);
-                for (auto i : mImpl->panel.files->selectedIndices()) {
-                    if (!mImpl->model.entries[i].isDir || mImpl->canSelectDirectory) {
-                        mImpl->results.push_back(dir + "/" + mImpl->model.entries[i].name);
+        // Configure file types combobox
+        mImpl->panel.fileTypes->clear();
+        for (auto &t : mImpl->allowedTypes) {
+            if (!t.extensions.empty() && !(t.extensions.size() == 1 && t.extensions[0] == "")) {
+                std::string exts;
+                for (int i = 0;  i < t.extensions.size();  ++i) {
+                    if (i > 0) {
+                        exts += ", ";
                     }
+                    exts += "*.";
+                    exts += t.extensions[i];
                 }
+                mImpl->panel.fileTypes->addItem(t.description + " (" + exts + ")");
             } else {
-                std::string filename;
-                if (mImpl->panel.files->selectedIndex() >= 0) {
-                    filename = mImpl->model.entries[mImpl->panel.files->selectedIndex()].name;
-                } else if (mImpl->panel.filename) {
-                    filename = mImpl->panel.filename->text();
-                }
-                mImpl->results.push_back(dir + "/" + filename);
+#if defined(_WIN32) || defined(_WIN64)
+                mImpl->panel.fileTypes->addItem(t.description + " (*.*)");
+#else
+                mImpl->panel.fileTypes->addItem(t.description);
+#endif // if windows
             }
         }
-        onDone(r, i);
-    });
+
+        // Configure list view
+        if (mImpl->canSelectMultipleFiles) {
+            mImpl->panel.files->setSelectionModel(ListView::SelectionMode::kMultipleItems);
+        } else {
+            mImpl->panel.files->setSelectionModel(ListView::SelectionMode::kSingleItem);
+        }
+
+        mImpl->updateDirectoryListing(FileDialog::Impl::dirPath);
+
+        Super::showModal(w, [this, onDone](Dialog::Result r, int i) {
+            if (r != Dialog::Result::kCancelled) {
+                auto dir = mImpl->selectedDir();
+                FileDialog::Impl::dirPath = dir;
+                if (mImpl->canSelectMultipleFiles) {
+                    assert(mImpl->type == kOpen);
+                    for (auto i : mImpl->panel.files->selectedIndices()) {
+                        if (!mImpl->model.entries[i].isDir || mImpl->canSelectDirectory) {
+                            mImpl->results.push_back(dir + "/" + mImpl->model.entries[i].name);
+                        }
+                    }
+                } else {
+                    std::string filename;
+                    if (mImpl->panel.files->selectedIndex() >= 0) {
+                        filename = mImpl->model.entries[mImpl->panel.files->selectedIndex()].name;
+                    } else if (mImpl->panel.filename) {
+                        filename = mImpl->panel.filename->text();
+                    }
+                    mImpl->results.push_back(dir + "/" + filename);
+                }
+            }
+            onDone(r, i);
+        });
+    }
 }
 
 Size FileDialog::preferredSize(const LayoutContext& context) const
