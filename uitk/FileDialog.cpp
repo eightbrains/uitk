@@ -38,7 +38,6 @@
 #else
 #endif
 
-#include <dirent.h>
 #if defined(_WIN32) || defined(_WIN64)
 #include <direct.h>
 #define getcwd _getcwd
@@ -46,6 +45,7 @@
 #include <unistd.h>
 #endif
 
+#include <filesystem>
 #include <set>
 
 namespace uitk {
@@ -128,29 +128,24 @@ struct FileDialog::Impl
     {
         std::vector<std::string> dirs;
         std::vector<std::string> files;
-        struct dirent *entry;
-        DIR *d = opendir(path.c_str());
-        if (d) {
-            do {
-                entry = readdir(d);
-                if (entry) {
-                    std::string entryName(entry->d_name);
-                    bool isHidden = (entry->d_name[0] == '.' && entryName != "..");  // .. is parent dir, so not hidden
-                    if (!isHidden || FileDialog::Impl::showDotFiles) {
-                        if (entry->d_type & DT_DIR) {
-                            std::string dirName(entryName);
-                            if (entryName != ".") {
-                                dirs.push_back(entryName);
-                            }
-                        } else if (entry->d_type & (DT_REG | DT_LNK)) {
-                            if (isValidExt(entryName)) {
-                                files.push_back(entryName);
-                            }
-                        }
+
+        for (auto const& entry : std::filesystem::directory_iterator(path)) {
+            auto name = entry.path().filename().u8string();  // always UTF-8
+            // (Unix file names cannot be empty; presumably Win32 is the same, so name[0] is safe)
+            bool isHidden = (name[0] == '.' && name != "..");  // .. is parent dir, so not hidden
+            if (!isHidden || FileDialog::Impl::showDotFiles) {
+                if (entry.is_directory()) {
+                    std::string dirName(name);
+                    if (name != ".") {
+                        dirs.push_back(name);
                     }
                 }
-            } while (entry);
-            closedir(d);
+                else if (entry.is_regular_file() || entry.is_symlink()) {
+                    if (isValidExt(name)) {
+                        files.push_back(name);
+                    }
+                }
+            }
         }
 
         std::sort(dirs.begin(), dirs.end());

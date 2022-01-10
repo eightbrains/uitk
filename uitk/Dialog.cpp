@@ -80,7 +80,7 @@ public:
                 if (i == 1) {
                     cancel();
                 } else {
-                    finish(i);
+                    finish(int(i));
                 }
             }
         }
