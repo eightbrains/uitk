@@ -30,7 +30,7 @@ std::string baseDirectoryOfPath(const std::string& path)
     if (idx == 0 || idx == std::string::npos) {
         return "/";
     }
-    return path.substr(0, idx - 1);
+    return path.substr(0, idx);
 }
 
 std::string removeMenuItemMnemonics(const std::string& s)

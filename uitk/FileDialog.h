@@ -58,6 +58,9 @@ public:
     void addAllowedType(const std::vector<std::string>& extensions, const std::string& description);
 
     bool canSelectDirectory() const;
+    /// Allows selecting a directory. This does not work with native Win32 dialogs,
+    /// as the feature was not implemented in Win32, so the non-native dialog will
+    /// be used on Win32 if this is true.
     void setCanSelectDirectory(bool can);
 
     /// Returns true if user can select multiple files. Default is false.

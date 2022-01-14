@@ -170,7 +170,7 @@ void Application::setSupportsNativeDialogs(bool supports)
 #if defined(__APPLE__)
     mImpl->supportsNativeDialogs = supports;
 #elif defined(_WIN32) || defined(_WIN64)
-    mImpl->supportsNativeDialogs = false;
+    mImpl->supportsNativeDialogs = supports;
 #else
     mImpl->supportsNativeDialogs = false;
 #endif

@@ -35,6 +35,7 @@
 #if defined(__APPLE__)
 #include "macos/MacOSDialog.h"
 #elif defined(_WIN32) || defined(_WIN64)
+#include "win32/Win32Dialog.h"
 #else
 #endif
 
@@ -47,6 +48,19 @@
 
 #include <filesystem>
 #include <set>
+
+// Using TaskDialogIndirect requires included comctl32.lib, but that leads to
+// "The ordinal 345 is missing from ... .exe".
+// This is from https://stackoverflow.com/a/43215416
+#if defined _M_IX86
+#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#elif defined _M_IA64
+#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='ia64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#elif defined _M_X64
+#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#else
+#pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+#endif
 
 namespace uitk {
 
@@ -263,7 +277,7 @@ struct FileDialog::Impl
     // showNativeDialog() needs some setup; it must be called from
     // FileDialog::showModal().
 #if defined(__APPLE__)
-    void showNativeDialog(Window *w, std::function<void(Dialog::Result, int)> onDone)
+    bool showNativeDialog(Window *w, std::function<void(Dialog::Result, int)> onDone)
     {
         std::vector<MacOSDialog::FileType> ftypes;
         for (size_t i = 0;  i < this->allowedTypes.size();  ++i) {
@@ -293,16 +307,56 @@ struct FileDialog::Impl
                 onDone(r, int(this->results.size()));
             });
         }
+        return true;
     }
 #elif defined(_WIN32) || defined(_WIN64)
-    void showNativeDialog(Window *w, std::function<void(Dialog::Result, int)> onDone)
+    bool showNativeDialog(Window *w, std::function<void(Dialog::Result, int)> onDone)
     {
-        assert(false);
+        std::vector<Win32Dialog::FileType> ftypes;
+
+        if (this->type == kSave) {
+            for (size_t i = 0; i < this->allowedTypes.size(); ++i) {
+                auto& desc = this->allowedTypes[i];
+                for (auto& e : desc.extensions) {
+                    ftypes.push_back({ { e }, desc.description });
+                }
+            }
+            Win32Dialog::showSave(w, "", Impl::dirPath, ftypes,
+                                  [this, onDone](Dialog::Result r, const std::string& path) {
+                                      if (r != Dialog::Result::kCancelled) {
+                                          Impl::dirPath = baseDirectoryOfPath(path);
+                                      }
+                                      this->results.push_back(path);
+                                      onDone(r, int(this->results.size()));
+            });
+        } else {
+            // Win32 does not support selecting directories, so fallback to
+            // non-native dialog in this case.
+            if (this->canSelectDirectory) {
+                return false;
+            }
+
+            for (size_t i = 0; i < this->allowedTypes.size(); ++i) {
+                auto& desc = this->allowedTypes[i];
+                ftypes.push_back({ desc.extensions, desc.description });
+            }
+            Win32Dialog::showOpen(w, "", Impl::dirPath, ftypes,
+                                  this->canSelectDirectory, this->canSelectMultipleFiles,
+                                  [this, onDone](Dialog::Result r, const std::vector<std::string>& paths) {
+                                      if (r != Dialog::Result::kCancelled && !paths.empty()) {
+                                          Impl::dirPath = baseDirectoryOfPath(paths[0]);
+                                      }
+                                      this->results = paths;
+                                      onDone(r, int(this->results.size()));
+                                  });
+        }
+        return true;
     }
 #else
-    void showNativeDialog(Window *w, std::function<void(Dialog::Result, int)> onDone)
+    bool showNativeDialog(Window *w, std::function<void(Dialog::Result, int)> onDone)
     {
         assert(false);
+        return false;
     }
 #endif
 };
@@ -474,9 +528,11 @@ void FileDialog::showModal(Window *w, std::function<void(Result, int)> onDone)
         addAllowedType("", "All types");
     }
 
+    bool showNonNative = true;
     if (Application::instance().supportsNativeDialogs()) {
-        mImpl->showNativeDialog(w, onDone);
-    } else {
+        showNonNative = !mImpl->showNativeDialog(w, onDone);
+    }
+    if (showNonNative) {
         // Configure path component selector
         mImpl->updatePathComponents(FileDialog::Impl::dirPath);
 

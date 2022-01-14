@@ -33,6 +33,7 @@
 #if defined(__APPLE__)
 #include "macos/MacOSDialog.h"
 #elif defined(_WIN32) || defined(_WIN64)
+#include "win32/Win32Dialog.h"
 #else
 #endif
 
@@ -184,7 +185,7 @@ void Dialog::showAlert(Window *w,
 #if defined(__APPLE__)
         MacOSDialog::showAlert(w, title, message, info, buttons, onDone);
 #elif defined(_WIN32) || defined(_WIN64)
-        assert(false);
+        Win32Dialog::showAlert(w, title, message, info, buttons, onDone);
 #else
         assert(false);
 #endif

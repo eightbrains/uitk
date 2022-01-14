@@ -114,6 +114,7 @@ elseif (WIN32)
     list(APPEND UITK_HEADERS win32/Win32Application.h
                              win32/Win32Clipboard.h
                              win32/Win32Cursor.h
+                             win32/Win32Dialog.h
                              win32/Win32Menu.h
                              win32/Win32Menubar.h
                              win32/Win32Utils.h
@@ -121,11 +122,12 @@ elseif (WIN32)
     list(APPEND UITK_SOURCES win32/Win32Application.cpp
                              win32/Win32Clipboard.cpp
                              win32/Win32Cursor.cpp
+                             win32/Win32Dialog.cpp
                              win32/Win32Menu.cpp
                              win32/Win32Menubar.cpp
                              win32/Win32Utils.cpp
                              win32/Win32Window.cpp)
-    list(APPEND UITK_LIBS d3d11 d2d1 dwrite shcore WindowsApp)
+    list(APPEND UITK_LIBS d3d11 d2d1 dwrite shcore comctl32 WindowsApp)
 elseif (UNIX)  # note that APPLE is UNIX, so need to check that first
     list(APPEND UITK_HEADERS x11/X11Application.h
                              x11/X11Clipboard.h

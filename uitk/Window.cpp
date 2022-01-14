@@ -972,6 +972,7 @@ void Window::onLayout(const DrawContext& dc)
         }
     }
     mImpl->rootWidget->layout(context);
+    mImpl->needsLayout = false;
 }
 
 void Window::onDraw(DrawContext& dc)
