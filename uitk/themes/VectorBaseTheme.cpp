@@ -124,6 +124,13 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mButtonOnStyles[DOWN].fgColor = params.accentedBackgroundTextColor;
     mButtonOnStyles[SELECTED] = mButtonOnStyles[DOWN];
 
+    // Button that is default for a dialog
+    copyStyles(mButtonStyles, mButtonDefaultDialogStyles);
+    mButtonDefaultDialogStyles[NORMAL].bgColor = params.accentColor;
+    mButtonDefaultDialogStyles[NORMAL].fgColor = params.accentedBackgroundTextColor;
+    mButtonDefaultDialogStyles[OVER].bgColor = params.accentColor.lighter();
+    mButtonDefaultDialogStyles[DOWN].bgColor = mButtonDefaultDialogStyles[OVER].bgColor;
+
     // Checkbox
     copyStyles(mButtonStyles, mCheckboxStyles);
     if (isDarkMode) {
@@ -611,7 +618,7 @@ void VectorBaseTheme::drawButton(UIContext& ui, const Rect& frame, ButtonDrawSty
             }
             break;
         case Theme::ButtonDrawStyle::kDialogDefault:
-            bs = &mButtonOnStyles[int(state)];
+            bs = &mButtonDefaultDialogStyles[int(state)];
             break;
     }
     drawFrame(ui, frame, bs->merge(style));

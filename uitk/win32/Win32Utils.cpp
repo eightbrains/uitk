@@ -34,7 +34,7 @@ std::wstring win32UnicodeFromUTF8(const std::string& utf8)
     const int kNullTerminated = -1;
     int nCharsNeeded = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(),
                                            kNullTerminated, NULL, 0);
-    std::wstring wstr(nCharsNeeded + 1, wchar_t(0));  // nCharsNeeded includes \0, but +1 just in case
+    std::wstring wstr(nCharsNeeded, wchar_t(0));
     MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), kNullTerminated, &wstr[0], nCharsNeeded);
     return wstr;
 }
@@ -51,6 +51,17 @@ std::string utf8FromWin32Unicode(wchar_t *wstr)
     std::string utf8(str);
     delete [] str;
     return utf8;
+}
+
+std::string normalizeWin32Path(const std::string& path)
+{
+    std::string normalized = path;
+    for (size_t i = 0; i < normalized.size(); ++i) {
+        if (normalized[i] == '\\') {
+            normalized[i] = '/';
+        }
+    }
+    return normalized;
 }
 
 //-----------------------------------------------------------------------------

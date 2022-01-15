@@ -136,6 +136,11 @@ public:
     /// Use setOSFrame if you need to set the size of the actual window (this is
     /// not normally helpful).
     void resize(const Size& contentSize);
+    /// Resizes the window to the largest preferred size of the children.
+    void resizeToFit();
+    /// Resizes the window to the size returned by the provided function.
+    void resizeToFit(std::function<Size(const LayoutContext&)> calcSizeFunc);
+
     void move(const PicaPt& dx, const PicaPt& dy);
 
     OSWindow::OSRect osFrame() const;
@@ -168,6 +173,9 @@ public:
 
     /// Schedules a redraw.
     void setNeedsDraw();
+
+    /// Schedules a layout
+    void setNeedsLayout();
 
     void raiseToTop() const;
 

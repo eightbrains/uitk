@@ -27,6 +27,10 @@
 
 namespace uitk {
 
+// Assumes forward slash for directory delimiter, returned path does not
+// include a trailing slash (unless the result is the root dir, "/")
+std::string baseDirectoryOfPath(const std::string& path);
+
 std::string removeMenuItemMnemonics(const std::string& s);
 
 } // namespace uitk

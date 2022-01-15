@@ -490,6 +490,11 @@ MacOSWindow::~MacOSWindow()
 void* MacOSWindow::nativeHandle() { return (__bridge void*)mImpl->window; }
 IWindowCallbacks& MacOSWindow::callbacks() { return mImpl->callbacks; }
 
+void MacOSWindow::callWithLayoutContext(std::function<void(const DrawContext&)> f)
+{
+    f(*[mImpl->contentView createContext]);
+}
+
 bool MacOSWindow::isShowing() const
 {
     return (mImpl->window.visible == YES ? true : false);
@@ -585,8 +590,19 @@ OSWindow::OSRect MacOSWindow::osContentRect() const
 
 void MacOSWindow::setContentSize(const Size& size)
 {
-    [mImpl->window setContentSize:NSMakeSize(size.width.toPixels(dpi()),
-                                             size.height.toPixels(dpi()))];
+    // macOS apparently expands the window away from the origin, but since the
+    // origin is in the lower left and our origin is in the upper right, this
+    // is a problem. This means we cannot use -setContentSize:, but need to set
+    // the frame.
+    auto currentOSContentRect = osContentRect();
+    auto newOSWidth = size.width.toPixels(dpi());
+    auto newOSHeight = size.height.toPixels(dpi());
+    auto dw = newOSWidth - currentOSContentRect.width;
+    auto dh = newOSHeight - currentOSContentRect.height;
+    auto f = osFrame();
+    auto titlebarHeight = f.height - currentOSContentRect.height;
+    f.y -= dh;  // minus, because this is the axis where the direction flips
+    setOSFrame(f.x, f.y, newOSWidth, newOSHeight + titlebarHeight);
 }
 
 float MacOSWindow::dpi() const

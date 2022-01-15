@@ -95,6 +95,7 @@ struct ListView::Impl
     SelectionMode selectionMode = SelectionMode::kSingleItem;
     std::unordered_set<int> selectedIndices;
     std::function<void(ListView*)> onChanged;
+    std::function<void(ListView*, int)> onDblClicked;
     int mouseOverIndex = -1;
     int lastClickedRow = 0;
 
@@ -150,6 +151,12 @@ ListView* ListView::setOnSelectionChanged(std::function<void(ListView*)> onChang
     return this;
 }
 
+ListView* ListView::setOnSelectionDoubleClicked(std::function<void(ListView*, int)> onDblClicked)
+{
+    mImpl->onDblClicked = onDblClicked;
+    return this;
+}
+
 ListView::SelectionMode ListView::selectionMode() const
 {
     return mImpl->selectionMode;
@@ -182,6 +189,7 @@ void ListView::clearCells()
     clearSelection();
     mImpl->content->clearAllChildren();
     mImpl->setMouseOverIndex(-1);
+    setContentOffset(Point::kZero);
 }
 
 ListView* ListView::addCell(Widget *cell)
@@ -353,6 +361,14 @@ Widget::EventResult ListView::mouse(const MouseEvent& e)
             if (selectionChanged && mImpl->onChanged) {
                 mImpl->onChanged(this);
             }
+        }
+    } else if (e.type == MouseEvent::Type::kButtonDown && e.button.button == MouseButton::kLeft && e.button.nClicks == 2) {
+        // If we are double-clicking, we are on the same item (if the mouse
+        // had moved, it would not be double-click). So we do not want to
+        // redo the selection, just call the double-click handler (if any)
+        int idx = calcRowIndex(e.pos);
+        if (idx >= 0 && mImpl->onDblClicked) {
+            mImpl->onDblClicked(this, idx);
         }
     } else if (e.type == MouseEvent::Type::kMove || e.type == MouseEvent::Type::kDrag) {
         mImpl->setMouseOverIndex(calcRowIndex(e.pos));

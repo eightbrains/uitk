@@ -74,6 +74,7 @@ public:
 
     void* nativeHandle() override;
     IWindowCallbacks& callbacks() override;
+    void callWithLayoutContext(std::function<void(const DrawContext&)> f) override;
 
     // Since each window has its own copy of the menus, if the structure
     // of the menus changes, it needs to be reloaded.

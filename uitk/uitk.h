@@ -36,6 +36,7 @@
 #include "Cursor.h"
 #include "Dialog.h"
 #include "Events.h"
+#include "FileDialog.h"
 #include "Label.h"
 #include "ListView.h"
 #include "NumberEdit.h"

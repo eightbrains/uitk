@@ -219,6 +219,7 @@ Widget* Widget::addChild(Widget *w)
 {
     mImpl->children.push_back(w);
     w->mImpl->parent = this;
+    setNeedsLayout();
     return this;
 }
 
@@ -228,6 +229,7 @@ Widget* Widget::removeChild(Widget *w)
         if (*it == w) {
             mImpl->children.erase(it);
             w->mImpl->parent = nullptr;
+            setNeedsLayout();
             return w;
         }
     }
@@ -245,6 +247,7 @@ void Widget::removeAllChildren()
         child->mImpl->parent = nullptr;
     }
     mImpl->children.clear();
+    // Do not need a layout, technically: there's nothing left to layout
 }
 
 void Widget::clearAllChildren()
@@ -252,6 +255,8 @@ void Widget::clearAllChildren()
     for (auto *child : mImpl->children) {
         delete child;
     }
+    mImpl->children.clear();
+    // Do not need a layout, technically: there's nothing left to layout
 }
 
 const std::vector<Widget*>& Widget::children() const
@@ -315,6 +320,12 @@ void Widget::setNeedsDraw()
     }
 }
 
+void Widget::setNeedsLayout()
+{
+    if (Window *win = window()) {
+        win->setNeedsLayout();
+    }
+}
 
 bool Widget::focused() const
 {

@@ -317,7 +317,6 @@ struct Window::Impl
     struct {
         Dialog* dialog = nullptr;
         std::unique_ptr<Window> window;
-        bool needsInitialSize = true;
     } dialog;
     std::function<void(MenuItem&)> onMenuItemNeedsUpdate;
     std::unordered_map<MenuId, std::function<void()>> onMenuActivatedCallbacks;
@@ -332,6 +331,7 @@ struct Window::Impl
     bool inKey = false;
     bool inDraw = false;
     bool needsDraw = false;
+    bool needsLayout = false;
 
     void cancelPopup()
     {
@@ -388,6 +388,8 @@ Window::Window(const std::string& title, int x, int y, int width, int height,
         Application::instance().addWindow(this);
         updateWindowList();
     }
+
+    mImpl->needsLayout = true;
 }
 
 Window::~Window()
@@ -491,7 +493,36 @@ void Window::popCursor()
 
 void Window::resize(const Size& contentSize)
 {
+    Size menuSize;
+    if (mImpl->menubarWidget) {
+        menuSize = mImpl->menubarWidget->frame().size();
+    }
+    Size newContentSize(contentSize.width, contentSize.height + menuSize.height);
+    
     mImpl->window->setContentSize(contentSize);
+}
+
+void Window::resizeToFit()
+{
+    mImpl->window->callWithLayoutContext([this](const DrawContext& dc) {
+        LayoutContext context{ *mImpl->theme, dc };
+        Size size(PicaPt::kZero, PicaPt::kZero);
+        for (auto *child : mImpl->rootWidget->children()) {
+            auto pref = child->preferredSize(context);
+            size.width = std::max(size.width, pref.width);
+            size.height = std::max(size.height, pref.height);
+        }
+        resize(size);
+    });
+}
+
+void Window::resizeToFit(std::function<Size(const LayoutContext&)> calcSizeFunc)
+{
+    mImpl->window->callWithLayoutContext([this, calcSizeFunc](const DrawContext& dc) {
+        LayoutContext context{ *mImpl->theme, dc };
+        auto size = calcSizeFunc(context);
+        resize(size);
+    });
 }
 
 void Window::move(const PicaPt& dx, const PicaPt& dy)
@@ -541,6 +572,12 @@ void Window::setNeedsDraw()
     } else {
         postRedraw();
     }
+}
+
+void Window::setNeedsLayout()
+{
+    mImpl->needsLayout = true;
+    setNeedsDraw();
 }
 
 void Window::postRedraw() const
@@ -672,7 +709,6 @@ bool Window::beginModalDialog(Dialog *d)
         return false;
     }
 
-    mImpl->dialog.needsInitialSize = true;
     mImpl->dialog.dialog = d;
     mImpl->dialog.window.reset(new Window(d->title(), 10, 10, Flags::kDialog));
     mImpl->dialog.window->addChild(d);
@@ -682,22 +718,9 @@ bool Window::beginModalDialog(Dialog *d)
         });
         return false;
     });
-    mImpl->dialog.window->setOnWindowLayout([this](Window &w, const LayoutContext &context) {
-        auto pref = mImpl->dialog.dialog->preferredSize(context);
-        mImpl->dialog.dialog->setFrame(Rect(PicaPt::kZero, PicaPt::kZero, pref.width, pref.height));
-        auto dbg = mImpl->dialog.window->nativeWindow()->osContentRect();
-        if (mImpl->dialog.needsInitialSize) {
-            mImpl->dialog.needsInitialSize = false;
-            // Don't resize now, we are in the middle of a layout.
-            // Also, wait to begin the modal dialog until we are the
-            // size we want to be, otherwise the sheet-opening animation
-            // on macOS does not work correctly.
-            Application::instance().scheduleLater(mImpl->dialog.window.get(), [this, pref]() {
-                mImpl->dialog.window->resize(pref);
-                mImpl->window->beginModalDialog(mImpl->dialog.window->nativeWindow());
-            });
-        }
-    });
+    mImpl->dialog.window->resizeToFit();
+    mImpl->window->beginModalDialog(mImpl->dialog.window->nativeWindow());
+
     return true;
 }
 
@@ -949,10 +972,18 @@ void Window::onLayout(const DrawContext& dc)
         }
     }
     mImpl->rootWidget->layout(context);
+    mImpl->needsLayout = false;
 }
 
 void Window::onDraw(DrawContext& dc)
 {
+    // It's not clear when to re-layout. We could send a user message for layout,
+    // but it's still going to delay a draw (since it is all done by the same thread),
+    // so it seems like it is simpler just to do it on a draw.
+    if (mImpl->needsLayout) {
+        onLayout(dc);
+    }
+
     UIContext context { *mImpl->theme, dc, mImpl->isActive };
     auto size = Size(PicaPt::fromPixels(float(dc.width()), dc.dpi()),
                      PicaPt::fromPixels(float(dc.height()), dc.dpi()));

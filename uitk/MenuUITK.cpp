@@ -865,7 +865,7 @@ bool MenuUITK::isShowing() const
 }
 
 void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= OSMenu::kInvalidId*/,
-                    int extraWindowFlags /*= 0*/)
+                    const PicaPt& minWidth /*= PicaPt::kZero*/, int extraWindowFlags /*= 0*/)
 {
     if (mImpl->menuWindow) {  // shouldn't happen, but handle it if it does
         cancel();
@@ -904,25 +904,28 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
     mImpl->listView = list;
     mImpl->menuWindow->addChild(list);
 
-    mImpl->menuWindow->setOnWindowLayout([this, list, id](Window& w, const LayoutContext& context) {
+    mImpl->menuWindow->resizeToFit([list, minWidth](const LayoutContext& context){
         auto contentSize = list->preferredContentSize(context);
         auto vertMargin = context.theme.calcPreferredMenuVerticalMargin();
-        list->setFrame(Rect(PicaPt::kZero, vertMargin, contentSize.width, contentSize.height));
-        Application::instance().scheduleLater(&w, [this, w=&w, list, id, contentSize, vertMargin]() {
-            w->resize(Size(contentSize.width, contentSize.height + 2.0f * vertMargin));
-
-            if (id != kInvalidId) {
-                auto osf = w->osFrame();
-                for (auto& kv : mImpl->id2item) {
-                    if (kv.first == id) {
-                        auto p = kv.second.item->frame().upperLeft();
-                        w->move(PicaPt::kZero, -p.y);
-                    }
-                }
+        return Size(std::max(minWidth, contentSize.width), contentSize.height + 2.0f * vertMargin);
+    });
+    if (id != kInvalidId) {
+        auto osf = w->osFrame();
+        for (auto& kv : mImpl->id2item) {
+            if (kv.first == id) {
+                auto p = kv.second.item->frame().upperLeft();
+                mImpl->menuWindow->move(PicaPt::kZero, -p.y);
+                break;
             }
+        }
+    }
 
-            w->setFocusWidget(list);
-         });
+    mImpl->menuWindow->setFocusWidget(list);
+
+    mImpl->menuWindow->setOnWindowLayout([this, list, id](Window& w, const LayoutContext& context) {
+        auto contentSize = w.contentRect().size();
+        auto vertMargin = context.theme.calcPreferredMenuVerticalMargin();
+        list->setFrame(Rect(PicaPt::kZero, vertMargin, contentSize.width, contentSize.height));
     });
 
     list->setOnSelectionChanged([this](ListView *lv) {
@@ -1014,6 +1017,7 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
         if (mImpl->parent) {
             mImpl->parent->postRedraw();
         }
+        mImpl->parent = nullptr;
     });
 
     mImpl->menuWindow->setMouseGrab(list);

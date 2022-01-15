@@ -483,6 +483,11 @@ void* Win32Window::nativeHandle() { return mImpl->hwnd; }
 
 IWindowCallbacks& Win32Window::callbacks() { return mImpl->callbacks; }
 
+void Win32Window::callWithLayoutContext(std::function<void(const DrawContext&)> f)
+{
+    f(*mImpl->dc);
+}
+
 ClickCounter& Win32Window::clickCounter() { return mImpl->clickCounter;  }
 
 void Win32Window::onMoved()

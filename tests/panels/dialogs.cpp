@@ -31,6 +31,13 @@ class Panel : public Widget
 public:
     Panel()
     {
+        mUseNative = new Checkbox("Use native dialogs");
+        mUseNative->setOn(true);
+        addChild(mUseNative);
+        mUseNative->setOnClicked([](Button *cb){
+            Application::instance().setSupportsNativeDialogs(cb->isOn());
+        });
+
         mOkAlert = new Button("Simple alert");
         mOkAlert->setOnClicked([this](Button *) { onOkAlert(); });
         addChild(mOkAlert);
@@ -38,15 +45,52 @@ public:
         mAlert = new Button("Alert");
         mAlert->setOnClicked([this](Button *) { onAlert(); });
         addChild(mAlert);
+
+        mOpen = new Button("Open file");
+        mOpen->setOnClicked([this](Button *) { onFileDialog(FileDialog::kOpen, mOpenResult); });
+        addChild(mOpen);
+
+        mOpenResult = new Label("");
+        addChild(mOpenResult);
+
+        mSave = new Button("Save file");
+        mSave->setOnClicked([this](Button *) { onFileDialog(FileDialog::kSave, mSaveResult); });
+        addChild(mSave);
+
+        mSaveResult = new Label("");
+        addChild(mSaveResult);
+
+        mMultiOpen = new Button("Multi-Open");
+        mMultiOpen->setOnClicked([this](Button *) { onMultiOpen(); });
+        addChild(mMultiOpen);
+
+        mMultiOpenResults = new Label("");
+        addChild(mMultiOpenResults);
     }
 
     void layout(const LayoutContext& context)
     {
         auto em = context.theme.params().labelFont.pointSize();
-        auto pref = mOkAlert->preferredSize(context);
-        mOkAlert->setFrame(Rect(em, em, pref.width, pref.height));
+
+        auto pref = mUseNative->preferredSize(context);
+        mUseNative->setFrame(Rect(em, em, pref.width, pref.height));
+
+        pref = mOkAlert->preferredSize(context);
+        mOkAlert->setFrame(Rect(em, mUseNative->frame().maxY() + em, pref.width, pref.height));
         pref = mAlert->preferredSize(context);
-        mAlert->setFrame(Rect(mOkAlert->frame().maxX() + em, em, pref.width, pref.height));
+        mAlert->setFrame(Rect(mOkAlert->frame().maxX() + em, mUseNative->frame().maxY() + em,
+                              pref.width, pref.height));
+
+        auto w = std::max(mOpen->preferredSize(context).width, mSave->preferredSize(context).width);
+        auto labelPref = mOpenResult->preferredSize(context);
+        mOpen->setFrame(Rect(em, mOkAlert->frame().maxY() + em, w, pref.height));
+        mOpenResult->setFrame(Rect(mOpen->frame().maxX() + em, mOpen->frame().y, labelPref.width, labelPref.height));
+        mSave->setFrame(Rect(em, mOpen->frame().maxY() + em, w, pref.height));
+        labelPref = mSaveResult->preferredSize(context);
+        mSaveResult->setFrame(Rect(mSave->frame().maxX() + em, mSave->frame().y, labelPref.width, labelPref.height));
+        mMultiOpen->setFrame(Rect(em, mSave->frame().maxY() + em, w, pref.height));
+        labelPref = mMultiOpenResults->preferredSize(context);
+        mMultiOpenResults->setFrame(Rect(mMultiOpen->frame().maxX() + em, mMultiOpen->frame().y, labelPref.width, labelPref.height));
 
         Super::layout(context);
     }
@@ -74,9 +118,51 @@ private:
         });
     }
 
+    void onFileDialog(FileDialog::Type type, Label *resultLabel)
+    {
+        auto *w = window();
+        auto *dlg = new FileDialog(type);
+        if (type == FileDialog::kOpen) {
+            // std::string has a constructor that takes a pair of iterators, so we need to
+            // specify that we want to make a vector.
+            dlg->addAllowedType(std::vector<std::string>({"jpg", "jpeg", "png", "gif"}), "Images");
+            dlg->addAllowedType("gif", "GIF Image");
+            dlg->addAllowedType(std::vector<std::string>({"jpg", "jpeg"}), "JPEG Image");
+            dlg->addAllowedType("png", "PNG Image");
+            dlg->addAllowedType("", "All files");
+        } else {
+            dlg->addAllowedType("gif", "GIF Image");
+            dlg->addAllowedType("jpg", "JPEG Image");
+            dlg->addAllowedType("png", "PNG Image");
+            dlg->addAllowedType("", "All files");
+        }
+        dlg->showModal(w, [dlg, resultLabel](Dialog::Result, int) {
+            resultLabel->setText(dlg->selectedPath());
+            delete dlg;
+        });
+    }
+
+    void onMultiOpen()
+    {
+        auto *w = window();
+        auto *dlg = new FileDialog(FileDialog::kOpen);
+        dlg->setCanSelectMultipleFiles(true);
+        dlg->showModal(w, [dlg, this](Dialog::Result, int) {
+            mMultiOpenResults->setText(std::to_string(dlg->selectedPaths().size()));
+            delete dlg;
+        });
+    }
+
 private:
+    Checkbox *mUseNative;
     Button *mOkAlert;
     Button *mAlert;
+    Button *mOpen;
+    Label *mOpenResult;
+    Button *mSave;
+    Label *mSaveResult;
+    Button *mMultiOpen;
+    Label *mMultiOpenResults;
 };
 
 }  // dialogs

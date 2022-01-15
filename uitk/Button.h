@@ -57,6 +57,11 @@ public:
     /// derived classes is likely to have no effect.
     Button* setDrawStyle(DrawStyle s);
 
+    /// Performs a click action, as if the user clicked the button with a mouse.
+    /// This will toggle on/off if the button is toggleable, and will call
+    /// the on-clicked callback function.
+    void performClick();
+
     Size preferredSize(const LayoutContext& context) const override;
     void layout(const LayoutContext& context) override;
 

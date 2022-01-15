@@ -74,6 +74,7 @@ public:
 
     void* nativeHandle() override;
     IWindowCallbacks& callbacks() override;
+    void callWithLayoutContext(std::function<void(const DrawContext&)> f) override;
 
     void onResize();
     void onLayout();

@@ -53,6 +53,7 @@ struct Application::Impl
     std::unique_ptr<Shortcuts> shortcuts;
     std::vector<Window*> windows;  // we do not own these
     Window* activeWindow = nullptr;  // we do not own this
+    bool supportsNativeDialogs;
 };
 Application* Application::Impl::instance = nullptr;
 
@@ -72,6 +73,8 @@ Application::Application()
 #else
     mImpl->osApp = std::make_unique<X11Application>();
 #endif
+
+    setSupportsNativeDialogs(true);
 
     // Defer creation of menubar until it is requested, since menubar may
     // ask us (Application) if we support native menus. This is so that we
@@ -154,6 +157,22 @@ bool Application::supportsNativeMenus() const
     return true;
 #else
     return false;
+#endif
+}
+
+bool Application::supportsNativeDialogs() const
+{
+    return mImpl->supportsNativeDialogs;
+}
+
+void Application::setSupportsNativeDialogs(bool supports)
+{
+#if defined(__APPLE__)
+    mImpl->supportsNativeDialogs = supports;
+#elif defined(_WIN32) || defined(_WIN64)
+    mImpl->supportsNativeDialogs = supports;
+#else
+    mImpl->supportsNativeDialogs = false;
 #endif
 }
 

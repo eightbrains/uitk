@@ -91,6 +91,23 @@ Button* Button::setDrawStyle(DrawStyle s)
     return this;
 }
 
+void Button::performClick()
+{
+    if (!enabled()) {
+        return;
+    }
+    
+    if (mImpl->isToggleable) {
+        mImpl->isOn = !mImpl->isOn;
+    } else {
+        mImpl->isOn = false;
+    }
+
+    if (mImpl->onClicked) {
+        mImpl->onClicked(this);
+    }
+}
+
 Size Button::preferredSize(const LayoutContext& context) const
 {
     return context.theme.calcPreferredButtonSize(context.dc, context.theme.params().labelFont,
@@ -118,15 +135,7 @@ Widget::EventResult Button::mouse(const MouseEvent &e)
         case MouseEvent::Type::kButtonUp: {
             result = EventResult::kConsumed;
 
-            if (mImpl->isToggleable) {
-                mImpl->isOn = !mImpl->isOn;
-            } else {
-                mImpl->isOn = false;
-            }
-
-            if (mImpl->onClicked) {
-                mImpl->onClicked(this);
-            }
+            performClick();
             break;
         }
         default:

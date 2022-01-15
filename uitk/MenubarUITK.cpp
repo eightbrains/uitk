@@ -159,7 +159,7 @@ public:
                         if (menuUitk) {
                             win->onMenuWillShow();
                             menuUitk->show(win, Point(frame().x + x, frame().maxY()),
-                                           0, Window::Flags::kMenuEdges);
+                                           0, PicaPt::kZero, Window::Flags::kMenuEdges);
                         }
                         mModel.justClosedIndex = MenubarModel::kNoActiveMenu;
                     } else {

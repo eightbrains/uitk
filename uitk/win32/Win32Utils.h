@@ -30,6 +30,8 @@ namespace uitk {
 std::wstring win32UnicodeFromUTF8(const std::string& utf8);
 std::string utf8FromWin32Unicode(wchar_t *wstr);
 
+std::string normalizeWin32Path(const std::string& path);
+
 // Use like:  DPrint() << "text " << i << ", " << ptr;
 // Destructor will add a newline before printing.
 class DPrint
