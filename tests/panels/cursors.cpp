@@ -51,9 +51,8 @@ public:
         Super::draw(context);
         if (!mInfo.empty()) {
             context.dc.setFillColor(borderColor());
-            context.dc.drawText(mInfo.c_str(), bounds(), Alignment::kCenter,
-                                TextWrapMode::kNoWrap,
-                                context.theme.params().labelFont,  kPaintFill);
+            context.dc.drawText(mInfo.c_str(), bounds(), Alignment::kCenter, kWrapNone,
+                                context.theme.params().labelFont, kPaintFill);
         }
     }
 

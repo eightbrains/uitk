@@ -35,15 +35,63 @@ namespace uitk {
 
 struct Label::Impl
 {
-    std::string text;
     bool wordWrap = false;
     int alignment = Alignment::kLeft | Alignment::kTop;
     Color textColor = Color(0.0f, 0.0f, 0.0f, 0.0f);
     bool usesThemeFont = true;
     Font customFont;
+    Text text;
+
+    mutable std::shared_ptr<TextLayout> layout;
+    mutable uint32_t layoutRGBA = 0;  // so we can compare colors (not helpful to compare a bunch of floats)
+
+    void clearLayout()
+    {
+        this->layout.reset();
+        this->layoutRGBA = 0;
+    }
+
+    void updateTextLayout(const DrawContext& dc, const Theme& theme, const Color& fg, const Size& size)
+    {
+        this->layout = createTextLayout(dc, theme, fg, size);
+        this->layoutRGBA = fg.toRGBA();
+    }
+
+    std::shared_ptr<TextLayout> createTextLayout(const DrawContext& dc, const Theme& theme,
+                                                 const Color& fg, const Size& size)
+    {
+        auto font = (this->usesThemeFont ? theme.params().labelFont : this->customFont);
+        auto margin = calcMargin(dc, theme);
+        PicaPt w = size.width;
+        if (size.width > PicaPt::kZero) {
+            w -= 2.0f * margin;
+        }
+        PicaPt h = size.height;
+        if (size.height > PicaPt::kZero) {
+            h -= 2.0f * margin;
+        }
+        auto wrap = (this->wordWrap ? kWrapWord : kWrapNone);
+        return dc.createTextLayout(this->text, font, fg, Size(w, h), this->alignment, wrap);
+    }
+
+    PicaPt calcMargin(const DrawContext& dc, const Theme& theme)
+    {
+        // Because the descent acts as the lower margin visually, all the other
+        // margins should be the descent.
+        auto font = (this->usesThemeFont ? theme.params().labelFont : this->customFont);
+        auto metrics = font.metrics(dc);
+        auto margin = dc.ceilToNearestPixel(metrics.descent);
+        return margin;
+    }
 };
 
 Label::Label(const std::string& text)
+    : mImpl(new Impl())
+{
+    mImpl->text = Text(text, Font(), Color::kTextDefault);
+}
+
+Label::Label(const Text& text)
     : mImpl(new Impl())
 {
     mImpl->text = text;
@@ -53,11 +101,19 @@ Label::~Label()
 {
 }
 
-const std::string& Label::text() const { return mImpl->text; }
+const std::string& Label::text() const { return mImpl->text.text(); }
 
 Label* Label::setText(const std::string& text)
 {
-    mImpl->text = text;
+    return setRichText(Text(text, Font(), Color::kTextDefault));
+}
+
+const Text& Label::richText() const { return mImpl->text; }
+
+Label* Label::setRichText(const Text& richText)
+{
+    mImpl->text = richText;
+    mImpl->clearLayout();
     setNeedsLayout();
     setNeedsDraw();
     return this;
@@ -68,6 +124,7 @@ bool Label::wordWrapEnabled() const { return mImpl->wordWrap; }
 Label* Label::setWordWrapEnabled(bool enabled)
 {
     mImpl->wordWrap = enabled;
+    mImpl->clearLayout();
     setNeedsDraw();
     return this;
 }
@@ -77,6 +134,7 @@ int Label::alignment() const { return mImpl->alignment; }
 Label* Label::setAlignment(int align)
 {
     mImpl->alignment = align;
+    mImpl->clearLayout();
     setNeedsDraw();
     return this;
 }
@@ -94,6 +152,7 @@ Label* Label::setFont(const Font& font)
 {
     mImpl->usesThemeFont = false;
     mImpl->customFont = font;
+    mImpl->clearLayout();
     return this;
 }
 
@@ -109,55 +168,64 @@ Label* Label::setTextColor(const Color& c)
 void Label::setTextColorNoRedraw(const Color& c)
 {
     mImpl->textColor = c;
+    mImpl->text.setColor(c);
+    mImpl->clearLayout();
+}
+
+Widget* Label::setFrame(const Rect& frame)
+{
+    Super::setFrame(frame);
+    mImpl->clearLayout();
+    return this;
 }
 
 Size Label::preferredSize(const LayoutContext& context) const
 {
     auto &font = context.theme.params().labelFont;
     auto fm = context.dc.fontMetrics(font);
-    // Because the descent acts as the lower margin visually, all the other
-    // margins should be the descent.
-    auto margin = context.dc.ceilToNearestPixel(fm.descent);
+    auto margin = mImpl->calcMargin(context.dc, context.theme);
     auto constrainedWidth = kDimGrow;
     if (mImpl->wordWrap) {
         constrainedWidth = context.constraints.width;
     }
-    auto tm = context.dc.createTextLayout(mImpl->text.c_str(), font, Color::kRed,
-                                          constrainedWidth)->metrics();
+    auto tm = mImpl->createTextLayout(context.dc, context.theme, Color(0.5f, 0.5f, 0.5f),
+                                      Size(constrainedWidth, PicaPt::kZero))->metrics();
     bool isOneLine = (tm.height < 1.5f * fm.lineHeight);
     if (isOneLine) {
         return Size(context.dc.ceilToNearestPixel(tm.width) + 2.0f * margin,
                     context.dc.ceilToNearestPixel(fm.capHeight) + 2.0f * margin);
     } else {
         return Size(context.dc.ceilToNearestPixel(tm.width) + 2.0f * margin,
-                    context.dc.ceilToNearestPixel(tm.height - (fm.ascent - fm.capHeight)) + 2.0f * margin);
+                    context.dc.ceilToNearestPixel(tm.height - (fm.ascent - fm.capHeight) - fm.descent) + 2.0f * margin);
     }
+}
+
+void Label::layout(const LayoutContext& context)
+{
+    mImpl->clearLayout();
+    Super::layout(context);
 }
 
 void Label::draw(UIContext& ui)
 {
     Super::draw(ui);
 
-    if (themeState() == Theme::WidgetState::kSelected) {
-        themeState();
-    }
-
     auto &r = bounds();
     auto &themeStyle = style(themeState());
     ui.theme.drawFrame(ui, r, themeStyle);
 
-    auto font = (mImpl->usesThemeFont ? ui.theme.params().labelFont : mImpl->customFont);
-    auto metrics = font.metrics(ui.dc);
-    auto margin = ui.dc.ceilToNearestPixel(metrics.descent);
-    Point pt;
-
+    Color fg;
     if (mImpl->textColor.alpha() == 0.0f) {  // color is unset
-        ui.dc.setFillColor(ui.theme.labelStyle(themeStyle, themeState()).fgColor);
-    } else {
-        ui.dc.setFillColor(mImpl->textColor);
+         fg = ui.theme.labelStyle(themeStyle, themeState()).fgColor;
+     } else {
+         fg = mImpl->textColor;
+     }
+    if (!mImpl->layout || fg.toRGBA() != mImpl->layoutRGBA) {
+        mImpl->updateTextLayout(ui.dc, ui.theme, fg, r.size());
     }
-    auto wrap = (mImpl->wordWrap ? TextWrapMode::kWordWrap : TextWrapMode::kNoWrap);
-    ui.dc.drawText(mImpl->text.c_str(), r.insetted(margin, margin), mImpl->alignment, wrap, font, kPaintFill);
+    auto margin = mImpl->calcMargin(ui.dc, ui.theme);
+    // This is really r.upperLeft() + margin, but r.upperLeft() is always (0, 0)
+    ui.dc.drawText(*mImpl->layout, Point(margin, margin));
 
 #if DEBUG_BASELINE
     auto onePx = ui.dc.onePixel();
