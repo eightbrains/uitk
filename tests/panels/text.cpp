@@ -29,7 +29,10 @@ class TextTestWidget : public Widget
 {
     using Super = Widget;
 public:
-    TextTestWidget(const Text& text)
+    static const int kNone = 0;
+    static const int kShowSizeSlider = (1 << 0);
+
+    TextTestWidget(const Text& text, int flags)
     {
         mHoriz = new SegmentedControl({"L", "C", "R"});
         mHoriz->setAction(SegmentedControl::Action::kSelectOne);
@@ -39,6 +42,12 @@ public:
         mVert->setAction(SegmentedControl::Action::kSelectOne);
         mVert->setSegmentOn(0, true);
         addChild(mVert);
+        if (flags & kShowSizeSlider) {
+            mSizeSlider = new Slider();
+            mSizeSlider->setLimits(0.75, 2.0, 0.001);
+            mSizeSlider->setValue(1.0);
+            addChild(mSizeSlider);
+        }
         mLabel = new Label(text);
         mLabel->setBorderWidth(PicaPt(1));
         mLabel->setBorderColor(Color(0.5f, 0.5f, 0.5f));
@@ -52,6 +61,11 @@ public:
             int alignments[] = { Alignment::kTop, Alignment::kVCenter, Alignment::kBottom };
             setVertAlign(alignments[idx]);
         });
+        if (mSizeSlider) {
+            mSizeSlider->setOnValueChanged([this](SliderLogic *slider) {
+                mLabel->setFont(mLabel->font().fontWithPointSize(mBaseFontSize * slider->doubleValue()));
+            });
+        }
     }
 
     Size preferredSize(const LayoutContext& context) const override
@@ -59,19 +73,31 @@ public:
         auto em = context.theme.params().labelFont.pointSize();
         auto prefHoriz = mHoriz->preferredSize(context);
         auto prefLabel = mLabel->preferredSize(context);
+        auto prefSlider = (mSizeSlider ? mSizeSlider->preferredSize(context) : Size::kZero);
         PicaPt w = std::max(prefHoriz.width + em + mVert->preferredSize(context).width,
                             prefLabel.width + 3.0f * em);
-        return Size(w, prefHoriz.height + 0.5f + em + 4.0f * em);
+        return Size(w, prefHoriz.height + prefSlider.height + 0.5f + em + 4.0f * em);
     }
 
     void layout(const LayoutContext& context) override
     {
+        // TODO: we need an onThemeChanged() or onConfig() callback so that we can set
+        // do things like this. Change this to use that when we have it.
+        mBaseFontSize = context.theme.params().labelFont.pointSize();
+
         auto em = context.theme.params().labelFont.pointSize();
         auto pref = mHoriz->preferredSize(context);
         mHoriz->setFrame(Rect(PicaPt::kZero, PicaPt::kZero, pref.width, pref.height));
         pref = mHoriz->preferredSize(context);
         mVert->setFrame(Rect(mHoriz->frame().maxX() + em, mHoriz->frame().y, pref.width, pref.height));
-        auto y = context.dc.ceilToNearestPixel(mHoriz->frame().maxY() + 0.5f * em);
+        auto y = mHoriz->frame().maxY();
+        if (mSizeSlider) {
+            pref = mSizeSlider->preferredSize(context);
+            mSizeSlider->setFrame(Rect(mHoriz->frame().x, mHoriz->frame().maxY(),
+                                       mVert->frame().maxX() - mHoriz->frame().x, pref.height));
+            y = mSizeSlider->frame().maxY();
+        }
+        y = context.dc.ceilToNearestPixel(y + 0.5f * em);
         mLabel->setFrame(Rect(mHoriz->frame().x, y, bounds().width, bounds().height - y));
 
         Super::layout(context);
@@ -80,7 +106,10 @@ public:
 private:
     SegmentedControl *mHoriz;
     SegmentedControl *mVert;
+    Slider *mSizeSlider = nullptr;
     Label *mLabel;
+
+    PicaPt mBaseFontSize;
 
     void setHorizAlign(int align)
     {
@@ -114,7 +143,7 @@ public:
         t.setUnderlineStyle(kUnderlineSingle, 46, 9);
         t.setBold(56, 4);
         t.setItalic(61, 6);
-        mSimple = new TextTestWidget(t);
+        mSimple = new TextTestWidget(t, TextTestWidget::kShowSizeSlider);
         addChild(mSimple);
 
         t = Text("single double dotted wavy\ndotdot wavywavy", Font(), Color::kTextDefault);
@@ -131,7 +160,7 @@ public:
         t.setUnderlineColor(Color::kRed, 33, 4);
         t.setUnderlineStyle(kUnderlineWavy, 37, 4);
         t.setUnderlineColor(Color(0.0f, 0.8f, 0.2f), 37, 4);
-        mUnderline = new TextTestWidget(t);
+        mUnderline = new TextTestWidget(t, TextTestWidget::kShowSizeSlider);
         addChild(mUnderline);
 
         t = Text("little big\nsmall big small\nlarge tiny", Font(), Color::kTextDefault);
@@ -140,7 +169,8 @@ public:
         t.setUnderlineStyle(kUnderlineSingle, 0, 10);
         t.setPointSize(PicaPt(18), 17, 3);
         t.setPointSize(PicaPt(18), 27, 5);
-        mLittleBig = new TextTestWidget(t);
+        // The font size is fixed in the Text, so the user cannot change it.
+        mLittleBig = new TextTestWidget(t, TextTestWidget::kNone);
         addChild(mLittleBig);
     }
 
