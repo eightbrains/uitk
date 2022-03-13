@@ -31,9 +31,12 @@ class TextTestWidget : public Widget
 public:
     static const int kNone = 0;
     static const int kShowSizeSlider = (1 << 0);
+    static const int kShowGlyphsRects = (1 << 1);
 
     TextTestWidget(const Text& text, int flags)
     {
+        mFlags = flags;
+
         mHoriz = new SegmentedControl({"L", "C", "R"});
         mHoriz->setAction(SegmentedControl::Action::kSelectOne);
         mHoriz->setSegmentOn(0, true);
@@ -103,7 +106,28 @@ public:
         Super::layout(context);
     }
 
+    void draw(UIContext& context) override
+    {
+        Super::draw(context);
+
+        // This is pretty inefficient, generating glyphs every draw, but it shouldn't be a problem,
+        // and it's a lot simpler.
+        if (mFlags & kShowGlyphsRects) {
+            auto layout = context.dc.createTextLayout(mLabel->richText(), mLabel->frame().size(),
+                                                      mLabel->alignment());
+            auto glyphs = layout->glyphs();
+            context.dc.save();
+            context.dc.setStrokeColor(Color(0.5f, 0.5f, 0.5f));
+            context.dc.setStrokeWidth(context.dc.onePixel());
+            for (auto &g : glyphs) {
+                context.dc.drawRect(g.frame + mLabel->frame().upperLeft(), kPaintStroke);
+            }
+            context.dc.restore();
+        }
+    }
+
 private:
+    int mFlags;
     SegmentedControl *mHoriz;
     SegmentedControl *mVert;
     Slider *mSizeSlider = nullptr;
@@ -122,7 +146,6 @@ private:
         auto clearedAlign = (mLabel->alignment() & (~Alignment::kVertMask));
         mLabel->setAlignment(clearedAlign | align);
     }
-
 };
 
 class Panel : public Widget
@@ -132,7 +155,7 @@ public:
     Panel()
     {
         const Color kCyan(0.0f, 1.0f, 1.0f);  // kBlue is a little too dark in dark mode
-        Text t("red green blue strike purple underline\nnormal underline bold italic", Font(), Color::kTextDefault);
+        Text t("red green blue strike purple underline\nnormal underline bold italic TT py1", Font(), Color::kTextDefault);
         t.setBackgroundColor(Color::kRed, 0, 9);
         t.setColor(Color::kGreen, 4, 5);
         t.setColor(kCyan, 10, 4);
@@ -143,6 +166,8 @@ public:
         t.setUnderlineStyle(kUnderlineSingle, 46, 9);
         t.setBold(56, 4);
         t.setItalic(61, 6);
+        t.setSuperscript(69, 1);
+        t.setSubscript(72, 2);
         mSimple = new TextTestWidget(t, TextTestWidget::kShowSizeSlider);
         addChild(mSimple);
 
@@ -172,6 +197,13 @@ public:
         // The font size is fixed in the Text, so the user cannot change it.
         mLittleBig = new TextTestWidget(t, TextTestWidget::kNone);
         addChild(mLittleBig);
+
+        t = Text("little big\n\nO(n2) H2O", Font(), Color::kTextDefault);
+        t.setPointSize(PicaPt(18), 7, 3);
+        t.setSuperscript(15, 1);
+        t.setSubscript(19, 1);
+        mGlyphs = new TextTestWidget(t, TextTestWidget::kShowGlyphsRects);
+        addChild(mGlyphs);
     }
 
     void layout(const LayoutContext& context) override
@@ -190,6 +222,10 @@ public:
         mLittleBig->setFrame(Rect(mSimple->frame().x, mSimple->frame().maxY() + em,
                                   pref.width, 9.0f * em));
 
+        pref = mGlyphs->preferredSize(context);
+        mGlyphs->setFrame(Rect(mLittleBig->frame().maxX() + em, mLittleBig->frame().y,
+                               pref.width, mLittleBig->frame().height));
+
         Super::layout(context);
     }
 
@@ -197,6 +233,7 @@ private:
     TextTestWidget *mSimple;
     TextTestWidget *mUnderline;
     TextTestWidget *mLittleBig;
+    TextTestWidget *mGlyphs;
 };
 
 }  // namespace text
