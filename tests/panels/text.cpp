@@ -79,7 +79,7 @@ public:
         auto prefSlider = (mSizeSlider ? mSizeSlider->preferredSize(context) : Size::kZero);
         PicaPt w = std::max(prefHoriz.width + em + mVert->preferredSize(context).width,
                             prefLabel.width + 3.0f * em);
-        return Size(w, prefHoriz.height + prefSlider.height + 0.5f + em + 4.0f * em);
+        return Size(w, prefHoriz.height + prefSlider.height + 0.5f + em + 6.0f * em);
     }
 
     void layout(const LayoutContext& context) override
@@ -171,7 +171,7 @@ public:
         mSimple = new TextTestWidget(t, TextTestWidget::kShowSizeSlider);
         addChild(mSimple);
 
-        t = Text("single double dotted wavy\ndotdot wavywavy", Font(), Color::kTextDefault);
+        t = Text("single double dotted wavy\ndotdot wavywavy strike\nsuperstrikeonetwodotwavy\nsubstrikeonetwodotwavy", Font(), Color::kTextDefault);
         t.setUnderlineStyle(kUnderlineSingle, 0, 6);
         t.setUnderlineStyle(kUnderlineDouble, 7, 6);
         t.setUnderlineStyle(kUnderlineDotted, 14, 6);
@@ -185,6 +185,19 @@ public:
         t.setUnderlineColor(Color::kRed, 33, 4);
         t.setUnderlineStyle(kUnderlineWavy, 37, 4);
         t.setUnderlineColor(Color(0.0f, 0.8f, 0.2f), 37, 4);
+        t.setStrikethrough(42, 6);
+        t.setSuperscript(54, 19);
+        t.setStrikethrough(54, 6);
+        t.setUnderlineStyle(kUnderlineSingle, 60, 3);
+        t.setUnderlineStyle(kUnderlineDouble, 63, 3);
+        t.setUnderlineStyle(kUnderlineDotted, 66, 3);
+        t.setUnderlineStyle(kUnderlineWavy, 69, 4);
+        t.setSubscript(77, 19);
+        t.setStrikethrough(77, 6);
+        t.setUnderlineStyle(kUnderlineSingle, 83, 3);
+        t.setUnderlineStyle(kUnderlineDouble, 86, 3);
+        t.setUnderlineStyle(kUnderlineDotted, 89, 3);
+        t.setUnderlineStyle(kUnderlineWavy, 92, 4);
         mUnderline = new TextTestWidget(t, TextTestWidget::kShowSizeSlider);
         addChild(mUnderline);
 
@@ -198,7 +211,7 @@ public:
         mLittleBig = new TextTestWidget(t, TextTestWidget::kNone);
         addChild(mLittleBig);
 
-        t = Text("little big\n\nO(n2) H2O", Font(), Color::kTextDefault);
+        t = Text("little big\n\nO(n2) H2O2", Font(), Color::kTextDefault);
         t.setPointSize(PicaPt(18), 7, 3);
         t.setSuperscript(15, 1);
         t.setSubscript(19, 1);
