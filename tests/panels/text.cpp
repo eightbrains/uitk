@@ -66,10 +66,13 @@ public:
         });
         if (mSizeSlider) {
             mSizeSlider->setOnValueChanged([this](SliderLogic *slider) {
-                mLabel->setFont(mLabel->font().fontWithPointSize(mBaseFontSize * slider->doubleValue()));
+                mLabel->setFont(mLabel->font().fontWithPointSize(mBaseFontSize * float(slider->doubleValue())));
             });
         }
     }
+
+    const Text& richText() const { return mLabel->richText(); }
+    void setRichText(const Text& t) { mLabel->setRichText(t); }
 
     Size preferredSize(const LayoutContext& context) const override
     {
@@ -113,14 +116,18 @@ public:
         // This is pretty inefficient, generating glyphs every draw, but it shouldn't be a problem,
         // and it's a lot simpler.
         if (mFlags & kShowGlyphsRects) {
+            auto labelMetrics = context.theme.params().labelFont.metrics(context.dc);
+            auto margin = context.dc.ceilToNearestPixel(labelMetrics.descent);
             auto layout = context.dc.createTextLayout(mLabel->richText(), mLabel->frame().size(),
                                                       mLabel->alignment());
             auto glyphs = layout->glyphs();
+
             context.dc.save();
             context.dc.setStrokeColor(Color(0.5f, 0.5f, 0.5f));
             context.dc.setStrokeWidth(context.dc.onePixel());
             for (auto &g : glyphs) {
-                context.dc.drawRect(g.frame + mLabel->frame().upperLeft(), kPaintStroke);
+                context.dc.drawRect(g.frame + Point(margin, margin) + mLabel->frame().upperLeft(),
+                                    kPaintStroke);
             }
             context.dc.restore();
         }
@@ -217,6 +224,45 @@ public:
         t.setSubscript(19, 1);
         mGlyphs = new TextTestWidget(t, TextTestWidget::kShowGlyphsRects);
         addChild(mGlyphs);
+
+        t = Text("", Font(), Color::kTextDefault);
+        mSpacings = new TextTestWidget(t, TextTestWidget::kShowGlyphsRects);
+        addChild(mSpacings);
+        mCharSpacingLabel = new Label("Char spacing");
+        addChild(mCharSpacingLabel);
+        mCharSpacingSlider = new Slider();
+        mCharSpacingSlider->setLimits(-2.0, 5.0, 0.001);
+        mCharSpacingSlider->setValue(0.0);
+        addChild(mCharSpacingSlider);
+        mLineHeightLabel = new Label("Line height");
+        addChild(mLineHeightLabel);
+        mLineHeightSlider = new Slider();
+        mLineHeightSlider->setLimits(0.75, 2.0, 0.001);
+        mLineHeightSlider->setValue(1.0);
+        addChild(mLineHeightSlider);
+        updateSpacingText();
+        mCharSpacingSlider->setOnValueChanged([this](SliderLogic *) {
+            updateSpacingText();
+        });
+        mLineHeightSlider->setOnValueChanged([this](SliderLogic *) {
+            updateSpacingText();
+        });
+
+        t = Text("Lorem ipsum dolor\nsit amet consectetur\nadipiscing elit sed do\neiusmod tempor\nincididunt ut labore\net dolore magna aliqua.\nUt enim ad minim\nveniam quis nostrud\nexercitation ullamco\nlaboris nisi ut aliquip\nex ea commodo\nconsequat.", Font(), Color::kTextDefault);
+        t.setStrikethrough(22, 4);
+        t.setStrikethrough(159, 12);
+        t.setStrikethrough(219, 9);
+        mTallSpacings = new TextTestWidget(t, TextTestWidget::kNone);
+        addChild(mTallSpacings);
+        mTallLineHeightSlider = new Slider();
+        mTallLineHeightSlider->setLimits(1.0, 2.0, 0.001);
+        mTallLineHeightSlider->setValue(1.0);
+        addChild(mTallLineHeightSlider);
+        mTallLineHeightSlider->setOnValueChanged([this](SliderLogic *) {
+            auto t = mTallSpacings->richText();  // copy
+            t.setLineHeightMultiple(mTallLineHeightSlider->doubleValue());
+            mTallSpacings->setRichText(t);
+        });
     }
 
     void layout(const LayoutContext& context) override
@@ -239,6 +285,24 @@ public:
         mGlyphs->setFrame(Rect(mLittleBig->frame().maxX() + em, mLittleBig->frame().y,
                                pref.width, mLittleBig->frame().height));
 
+        pref = mSpacings->preferredSize(context);
+        mSpacings->setFrame(Rect(mGlyphs->frame().maxX() + em, mGlyphs->frame().y,
+                                 20 * em, mGlyphs->frame().height));
+        pref = mCharSpacingLabel->preferredSize(context);
+        mCharSpacingLabel->setFrame(Rect(mSpacings->frame().x, mSpacings->frame().maxY(),
+                                         pref.width, pref.height));
+        mCharSpacingSlider->setFrame(Rect(mCharSpacingLabel->frame().maxX(), mCharSpacingLabel->frame().y,
+                                          mSpacings->frame().width - pref.width, pref.height));
+        mLineHeightLabel->setFrame(Rect(mCharSpacingLabel->frame().x, mCharSpacingLabel->frame().maxY(),
+                                         pref.width, pref.height));
+        mLineHeightSlider->setFrame(Rect(mLineHeightLabel->frame().maxX(), mLineHeightLabel->frame().y,
+                                          mSpacings->frame().width - pref.width, pref.height));
+
+        pref = mTallSpacings->preferredSize(context);
+        mTallSpacings->setFrame(Rect(em, mLineHeightSlider->frame().y + em, 12.0f * em, 30.0f * em));
+        mTallLineHeightSlider->setFrame(Rect(mTallSpacings->frame().x, mTallSpacings->frame().maxY(),
+                                             mTallSpacings->frame().width, em));
+
         Super::layout(context);
     }
 
@@ -247,6 +311,22 @@ private:
     TextTestWidget *mUnderline;
     TextTestWidget *mLittleBig;
     TextTestWidget *mGlyphs;
+    TextTestWidget *mSpacings;
+    TextTestWidget *mTallSpacings;
+    Label *mCharSpacingLabel;
+    Label *mLineHeightLabel;
+    Slider *mCharSpacingSlider;
+    Slider *mLineHeightSlider;
+    Slider *mTallLineHeightSlider;
+
+    void updateSpacingText()
+    {
+        Text t("lorem ipsum dolor\nsit amet consectetur\nadipiscing elit", Font(), Color::kTextDefault);
+        t.setStrikethrough(22, 4);  // all platforms draw their own strikethrough
+        t.setCharacterSpacing(PicaPt(mCharSpacingSlider->doubleValue()));
+        t.setLineHeightMultiple(mLineHeightSlider->doubleValue());
+        mSpacings->setRichText(t);
+    }
 };
 
 }  // namespace text
