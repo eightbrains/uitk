@@ -29,14 +29,20 @@
 
 namespace uitk {
 
+class Text;
+
 class Label : public Widget {
     using Super = Widget;
 public:
     explicit Label(const std::string& text);
+    explicit Label(const Text& richText);
     ~Label();
 
     const std::string& text() const;
     Label* setText(const std::string& text);
+
+    const Text& richText() const;
+    Label* setRichText(const Text& richText);
 
     /// Returns true if word-wrapping is enabled, false otherwise.
     /// Default is false (disabled).
@@ -69,7 +75,9 @@ public:
     /// a pointer itself.)
     void setTextColorNoRedraw(const Color& c);
 
+    Widget* setFrame(const Rect& frame) override;
     Size preferredSize(const LayoutContext& context) const override;
+    void layout(const LayoutContext& context) override;
     void draw(UIContext& context) override;
 
 private:

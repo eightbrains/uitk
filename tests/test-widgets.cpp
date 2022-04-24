@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -28,6 +28,7 @@ using namespace uitk;
 // inherit from Widget, there is no point in creating a bunch of virtually
 // identical .h files.
 #include "panels/widgets.cpp"
+#include "panels/text.cpp"
 #include "panels/cursors.cpp"
 #include "panels/dialogs.cpp"
 
@@ -151,6 +152,7 @@ public:
 
         auto *root = new RootWidget();
         root->addPanel("Widgets", new widgets::AllWidgetsPanel());
+        root->addPanel("Text", new text::Panel());
         root->addPanel("Cursors", new cursor::Panel());
         root->addPanel("Dialogs", new dialogs::Panel());
         addChild(root);

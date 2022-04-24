@@ -24,6 +24,7 @@
 
 #include "Application.h"
 #include "Clipboard.h"
+#include "Widget.h"
 
 #include <nativedraw.h>
 
@@ -215,7 +216,8 @@ void StringEditorLogic::layoutText(const DrawContext& dc, const Font& font,
                                const Color& color, const PicaPt& width)
 {
     mImpl->layoutDPI = dc.dpi();
-    mImpl->layout = dc.createTextLayout(mImpl->stringUTF8.c_str(), font, color, width);
+    mImpl->layout = dc.createTextLayout(mImpl->stringUTF8.c_str(), font, color,
+                                        Size(width, Widget::kDimGrow));
     mImpl->needsLayout = false;
 }
 

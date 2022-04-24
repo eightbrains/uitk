@@ -33,11 +33,16 @@
 #include "private/Utils.h"
 
 #if defined(__APPLE__)
-#include <dirent.h>  // for readdir, etc.
+#define HAS_STD_FILESYSTEM 0
 #include "macos/MacOSDialog.h"
 #elif defined(_WIN32) || defined(_WIN64)
 #include "win32/Win32Dialog.h"
+#define HAS_STD_FILESYSTEM 1
 #else
+// Ubuntu 18.04 has GCC 7.5, which does not support std::filesystem yet.
+// (It may be supported with #include <experimental/filesystem> and linking
+// with -lstdc++fs, but all that is too much hassle)
+#define HAS_STD_FILESYSTEM 0
 #endif
 
 #if defined(_WIN32) || defined(_WIN64)
@@ -47,10 +52,15 @@
 #include <unistd.h>
 #endif
 
+#if HAS_STD_FILESYSTEM
 #include <filesystem>
+#else
+#include <dirent.h>  // for readdir, etc.
+#endif
+
 #include <set>
 
-// Using TaskDialogIndirect requires included comctl32.lib, but that leads to
+// Using TaskDialogIndirect requires linking to comctl32.lib, but that leads to
 // "The ordinal 345 is missing from ... .exe".
 // This is from https://stackoverflow.com/a/43215416
 #if defined _M_IX86
@@ -144,10 +154,30 @@ struct FileDialog::Impl
         std::vector<std::string> dirs;
         std::vector<std::string> files;
 
-#if __APPLE__
+#if HAS_STD_FILESYSTEM
+        for (auto const& entry : std::filesystem::directory_iterator(path)) {
+            auto name = entry.path().filename().u8string();  // always UTF-8
+            // (Unix file names cannot be empty; presumably Win32 is the same, so name[0] is safe)
+            bool isHidden = (name[0] == '.' && name != "..");  // .. is parent dir, so not hidden
+            if (!isHidden || FileDialog::Impl::showDotFiles) {
+                if (entry.is_directory()) {
+                    std::string dirName(name);
+                    if (name != ".") {
+                        dirs.push_back(name);
+                    }
+                }
+                else if (entry.is_regular_file() || entry.is_symlink()) {
+                    if (isValidExt(name)) {
+                        files.push_back(name);
+                    }
+                }
+            }
+        }
+#else
         // macOS 10.14 doesn't support std::filesystem; remove this path when
         // Mojave (10.14) drops below 2% market share (it is the last 32-bit OS,
         // so some people may stay a while).
+        // Ubuntu 18.04 also has issues with std::filesystem.
         struct dirent *entry;
         DIR *d = opendir(path.c_str());
         if (d) {
@@ -171,25 +201,6 @@ struct FileDialog::Impl
                 }
             } while (entry);
             closedir(d);
-        }
-#else
-        for (auto const& entry : std::filesystem::directory_iterator(path)) {
-            auto name = entry.path().filename().u8string();  // always UTF-8
-            // (Unix file names cannot be empty; presumably Win32 is the same, so name[0] is safe)
-            bool isHidden = (name[0] == '.' && name != "..");  // .. is parent dir, so not hidden
-            if (!isHidden || FileDialog::Impl::showDotFiles) {
-                if (entry.is_directory()) {
-                    std::string dirName(name);
-                    if (name != ".") {
-                        dirs.push_back(name);
-                    }
-                }
-                else if (entry.is_regular_file() || entry.is_symlink()) {
-                    if (isValidExt(name)) {
-                        files.push_back(name);
-                    }
-                }
-            }
         }
 #endif
 

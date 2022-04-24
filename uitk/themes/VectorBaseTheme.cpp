@@ -997,13 +997,13 @@ void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaP
         if (!placeholder.empty()) {
             ui.dc.setFillColor(mTextEditStyles[int(WidgetState::kDisabled)].fgColor);
             ui.dc.drawText(placeholder.c_str(), textRect, horizAlign | Alignment::kVCenter,
-                           TextWrapMode::kNoWrap, mParams.labelFont, kPaintFill);
+                           kWrapNone, mParams.labelFont, kPaintFill);
         }
     } else {
         // The layout incorporates the color, so we cannot set it.
         auto textRect = calcTextEditRectForFrame(frame, ui.dc, font);
         if (editor.layout()) {
-            ui.dc.drawText(*editor.layout(), textRect.upperLeft() + Point(scrollOffset, PicaPt::kZero));
+            ui.dc.drawText(*editor.layout(), textRect.upperLeft() + Point(scrollOffset, textMargins.height));
         }
     }
 
@@ -1098,7 +1098,7 @@ void VectorBaseTheme::drawMenuItem(UIContext& ui, const Rect& frame, const PicaP
     }
     ui.dc.setFillColor(s.fgColor);
     ui.dc.drawText(text.c_str(), textRect, Alignment::kLeft | Alignment::kVCenter,
-                   TextWrapMode::kNoWrap, mParams.labelFont, kPaintFill);
+                   kWrapNone, mParams.labelFont, kPaintFill);
     if (itemAttr == MenuItemAttribute::kSubmenu) {
         auto itemMetrics = calcPreferredMenuItemMetrics(ui.dc, frame.height);
         Rect r(shortcutRect.maxX() - itemMetrics.submenuIconSize.width,
@@ -1108,7 +1108,7 @@ void VectorBaseTheme::drawMenuItem(UIContext& ui, const Rect& frame, const PicaP
         drawSubmenuIcon(ui, r, s);
     } else {
         ui.dc.drawText(shortcutKey.c_str(), shortcutRect, Alignment::kRight | Alignment::kVCenter,
-                       TextWrapMode::kNoWrap, mParams.labelFont, kPaintFill);
+                       kWrapNone, mParams.labelFont, kPaintFill);
     }
 }
 
@@ -1153,7 +1153,7 @@ void VectorBaseTheme::drawMenubarItem(UIContext& ui, const Rect& frame, const st
     auto s = mMenubarItemStyles[int(state)];
     drawFrame(ui, frame, s);
     ui.dc.setFillColor(s.fgColor);
-    ui.dc.drawText(text.c_str(), frame, Alignment::kCenter, TextWrapMode::kNoWrap,
+    ui.dc.drawText(text.c_str(), frame, Alignment::kLeft | Alignment::kVCenter, kWrapNone,
                    mParams.nonNativeMenubarFont, kPaintFill);
 }
 
