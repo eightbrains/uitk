@@ -120,12 +120,20 @@ Theme::Params MacOSApplication::themeParams() const
     // selectedControlTextColor is white in dark mode, but black in light mode, even though
     // the system buttons have white text in light mode.
     params.accentedBackgroundTextColor = toUITKColor(NSColor.alternateSelectedControlTextColor);
+
+    // macOS gives the same font size no matter what the effective resolution
+    // is (e.g. between native and scaled), so it handles the conversion to the
+    // actual font size under the hood. Since we want the native resolution to
+    // be the correct size, use the uiDPI. This will properly scale it if the
+    // uses a different setting in Settings >> Display >> Resolution.
+    float uiDPI;
+    DrawContext::getScreenDPI(nullptr, &uiDPI, nullptr, nullptr);
     NSFont *nsfont = [NSTextField labelWithString:@"Ag"].font;
     params.labelFont = Font(nsfont.familyName.UTF8String,
-                            PicaPt::fromPixels(nsfont.pointSize, 72.0f));
+                            PicaPt::fromPixels(nsfont.pointSize, uiDPI));
     NSFont *nsmenufont = [NSFont menuFontOfSize:0.0];
     params.nonNativeMenubarFont = Font(nsmenufont.familyName.UTF8String,
-                                       PicaPt::fromPixels(nsmenufont.pointSize, 72.0f));
+                                       PicaPt::fromPixels(nsmenufont.pointSize, uiDPI));
     return params;
 }
 

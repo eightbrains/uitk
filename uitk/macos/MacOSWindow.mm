@@ -37,10 +37,6 @@
 #include <unordered_map>
 
 namespace {
-// macOS (and iOS) uses a 72 dpi assumption, and units to the API are
-// given in 72 dpi pixels. Underneath the hood, the pixels might be
-// smaller, so the fonts are scaled, the images are scaled, etc.
-static const float kDPI = 72.0f;
 
 static const float kPopopBorderWidth = 1;
 
@@ -123,6 +119,8 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 }
 @property uitk::IWindowCallbacks *callbacks;  // ObjC does not accept reference
 @property bool inEvent;
+@property float dpi;
+@property float hiresDPI;
 @end
 
 @implementation ContentView
@@ -135,14 +133,33 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     return self;
 }
 
+- (void)updateDPI
+{
+    NSScreen *screen = nil;
+    if (self.window != nil) {
+        screen = self.window.screen;
+    }
+    if (!screen) {
+        screen = NSScreen.deepestScreen;
+    }
+
+    // uiDPI is actually the native resolution of the screen. Setting this as the
+    // DPI ensures that the PicaPt(72) is one inch in native resolution, but is
+    // scaled appropriately if the user chooses something different in
+    // Settings >> Display >> Resolution. Note that large, e.g. 15" MBPs do not use the
+    // native resolution by default, since 2016! This means that, by default,
+    // some screens--likely to be used by developers--will (correctly) display
+    // using a scaled length and not the actual physical length specified. This
+    // may surprise developers, but will match user expectations.
+    float uiDPI, hiDPI;
+    uitk::DrawContext::getScreenDPI((__bridge void*)screen, &uiDPI, nullptr, &hiDPI);
+    self.dpi = uiDPI;
+    self.hiresDPI = hiDPI;
+}
+
 - (void)addDeferredCall:(std::function<void()>)f
 {
     mDeferredCalls.push_back(f);
-}
-
-- (float)dpi
-{
-    return kDPI;
 }
 
 // Note:  on macOS, draw contexts are transitory
@@ -151,8 +168,7 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     int height = int(std::ceil(self.bounds.size.height));
 
     auto cgContext = NSGraphicsContext.currentContext.CGContext;
-    return uitk::DrawContext::fromCoreGraphics(cgContext, width, height,
-                                               kDPI * self.window.backingScaleFactor);
+    return uitk::DrawContext::fromCoreGraphics(cgContext, width, height, self.dpi);
 }
 
 /*- (void)setFrame:(NSRect)frame
@@ -194,10 +210,11 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 
     NSPoint pt = [self convertPoint:e.locationInWindow fromView:nil];
 
+    float dpi = self.dpi;
     uitk::MouseEvent me;
     me.type = uitk::MouseEvent::Type::kMove;
-    me.pos = uitk::Point(uitk::PicaPt::fromPixels(pt.x, kDPI),
-                         uitk::PicaPt::fromPixels(self.frame.size.height - pt.y, kDPI));
+    me.pos = uitk::Point(uitk::PicaPt::fromPixels(pt.x, dpi),
+                         uitk::PicaPt::fromPixels(self.frame.size.height - pt.y, dpi));
     me.keymods = toKeymods(e.modifierFlags);
 
     [self doOnMouse:me];
@@ -223,10 +240,11 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 
     NSPoint pt = [self convertPoint:e.locationInWindow fromView:nil];
 
+    float dpi = self.dpi;
     uitk::MouseEvent me;
     me.type = uitk::MouseEvent::Type::kButtonDown;
-    me.pos = uitk::Point(uitk::PicaPt::fromPixels(pt.x, kDPI),
-                         uitk::PicaPt::fromPixels(self.frame.size.height - pt.y, kDPI));
+    me.pos = uitk::Point(uitk::PicaPt::fromPixels(pt.x, dpi),
+                         uitk::PicaPt::fromPixels(self.frame.size.height - pt.y, dpi));
     me.keymods = toKeymods(e.modifierFlags);
     me.button.button = toUITKMouseButton(e.buttonNumber);
     me.button.nClicks = e.clickCount;
@@ -240,10 +258,11 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 
     NSPoint pt = [self convertPoint:e.locationInWindow fromView:nil];
 
+    float dpi = self.dpi;
     uitk::MouseEvent me;
     me.type = uitk::MouseEvent::Type::kDrag;
-    me.pos = uitk::Point(uitk::PicaPt::fromPixels(pt.x, kDPI),
-                         uitk::PicaPt::fromPixels(self.frame.size.height - pt.y, kDPI));
+    me.pos = uitk::Point(uitk::PicaPt::fromPixels(pt.x, dpi),
+                         uitk::PicaPt::fromPixels(self.frame.size.height - pt.y, dpi));
     me.keymods = toKeymods(e.modifierFlags);
     me.drag.buttons = 0;
     if (NSEvent.pressedMouseButtons & (1 << 0)) {
@@ -285,10 +304,11 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 
     NSPoint pt = [self convertPoint:e.locationInWindow fromView:nil];
 
+    float dpi = self.dpi;
     uitk::MouseEvent me;
     me.type = uitk::MouseEvent::Type::kButtonUp;
-    me.pos = uitk::Point(uitk::PicaPt::fromPixels(pt.x, kDPI),
-                         uitk::PicaPt::fromPixels(self.frame.size.height - pt.y, kDPI));
+    me.pos = uitk::Point(uitk::PicaPt::fromPixels(pt.x, dpi),
+                         uitk::PicaPt::fromPixels(self.frame.size.height - pt.y, dpi));
     me.keymods = toKeymods(e.modifierFlags);
     me.button.button = toUITKMouseButton(e.buttonNumber);
 
@@ -301,13 +321,14 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 
     NSPoint pt = [self convertPoint:e.locationInWindow fromView:nil];
 
+    float dpi = self.dpi;
     uitk::MouseEvent me;
     me.type = uitk::MouseEvent::Type::kScroll;
-    me.pos = uitk::Point(uitk::PicaPt::fromPixels(pt.x, kDPI),
-                         uitk::PicaPt::fromPixels(self.frame.size.height - pt.y, kDPI));
+    me.pos = uitk::Point(uitk::PicaPt::fromPixels(pt.x, dpi),
+                         uitk::PicaPt::fromPixels(self.frame.size.height - pt.y, dpi));
     me.keymods = toKeymods(e.modifierFlags);
-    me.scroll.dx = uitk::PicaPt::fromPixels(e.deltaX, kDPI);
-    me.scroll.dy = uitk::PicaPt::fromPixels(e.deltaY, kDPI);
+    me.scroll.dx = uitk::PicaPt::fromPixels(e.deltaX, dpi);
+    me.scroll.dy = uitk::PicaPt::fromPixels(e.deltaY, dpi);
 
     [self doOnMouse:me];
 }
@@ -385,6 +406,14 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     return self;
 }
 
+- (void)windowDidChangeScreen:(NSNotification *)notification
+{
+    ContentView *cv = (ContentView*)self.window.contentView;
+    if (cv != nil) {
+        [cv updateDPI];
+    }
+}
+
 // A "main" window is the window that is the active, top-level window. (A "key"
 // window is the window that has the key focus; usually the main window also
 // has key focus.)
@@ -392,8 +421,9 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 {
     NSPoint p = self.window.mouseLocationOutsideOfEventStream;
     NSRect contentRect = [self.window contentRectForFrameRect:self.window.frame];
-    uitk::Point currMouse(uitk::PicaPt::fromPixels(p.x, kDPI),
-                          uitk::PicaPt::fromPixels(contentRect.size.height - p.y, kDPI));
+    ContentView *cv = (ContentView*)self.window.contentView;
+    uitk::Point currMouse(uitk::PicaPt::fromPixels(p.x, cv.dpi),
+                          uitk::PicaPt::fromPixels(contentRect.size.height - p.y, cv.dpi));
     self.callbacks->onActivated(currMouse);
 }
 
@@ -455,6 +485,10 @@ MacOSWindow::MacOSWindow(IWindowCallbacks& callbacks,
     mImpl->window.releasedWhenClosed = NO;
     mImpl->contentView = [[ContentView alloc] initWithCallbacks:&callbacks];
     mImpl->window.contentView = mImpl->contentView;
+    // Everything else assumes dpi is properly set. (Note that we cannot call the delegate's
+    // -windowDidChangeScreen: function because we cannot create an NSNotification. Also note
+    // that -windowDidChangeScreen: is NOT called for the initial screen)
+    [mImpl->contentView updateDPI];
     // Set view as first responder, otherwise we won't get mouse events
     [mImpl->window makeFirstResponder:mImpl->contentView];
 
@@ -570,10 +604,11 @@ void MacOSWindow::setCursor(const Cursor& cursor)
 
 Rect MacOSWindow::contentRect() const
 {
+    ContentView *cv = (ContentView*)mImpl->window.contentView;
     return Rect(PicaPt::kZero,
                 PicaPt::kZero,
-                PicaPt::fromPixels(mImpl->contentView.frame.size.width, kDPI),
-                PicaPt::fromPixels(mImpl->contentView.frame.size.height, kDPI));
+                PicaPt::fromPixels(mImpl->contentView.frame.size.width, cv.dpi),
+                PicaPt::fromPixels(mImpl->contentView.frame.size.height, cv.dpi));
 }
 
 OSWindow::OSRect MacOSWindow::osContentRect() const

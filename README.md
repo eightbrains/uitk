@@ -23,6 +23,13 @@ cmake -G "Visual Studio 16 2019" ..
 cmake --build .
 ```
 
+### DPI
+On macOS lengths are physically accurate (e.g. PicaPt(72) measures one inch with a ruler) when using the native resolution of the display, set in Settings >> Display >> Resolution. Note that the "Default" setting may _not_ be the native resolution! For instance, large MacBook Pros, commonly used by developers, use a scaled resolution by default. Since the resolution setting is clearly intended to be a UI scale factor, UITK applies this to the UI.
+
+On Windows, the UI scales as expected; increasing the scale factor increases the effective DPI of the screen.
+
+On Linux/X11, the `Xft.dpi` Xresources setting will be used. If that is not set, the X server's DPI will be used (which is probably incorrect for high DPI screens).
+
 ### Design philosphy
 The interface design is strongly influenced by Cocoa (aka NextStep) with some influence by Qt. The default theme is aesthetically similar to macOS because, of the major desktop operating systems, only macOS has a strong and consistent aesthetic. Linux has no official toolkit and both GTK and Qt are commonly used, with the result that apps are a hodgepodge of styles. Windows has gone through many incarnations of UI, each with a different look. The closest to an official style is the old Win32 widgets, which are outdated. Windows apps also have a very hodgepodge look about them, including the core operating system, which has some panels that have the most recent look, which some older, more advanced-user panels look like they are unchanged from NT 4.0. Also--unlike Linux--I have not heard complaints about the visual differences of Windows apps, which macOS user value a native look-and-feel much more highly, so it make sense to target macOS by default. (And if the library gets strong uptake, at least some integration with GTK themes is probably fairly easy to support.)
 
