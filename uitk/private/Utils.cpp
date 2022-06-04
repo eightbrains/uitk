@@ -24,6 +24,13 @@
 
 namespace uitk {
 
+// Hack:
+//   std::vector<int> utf8IndicesForUTF16Indices(const char *utf8)
+//   std::vector<int> utf16IndicesForUTF8Indices(const char *utf8)
+// already exist in libnativedraw with these signatures. Since this will be
+// linked, we just won't provide a body for these, and the libnativedraw ones
+// will be used.
+
 std::string baseDirectoryOfPath(const std::string& path)
 {
     auto idx = path.rfind('/');

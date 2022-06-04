@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -30,6 +30,8 @@
 #include "../Cursor.h"
 #include "../Events.h"
 #include "../OSCursor.h"
+#include "../TextEditorLogic.h"
+#include "../private/Utils.h"
 #include <nativedraw.h>
 
 #import <Cocoa/Cocoa.h>
@@ -109,7 +111,7 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 }  // namespace
 
 //-----------------------------------------------------------------------------
-@interface ContentView : NSView
+@interface ContentView : NSView<NSTextInputClient>
 @end
 
 @interface ContentView ()
@@ -121,6 +123,8 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 @property bool inEvent;
 @property float dpi;
 @property float hiresDPI;
+@property uitk::TextEditorLogic* textEditor;
+@property uitk::Rect textEditorFrame;
 @end
 
 @implementation ContentView
@@ -367,11 +371,10 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 
     self.inEvent = true;
     self.callbacks->onKey(ke);
-    if (type == uitk::KeyEvent::Type::kKeyDown
-        && (ke.keymods == 0 && ((ke.key >= uitk::Key::kSpace && ke.key < uitk::Key::kDelete)
-                                || ke.key == uitk::Key::kUnknown))) {
-        uitk::TextEvent te{ e.characters.UTF8String };
-        self.callbacks->onText(te);
+    if (type == uitk::KeyEvent::Type::kKeyDown) {
+        if (self.textEditor) {
+            [self interpretKeyEvents:@[e] ];  // handles NSTextInputClient
+        }
     }
     self.inEvent = false;
 }
@@ -388,6 +391,207 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     // See https://developer.apple.com/documentation/uikit/appearance_customization/supporting_dark_mode_in_your_interface
     mAppearanceChanged = true;
 }
+
+// ---- NSTextInputClient ----
+// We store text in UTF8, as is right and proper, but macOS chose UTF16 before
+// it became apparent that this was insufficient. So we need to convert back
+// and forth. It is not clear how to do this efficiently: since it requires
+// scanning the string up to the index (frequently the end), and the string
+// will change frequently since it is being edited.
+// On a 2019 MBP, 2.9 GHz i9:
+// - utf16IndicesForUTF8Indices() takes about 10 ns
+//   per character (140 ns in debug mode). Moby Dick is about 1215236 characters,
+//   which would take under 6 ms (170 ms debug). One hopes an editor capable of
+//   handling Moby Dick would break the text up a bit, but even if not, this
+//   worst case should still be handleable.
+// - utf8IndicesForUTF16Indices() takes about 12 ns (18 ns), so Moby Dick would
+//   be about 15 ms (22 ms).
+- (BOOL)hasMarkedText
+{
+    return (self.textEditor && !self.textEditor->imeConversion().isEmpty());
+}
+
+- (NSRange)markedRange
+{
+    if (self.textEditor) {
+        auto utf8 = self.textEditor->textWithConversion();
+        auto toUtf16 = uitk::utf16IndicesForUTF8Indices(utf8.c_str());
+        int start8 = self.textEditor->imeConversion().start;
+        int end8 = start8 + self.textEditor->imeConversion().text.length();
+        return NSMakeRange(toUtf16[start8], toUtf16[end8] - toUtf16[start8]);
+    } else {
+        return NSMakeRange(NSNotFound, 0);
+    }
+}
+
+// TODO: this might get called during draw, in which case we need to cache toUtf16 somehow
+- (NSRange)selectedRange {
+    if (self.textEditor) {
+        auto utf8 = self.textEditor->textWithConversion();
+        auto toUtf16 = uitk::utf16IndicesForUTF8Indices(utf8.c_str());
+        int start8 = self.textEditor->selection().start;
+        int end8 = self.textEditor->selection().end;
+        return NSMakeRange(toUtf16[start8], toUtf16[end8] - toUtf16[start8]);
+    } else {
+        return NSMakeRange(NSNotFound, 0);
+    }
+}
+
+- (void)setMarkedText:(nonnull id)string selectedRange:(NSRange)selectedRange replacementRange:(NSRange)replacementRange {
+    if (self.textEditor) {
+        // TODO: not sure what selectedRange is for
+        std::string utf8;
+        if ([string isKindOfClass:[NSAttributedString class]]) {
+            utf8 = std::string(((NSAttributedString*)string).string.UTF8String);
+        } else {
+            utf8 = std::string(((NSString*)string).UTF8String);
+        }
+        auto sel = self.textEditor->selection();
+        self.textEditor->setIMEConversion(uitk::TextEditorLogic::IMEConversion(sel.start, utf8));
+        self.needsDisplay = YES;
+    }
+}
+
+- (void)unmarkText {
+    if (self.textEditor) {
+        self.textEditor->setIMEConversion(uitk::TextEditorLogic::IMEConversion());
+        self.needsDisplay = YES;
+    }
+}
+
+- (nonnull NSArray<NSAttributedStringKey> *)validAttributesForMarkedText {
+    return @[];
+}
+
+- (nullable NSAttributedString *)attributedSubstringForProposedRange:(NSRange)range actualRange:(nullable NSRangePointer)actualRange {
+    if (self.textEditor) {
+        auto utf8 = self.textEditor->textWithConversion();
+        auto fromUtf16 = uitk::utf8IndicesForUTF16Indices(utf8.c_str());
+        int start16 = std::min(int(range.location), int(fromUtf16.size() - 1));
+        int end16 = std::min(start16 + int(range.length), int(fromUtf16.size() - 1));
+        int start8 = fromUtf16[start16];
+        int end8 = fromUtf16[end16];
+        auto substr = utf8.substr(start8, start8 - end8);
+        NSString *nsstr = [NSString stringWithUTF8String:substr.c_str()];
+        if (actualRange) {
+            *actualRange = NSMakeRange(start16, end16 - start16);
+        }
+        return [[NSAttributedString alloc] initWithString:nsstr];
+    } else {
+        return nil;
+    }
+}
+
+- (void)insertText:(nonnull id)string replacementRange:(NSRange)replacementRange {
+    if (self.textEditor) {
+        auto sel = self.textEditor->selection();
+        if (sel.end > sel.start) {
+            self.textEditor->deleteText(sel.start, sel.end);
+        } else if (replacementRange.length > 0) {
+            // TODO: is the replacement range in the marked text or the committed text?
+            // TODO: when does this happen? Doesn't seem to happen with Chinese, maybe Japanese?
+            self.textEditor->deleteText(replacementRange.location,
+                                        replacementRange.location + replacementRange.length);
+        }
+        std::string utf8;
+        if ([string isKindOfClass:[NSAttributedString class]]) {
+            utf8 = std::string(((NSAttributedString*)string).string.UTF8String);
+        } else {
+            utf8 = std::string(((NSString*)string).UTF8String);
+        }
+        self.textEditor->insertText(sel.start, utf8);
+        self.textEditor->setIMEConversion(uitk::TextEditorLogic::IMEConversion());
+
+        //std::cout << "[debug] insertText: '" << utf8 << "', range: (" << replacementRange.location << ", " << replacementRange.length << ")" << std::endl;
+
+        int endIdx = sel.start + int(utf8.size());
+        if (sel.end > sel.start) {
+            sel = uitk::TextEditorLogic::Selection(sel.start, endIdx,
+                                                   uitk::TextEditorLogic::Selection::CursorLocation::kEnd);
+        } else {
+            sel = uitk::TextEditorLogic::Selection(endIdx, endIdx,
+                                                   uitk::TextEditorLogic::Selection::CursorLocation::kEnd);
+        }
+        self.textEditor->setSelection(sel);
+
+        self.needsDisplay = YES;
+    }
+}
+
+- (NSUInteger)characterIndexForPoint:(NSPoint)p {
+    // TODO: when is this called?
+    if (self.textEditor) {
+        p = [self.window convertPointFromScreen:p];  // screen -> window
+        p = [self convertPoint:p fromView:nil]; // window -> view
+        // TODO: this probably needs to be with the marked text
+        int idx8 = self.textEditor->indexAtPoint(uitk::Point(uitk::PicaPt::fromPixels(p.x, self.dpi),
+                                                             uitk::PicaPt::fromPixels(p.y, self.dpi)));
+        auto toUtf16 = uitk::utf16IndicesForUTF8Indices(self.textEditor->textForRange(0, idx8).c_str());
+        return toUtf16[idx8];
+    }
+    return 0;
+}
+
+// TODO: convert from UTF16 indices
+- (NSRect)firstRectForCharacterRange:(NSRange)range actualRange:(nullable NSRangePointer)actualRange {
+    if (self.textEditor) {
+        auto &glyphs = self.textEditor->layout()->glyphs();
+        const uitk::TextLayout::Glyph *g;
+        int idx = range.location;
+        if (idx < glyphs.size()) {
+            g = &glyphs[idx];
+        } else {
+            if (glyphs.empty()) {
+                g = nullptr;
+            } else {
+                g = &glyphs[glyphs.size() - 1];
+            }
+        }
+
+        NSRect r;
+        if (g) {
+            r = NSMakeRect(g->frame.x.toPixels(self.dpi), g->frame.y.toPixels(self.dpi),
+                           g->frame.maxX().toPixels(self.dpi), g->frame.maxY().toPixels(self.dpi));
+        } else {
+            r = NSMakeRect(0, 0, 0, 0);  // empty text (TODO: use appropriate height)
+        }
+        // The docs say the rect is the nearest suitable index in the range
+        // (given composition characters, etc.), or to the end of the line
+        // if the range extends beyond the first line.
+        while (idx < range.location + range.length && idx < glyphs.size() && glyphs[idx].frame.y.toPixels(self.dpi) < r.origin.x + r.size.height) {
+            r.size.width = glyphs[idx].frame.maxX().toPixels(self.dpi) - r.origin.x;
+            idx++;
+        }
+        if (actualRange) {
+            *actualRange = NSMakeRange(range.location, idx - range.location);
+        }
+
+        // The coordinates are in screen coordinates (presumably so that
+        // the IME conversion window knows where to go). macOS wants to put
+        // the window underneath the text.
+        r.origin.x += self.textEditorFrame.x.toPixels(self.dpi);
+        r.origin.y += self.frame.size.height - self.textEditorFrame.maxY().toPixels(self.dpi);
+        r.origin = [self convertPoint:r.origin toView:nil]; // to window coord
+        r.origin = [self.window convertPointToScreen:r.origin];  // to screen coord
+
+        return r;
+    }
+
+    if (actualRange) {
+        *actualRange = NSMakeRange(NSNotFound, 0);
+    }
+    return NSMakeRect(0, 0, 0, 0);
+}
+
+- (void)doCommandBySelector:(nonnull SEL)selector
+{
+    // Do nothing: TextEditorLogic handles these right now.
+    // However, we should probably use NSStringFromSelector() and have a
+    // bunch of ugly if's that call the appropriate functions. This would make
+    // sure that things like emacs keybindings work, as well as any voice
+    // editing commands that macOS may have.a
+}
+// ----
 
 @end
 
@@ -698,6 +902,12 @@ Point MacOSWindow::currentMouseLocation() const
     NSRect contentRect = [mImpl->window contentRectForFrameRect:mImpl->window.frame];
     return Point(PicaPt::fromPixels(p.x, dpi()),
                  PicaPt::fromPixels(contentRect.size.height - p.y, dpi()));
+}
+
+void MacOSWindow::setTextEditing(TextEditorLogic *te, const Rect& frame)
+{
+    mImpl->contentView.textEditor = te;
+    mImpl->contentView.textEditorFrame = frame;
 }
 
 }  // namespace uitk

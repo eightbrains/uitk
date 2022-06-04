@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -31,6 +31,7 @@
 
 namespace uitk {
 
+class EditableText;
 struct KeyEvent;
 struct MouseEvent;
 struct TextEvent;
@@ -116,6 +117,14 @@ public:
     /// return this interface. This is used by the copy/cut/paste menu items.
     /// The base class action returns nullptr, which disables the items.
     virtual CutPasteable* asCutPasteable();
+
+    // If the widget has text that is editable, it should return the
+    // interface here. Although key events are sufficient for languages
+    // like English, many languages have text systems that require conversion
+    // of intermediate description into the final glyphs. When the widget has
+    // focus, the window system will use this to edit the text.
+    // The base class returns nullptr.
+    virtual TextEditorLogic* asTextEditorLogic();
 
     /// Returned by size calculations to indicate that the widget wants
     /// as much space as possible in that dimension.

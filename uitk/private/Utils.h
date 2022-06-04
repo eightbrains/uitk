@@ -24,8 +24,18 @@
 #define UITK_UTILS_H
 
 #include <string>
+#include <vector>
 
 namespace uitk {
+
+// Returns an array such that out[i] where i is an index into a UTF-16 string,
+// gives the index into utf8. Multibyte UTF-16 characters have the same index
+// for each byte, which eliminates the need for error checking in the unfortunate
+// event of a bug that results in lookup up in the middle of a character.
+std::vector<int> utf8IndicesForUTF16Indices(const char *utf8);
+
+// Returns an array such that out[utf16idx] gives the utf8 index.
+std::vector<int> utf16IndicesForUTF8Indices(const char *utf8);
 
 // Assumes forward slash for directory delimiter, returned path does not
 // include a trailing slash (unless the result is the root dir, "/")

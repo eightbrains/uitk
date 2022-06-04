@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -35,6 +35,7 @@ namespace uitk {
 struct KeyEvent;
 struct MouseEvent;
 struct TextEvent;
+class TextEditorLogic;
 
 class Cursor;
 
@@ -122,6 +123,8 @@ public:
     virtual void* nativeHandle() = 0;
     virtual IWindowCallbacks& callbacks() = 0;
     virtual void callWithLayoutContext(std::function<void(const DrawContext&)> f) = 0;
+
+    virtual void setTextEditing(TextEditorLogic *te, const Rect& frame) = 0;
 };
 
 }  // namespace uitk

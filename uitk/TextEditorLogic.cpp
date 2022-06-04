@@ -161,81 +161,83 @@ bool TextEditorLogic::handleKeyEvent(const KeyEvent& e)
     isLineMod = false;  // Windows/Linux uses home/end
 #endif // __APPLE__
 
-    switch (e.key) {
-        case Key::kBackspace:
-            if (isWordMod) {
-                deleteBackToWordStart();
-            } else if (isLineMod) {
-                deleteBackToLineStart();
-            } else {
-                deletePrevChar();
-            }
-            if (onTextChanged) { onTextChanged(); }
-            break;
-        case Key::kDelete:
-            if (isWordMod) {
-                deleteForwardToWordEnd();
-            } else if (isLineMod) {
-                deleteForwardToLineEnd();
-            } else {
-                deleteNextChar();
-            }
-            if (onTextChanged) { onTextChanged(); }
-            break;
-        case Key::kLeft:
-            if (isWordMod) {
-                moveToPrevWord(selMode);
-            } else if (isLineMod) {
-                moveToLineStart(selMode);
-            } else {
-                moveToPrevChar(selMode);
-            }
-            break;
-        case Key::kRight:
-            if (isWordMod) {
-                moveToNextWord(selMode);
-            } else if (isLineMod) {
-                moveToLineEnd(selMode);
-            } else {
-                moveToNextChar(selMode);
-            }
-            break;
-        case Key::kUp:
-            if (e.keymods & KeyModifier::kCtrl) {
-                moveToStart(selMode);
-            } else {
-                moveOneLineUp(selMode);
-            }
-            break;
-        case Key::kDown:
-            if (e.keymods & KeyModifier::kCtrl) {
-                moveToEnd(selMode);
-            } else {
-                moveOneLineDown(selMode);
-            }
-            break;
-        case Key::kHome:
-            if (e.keymods & KeyModifier::kCtrl) {
-                moveToStart(selMode);
-            } else {
-                moveToLineStart(selMode);
-            }
-            break;
-        case Key::kEnd:
-            if (e.keymods & KeyModifier::kCtrl) {
-                moveToEnd(selMode);
-            } else {
-                moveToLineEnd(selMode);
-            }
-            break;
-        case Key::kEnter:
-        case Key::kReturn:
-            if (onTextCommitted) {
-                onTextCommitted();
-            }
-            break;
-        default:
-            break;
+    if (imeConversion().isEmpty()) {  // OS will handle editing the IME text
+        switch (e.key) {
+            case Key::kBackspace:
+                if (isWordMod) {
+                    deleteBackToWordStart();
+                } else if (isLineMod) {
+                    deleteBackToLineStart();
+                } else {
+                    deletePrevChar();
+                }
+                if (onTextChanged) { onTextChanged(); }
+                break;
+            case Key::kDelete:
+                if (isWordMod) {
+                    deleteForwardToWordEnd();
+                } else if (isLineMod) {
+                    deleteForwardToLineEnd();
+                } else {
+                    deleteNextChar();
+                }
+                if (onTextChanged) { onTextChanged(); }
+                break;
+            case Key::kLeft:
+                if (isWordMod) {
+                    moveToPrevWord(selMode);
+                } else if (isLineMod) {
+                    moveToLineStart(selMode);
+                } else {
+                    moveToPrevChar(selMode);
+                }
+                break;
+            case Key::kRight:
+                if (isWordMod) {
+                    moveToNextWord(selMode);
+                } else if (isLineMod) {
+                    moveToLineEnd(selMode);
+                } else {
+                    moveToNextChar(selMode);
+                }
+                break;
+            case Key::kUp:
+                if (e.keymods & KeyModifier::kCtrl) {
+                    moveToStart(selMode);
+                } else {
+                    moveOneLineUp(selMode);
+                }
+                break;
+            case Key::kDown:
+                if (e.keymods & KeyModifier::kCtrl) {
+                    moveToEnd(selMode);
+                } else {
+                    moveOneLineDown(selMode);
+                }
+                break;
+            case Key::kHome:
+                if (e.keymods & KeyModifier::kCtrl) {
+                    moveToStart(selMode);
+                } else {
+                    moveToLineStart(selMode);
+                }
+                break;
+            case Key::kEnd:
+                if (e.keymods & KeyModifier::kCtrl) {
+                    moveToEnd(selMode);
+                } else {
+                    moveToLineEnd(selMode);
+                }
+                break;
+            case Key::kEnter:
+            case Key::kReturn:
+                if (onTextCommitted) {
+                    onTextCommitted();
+                }
+                break;
+            default:
+                break;
+        }
     }
     return true;
 }
@@ -359,12 +361,20 @@ void TextEditorLogic::moveToEnd(SelectionMode mode)
 
 void TextEditorLogic::moveToPrevChar(SelectionMode mode)
 {
-    moveToLocation(prevChar(selection().cursorIndex(-1)), mode);
+    if (mode == SelectionMode::kReplace && selection().end > selection().start) {
+        moveToLocation(selection().start, mode);
+    } else {
+        moveToLocation(prevChar(selection().cursorIndex(-1)), mode);
+    }
 }
 
 void TextEditorLogic::moveToNextChar(SelectionMode mode)
 {
-    moveToLocation(nextChar(selection().cursorIndex(1)), mode);
+    if (mode == SelectionMode::kReplace && selection().end > selection().start) {
+        moveToLocation(selection().end, mode);
+    } else {
+        moveToLocation(nextChar(selection().cursorIndex(1)), mode);
+    }
 }
 
 void TextEditorLogic::moveToPrevWord(SelectionMode mode)

@@ -968,9 +968,15 @@ void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaP
     auto selectionStart = PicaPt::kZero;
     auto selectionEnd = selectionStart;
     if (hasFocus) {
-        auto sel = editor.selection();
-        selectionStart = editor.pointAtIndex(sel.start).x + textMargins.width + scrollOffset;
-        selectionEnd = editor.pointAtIndex(sel.end).x + textMargins.width + scrollOffset;
+        auto imeConversion = editor.imeConversion();
+        if (imeConversion.isEmpty()) {
+            auto sel = editor.selection();
+            selectionStart = editor.pointAtIndex(sel.start).x + textMargins.width + scrollOffset;
+            selectionEnd = editor.pointAtIndex(sel.end).x + textMargins.width + scrollOffset;
+        } else {
+            selectionStart = editor.pointAtIndex(imeConversion.start + int(imeConversion.text.size())).x + textMargins.width + scrollOffset;
+            selectionEnd = selectionStart;
+        }
     }
 
     auto textRect = frame;
@@ -993,7 +999,7 @@ void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaP
         ui.dc.drawRect(selectionRect, kPaintFill);
     }
 
-    if (editor.isEmpty()) {
+    if (editor.isEmpty() && editor.imeConversion().isEmpty()) {
         if (!placeholder.empty()) {
             ui.dc.setFillColor(mTextEditStyles[int(WidgetState::kDisabled)].fgColor);
             ui.dc.drawText(placeholder.c_str(), textRect, horizAlign | Alignment::kVCenter,

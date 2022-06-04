@@ -45,6 +45,7 @@ struct StringEditorLogic::Impl
 {
     std::string stringUTF8;
     Selection selection = Selection(0);
+    IMEConversion imeConversion = IMEConversion();
     std::shared_ptr<TextLayout> layout;
     float layoutDPI = 0;
     bool needsLayout = true;
@@ -215,9 +216,15 @@ bool StringEditorLogic::needsLayout() const
 void StringEditorLogic::layoutText(const DrawContext& dc, const Font& font,
                                const Color& color, const PicaPt& width)
 {
+    if (mImpl->imeConversion.isEmpty()) {
+        Text t(mImpl->stringUTF8, font, color);
+        mImpl->layout = dc.createTextLayout(t, Size(width, Widget::kDimGrow));
+    } else {
+        Text t(textWithConversion(), font, color);
+        t.setUnderlineStyle(kUnderlineSingle, mImpl->imeConversion.start, mImpl->imeConversion.text.size());
+        mImpl->layout = dc.createTextLayout(t, Size(width, Widget::kDimGrow));
+    }
     mImpl->layoutDPI = dc.dpi();
-    mImpl->layout = dc.createTextLayout(mImpl->stringUTF8.c_str(), font, color,
-                                        Size(width, Widget::kDimGrow));
     mImpl->needsLayout = false;
 }
 
@@ -230,7 +237,9 @@ float StringEditorLogic::layoutDPI() const
 
 Point StringEditorLogic::pointAtIndex(Index i) const
 {
-    if (mImpl->layout && i >= 0 && i <= Index(mImpl->stringUTF8.size())) {
+    // Note that i >= mImpl->stringUTF8.size() is okay (and expected); pointAtIndex()
+    // will return the farthest side of the last glyph.
+    if (mImpl->layout && i >= 0) {
         return mImpl->layout->pointAtIndex(long(i));
     }
     return Point(PicaPt::kZero, PicaPt::kZero);
@@ -265,6 +274,30 @@ void StringEditorLogic::setSelection(const Selection& sel)
             clip.setX11SelectionString(textForRange(sel.start, sel.end));
         }
     }
+}
+
+StringEditorLogic::IMEConversion StringEditorLogic::imeConversion() const
+{
+    return mImpl->imeConversion;
+}
+
+void StringEditorLogic::setIMEConversion(const IMEConversion& conv)
+{
+    mImpl->imeConversion = conv;
+    mImpl->needsLayout = true;
+}
+
+std::string StringEditorLogic::textWithConversion() const
+{
+    std::string s = mImpl->stringUTF8;  // copy
+    auto sel = selection();
+    s.replace(sel.start, sel.end - sel.start, mImpl->imeConversion.text);
+    return s;
+}
+
+Point StringEditorLogic::textUpperLeft() const
+{
+    return Point::kZero;
 }
 
 }  // namespace uitk

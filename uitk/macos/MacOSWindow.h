@@ -73,6 +73,8 @@ public:
     IWindowCallbacks& callbacks() override;
     void callWithLayoutContext(std::function<void(const DrawContext&)> f) override;
 
+    virtual void setTextEditing(TextEditorLogic *te, const Rect& frame) override;
+
 public:
     struct Impl;
     std::unique_ptr<Impl> mImpl;

@@ -64,6 +64,12 @@ public:
     Selection selection() const override;
     void setSelection(const Selection& sel) override;
 
+    IMEConversion imeConversion() const override;
+    void setIMEConversion(const IMEConversion& conv) override;
+
+    std::string textWithConversion() const override;
+    Point textUpperLeft() const override;
+
 private:
     struct Impl;
     std::unique_ptr<Impl> mImpl;

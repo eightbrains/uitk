@@ -88,6 +88,25 @@ public:
         }
     };
 
+    // This is text that is currently in its temporary (usually phonetic)
+    // form while the user is converting it to its final form. It should
+    // replace the selection (including if the selection is empty, as
+    // it represents the caret in that case). However, it has not been
+    // committed by the user, so it should not be part of the value of
+    // the control.
+    struct IMEConversion
+    {
+        Index start;   // TODO: do we need this?
+        std::string text;
+
+        IMEConversion() : start(kInvalidIndex) {}
+        IMEConversion(Index start_, const std::string& text_)
+            : start(start_), text(text_)
+        {}
+
+        bool isEmpty() const { return text.empty(); }
+    };
+
     TextEditorLogic();
     virtual ~TextEditorLogic();
 
@@ -125,6 +144,13 @@ public:
 
     virtual Selection selection() const = 0;
     virtual void setSelection(const Selection& sel) = 0;
+
+    virtual IMEConversion imeConversion() const = 0;
+    virtual void setIMEConversion(const IMEConversion& conv) = 0;
+
+    virtual std::string textWithConversion() const = 0;
+    // Text rect, in widget coordinates. Used to position the input method editor window.
+    virtual Point textUpperLeft() const = 0;
 
     /// Handles mouse events, except for right-click for context menu.
     /// Returns true if consumed the event.
