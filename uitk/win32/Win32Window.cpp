@@ -26,6 +26,7 @@
 #include "../Cursor.h"
 #include "../Events.h"
 #include "../OSCursor.h"
+#include "../TextEditorLogic.h"
 #include "Win32Application.h"
 #include "Win32Menubar.h"
 #include "Win32Utils.h"
@@ -137,7 +138,7 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT uMsg,
                              WPARAM wParam, LPARAM lParam);
                              
 struct Win32Window::Impl {
-    static const char *wndclass;
+    static const wchar_t *wndclass;
 
     IWindowCallbacks& callbacks;
     HWND hwnd = 0;
@@ -149,6 +150,8 @@ struct Win32Window::Impl {
     bool isFinishedConstructing = false;  // wndproc callbacks can happen before constructor finishes
     bool needsUpdateMenu = false;
     bool needsLayout = true;
+    uitk::TextEditorLogic* textEditor = nullptr;  // reference; we do not own
+    uitk::Rect textEditorFrame_window;  // in window coordinates
 
     void updateDrawContext()
     {
@@ -167,8 +170,28 @@ struct Win32Window::Impl {
         this->dc.reset();
         this->dc = DrawContext::fromHwnd(this->hwnd, width, height, dpi);
     }
+
+    std::string getIMEString(long gcsType)
+    {
+        std::string result;
+        if (this->textEditor) {
+            HIMC imeContext = ImmGetContext(this->hwnd);
+            auto nBytes = ImmGetCompositionStringW(imeContext, gcsType, nullptr, 0);
+            if (nBytes >= 0) {
+                char* compositionUTF16 = new char[nBytes + 2];  // +2 because u0000 is 2 bytes
+                if (ImmGetCompositionStringW(imeContext, gcsType, compositionUTF16, nBytes) >= 0) {
+                    compositionUTF16[nBytes] = 0;
+                    compositionUTF16[nBytes + 1] = 0;
+                    result = utf8FromWin32Unicode((wchar_t*)compositionUTF16);
+                }
+                delete[] compositionUTF16;
+            }
+            ImmReleaseContext(this->hwnd, imeContext);
+        }
+        return result;
+    }
 };
-const char *Win32Window::Impl::wndclass = nullptr;
+const wchar_t *Win32Window::Impl::wndclass = nullptr;
 
 Win32Window::Win32Window(IWindowCallbacks& callbacks,
                          const std::string& title, int width, int height,
@@ -192,8 +215,8 @@ Win32Window::Win32Window(IWindowCallbacks& callbacks,
     mImpl->flags = flags;
 
     if (!Impl::wndclass) {
-        Impl::wndclass = "UITK_window";
-        WNDCLASSEX wcex = { sizeof(WNDCLASSEX) };
+        Impl::wndclass = L"UITK_window";
+        WNDCLASSEXW wcex = { sizeof(WNDCLASSEXW) };
         wcex.style         = CS_HREDRAW | CS_VREDRAW;
         wcex.lpfnWndProc   = UITKWndProc;
         wcex.cbClsExtra    = 0;
@@ -213,7 +236,7 @@ Win32Window::Win32Window(IWindowCallbacks& callbacks,
         // so that the cursor would be the application cursor.)
         wcex.hCursor       = NULL;
         wcex.lpszClassName = Impl::wndclass;
-        RegisterClassEx(&wcex);
+        RegisterClassExW(&wcex);
     }
 
     DWORD style = 0;
@@ -237,16 +260,17 @@ Win32Window::Win32Window(IWindowCallbacks& callbacks,
 
     // CreateWindow() executes WM_GETMINMAXINFO, WM_NCCREATE, WM_NCCALCSIZE, WM_CREATE events
     // synchronously before the function finishes.
-    mImpl->hwnd = CreateWindowEx(exStyle,
-                                 Impl::wndclass,
-                                 "",
-                                 style,
-                                 x, y,
-                                 width, height,
-                                 NULL,  // parent
-                                 NULL,  // menu
-                                 HINST_THISCOMPONENT,
-                                 this); // passed to WM_CREATE message, useful for a this pointer
+    mImpl->hwnd = CreateWindowExW(exStyle,
+                                  Impl::wndclass,
+                                  L"",
+                                  style,
+                                  x, y,
+                                  width, height,
+                                  NULL,  // parent
+                                  NULL,  // menu
+                                  HINST_THISCOMPONENT,
+                                  this); // passed to WM_CREATE message, useful for a this pointer
+    assert(IsWindowUnicode(mImpl->hwnd));
     auto &win32app = static_cast<Win32Application&>(Application::instance().osApplication());
     win32app.registerWindow(mImpl->hwnd, this);
     mImpl->updateDrawContext();
@@ -486,6 +510,97 @@ IWindowCallbacks& Win32Window::callbacks() { return mImpl->callbacks; }
 void Win32Window::callWithLayoutContext(std::function<void(const DrawContext&)> f)
 {
     f(*mImpl->dc);
+}
+
+void Win32Window::setTextEditing(TextEditorLogic* te, const Rect& frame)
+{
+    mImpl->textEditor = te;
+    mImpl->textEditorFrame_window = frame;
+}
+
+void Win32Window::showIMEWindow()
+{
+    if (mImpl->textEditor) {
+        auto sel = mImpl->textEditor->selection();
+        auto glyphRect = mImpl->textEditor->glyphRectAtIndex(sel.start);
+        auto cursorPt = mImpl->textEditorFrame_window.upperLeft() + glyphRect.lowerLeft();
+        auto winX = LONG(cursorPt.x.toPixels(mImpl->dc->dpi()));
+        auto winY = LONG(cursorPt.y.toPixels(mImpl->dc->dpi()));
+
+        // Some IMEs use the caret position and some need to be told where to go manually,
+        // so we do both.
+
+        CreateCaret(mImpl->hwnd, NULL, 1, int(std::ceil(glyphRect.height.toPixels(mImpl->dc->dpi()))));
+        SetCaretPos(winX, winY);
+
+        HIMC imeContext = ImmGetContext(mImpl->hwnd);
+        COMPOSITIONFORM cf;
+        cf.dwStyle = CFS_FORCE_POSITION;
+        cf.ptCurrentPos.x = winX;
+        cf.ptCurrentPos.y = winY;
+        ImmSetCompositionWindow(imeContext, &cf);
+        ImmReleaseContext(mImpl->hwnd, imeContext);
+    }
+}
+
+void Win32Window::hideIMEWindow()
+{
+    DestroyCaret();
+}
+
+void Win32Window::updateIMEText(long lParam)
+{
+    if (mImpl->textEditor) {
+        if (lParam != 0) {
+            auto composition = mImpl->getIMEString(GCS_COMPSTR);
+            auto sel = mImpl->textEditor->selection();
+            if (sel.end > sel.start) {
+                // TODO: it would be nice if pressing ESC to cancel the unconverted test would undo the delete
+                //       (e.g. add characters, select some, type some pinyin, press ESC to cancel;
+                //       should get original text back, ideally with the original selection)
+                mImpl->textEditor->deleteSelection();
+            }
+
+            // Windows allows moving within the unconverted text. This feature of ImmGetCompositionString()
+            // is undocumented, but I am assuming that the return value is in bytes because,
+            // a) it is bytes when we get the string, and b) the whole point of the IME is to turn
+            // ASCII into unicode and ASCII is bytes. Our text offsets are always into the UTF-8
+            // string (that is, byte offsets).
+            HIMC imeContext = ImmGetContext(mImpl->hwnd);
+            auto offset = ImmGetCompositionStringW(imeContext, GCS_CURSORPOS, nullptr, 0);
+            ImmReleaseContext(mImpl->hwnd, imeContext);
+
+            TextEditorLogic::IMEConversion conv(sel.start, composition);
+            conv.cursorOffset = offset;
+            mImpl->textEditor->setIMEConversion(conv);
+
+        } else {
+            // lParam == 0 means composition was cancelled
+            mImpl->textEditor->setIMEConversion(TextEditorLogic::IMEConversion());
+        }
+    }
+}
+
+void Win32Window::applyIMEText()
+{
+    if (mImpl->textEditor) {
+        auto conversion = mImpl->getIMEString(GCS_RESULTSTR);
+        if (!conversion.empty()) {
+            auto sel = mImpl->textEditor->selection();
+            int newPos = sel.start + int(conversion.size());
+            mImpl->textEditor->insertText(sel.start, conversion);
+            mImpl->textEditor->setSelection(
+                TextEditorLogic::Selection(newPos, newPos, TextEditorLogic::Selection::CursorLocation::kEnd));
+        }
+        updateIMEText(GCS_COMPSTR);
+    }
+}
+
+void Win32Window::cancelIMEText()
+{
+    if (mImpl->textEditor) {
+        mImpl->textEditor->setIMEConversion(TextEditorLogic::IMEConversion());
+    }
 }
 
 ClickCounter& Win32Window::clickCounter() { return mImpl->clickCounter;  }
@@ -925,6 +1040,30 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
                 return FALSE;
             }
         }
+        case WM_IME_SETCONTEXT:
+            lParam = lParam & (~ISC_SHOWUICOMPOSITIONWINDOW);  // we show the composition, so remove this
+            return DefWindowProc(hwnd, message, wParam, lParam);
+        case WM_IME_STARTCOMPOSITION:
+            w->showIMEWindow();
+            return DefWindowProc(hwnd, message, wParam, lParam);
+        case WM_IME_COMPOSITION:
+            if (lParam & GCS_RESULTSTR) {  // apply conversion
+                w->applyIMEText();
+            } else {
+                w->updateIMEText(long(lParam));
+            }
+            return 0;
+        case WM_IME_ENDCOMPOSITION:
+            w->cancelIMEText();
+            w->hideIMEWindow();
+            return 0;
+        case WM_INPUTLANGCHANGE:
+        case WM_IME_SELECT:
+        case WM_IME_REQUEST:
+        case WM_IME_CONTROL:
+        case WM_IME_NOTIFY:
+        case WM_IME_CHAR:
+            return DefWindowProc(hwnd, message, wParam, lParam);
         case WM_ENTERMENULOOP:
             w->onMenuWillShow();
             return 0;

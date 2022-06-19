@@ -124,6 +124,7 @@ public:
     virtual IWindowCallbacks& callbacks() = 0;
     virtual void callWithLayoutContext(std::function<void(const DrawContext&)> f) = 0;
 
+    // Frame is in window coordinates
     virtual void setTextEditing(TextEditorLogic *te, const Rect& frame) = 0;
 };
 

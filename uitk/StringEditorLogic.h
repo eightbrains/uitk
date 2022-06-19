@@ -60,6 +60,7 @@ public:
 
     Index indexAtPoint(const Point& p) const override;
     Point pointAtIndex(Index i) const override;
+    Rect glyphRectAtIndex(Index i) const override;
 
     Selection selection() const override;
     void setSelection(const Selection& sel) override;

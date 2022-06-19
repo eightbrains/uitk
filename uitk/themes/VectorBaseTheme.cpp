@@ -974,7 +974,7 @@ void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaP
             selectionStart = editor.pointAtIndex(sel.start).x + textMargins.width + scrollOffset;
             selectionEnd = editor.pointAtIndex(sel.end).x + textMargins.width + scrollOffset;
         } else {
-            selectionStart = editor.pointAtIndex(imeConversion.start + int(imeConversion.text.size())).x + textMargins.width + scrollOffset;
+            selectionStart = editor.pointAtIndex(imeConversion.start + imeConversion.cursorOffset).x + textMargins.width + scrollOffset;
             selectionEnd = selectionStart;
         }
     }

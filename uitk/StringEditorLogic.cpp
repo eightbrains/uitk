@@ -48,6 +48,7 @@ struct StringEditorLogic::Impl
     IMEConversion imeConversion = IMEConversion();
     std::shared_ptr<TextLayout> layout;
     float layoutDPI = 0;
+    PicaPt layoutLineHeight = PicaPt(12.0f);
     bool needsLayout = true;
 };
 
@@ -221,10 +222,11 @@ void StringEditorLogic::layoutText(const DrawContext& dc, const Font& font,
         mImpl->layout = dc.createTextLayout(t, Size(width, Widget::kDimGrow));
     } else {
         Text t(textWithConversion(), font, color);
-        t.setUnderlineStyle(kUnderlineSingle, mImpl->imeConversion.start, mImpl->imeConversion.text.size());
+        t.setUnderlineStyle(kUnderlineSingle, mImpl->imeConversion.start, int(mImpl->imeConversion.text.size()));
         mImpl->layout = dc.createTextLayout(t, Size(width, Widget::kDimGrow));
     }
     mImpl->layoutDPI = dc.dpi();
+    mImpl->layoutLineHeight = font.pointSize();
     mImpl->needsLayout = false;
 }
 
@@ -233,6 +235,28 @@ const TextLayout* StringEditorLogic::layout() const { return mImpl->layout.get()
 float StringEditorLogic::layoutDPI() const
 {
     return mImpl->layoutDPI;
+}
+
+Rect StringEditorLogic::glyphRectAtIndex(Index i) const
+{
+    // Note that i >= mImpl->stringUTF8.size() is okay (and expected)
+
+    if (mImpl->stringUTF8.empty()) {
+        return Rect(PicaPt::kZero, PicaPt::kZero, PicaPt::kZero, mImpl->layoutLineHeight);
+    }
+
+    if (mImpl->layout) {
+        if (i == 0) {
+            return mImpl->layout->glyphs()[0].frame;
+        } else if (i < mImpl->layout->glyphs().size()) {
+            return mImpl->layout->glyphs()[i].frame;
+        } else {
+            return Rect(mImpl->layout->glyphs().back().frame.maxX(), PicaPt::kZero,
+                        PicaPt::kZero, mImpl->layoutLineHeight);
+        }
+    }
+
+    return Rect(PicaPt::kZero, PicaPt::kZero, PicaPt::kZero, mImpl->layoutLineHeight);
 }
 
 Point StringEditorLogic::pointAtIndex(Index i) const
