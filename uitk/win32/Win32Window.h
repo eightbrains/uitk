@@ -76,12 +76,20 @@ public:
     IWindowCallbacks& callbacks() override;
     void callWithLayoutContext(std::function<void(const DrawContext&)> f) override;
 
+    // frame is in window coordinates
+    void setTextEditing(TextEditorLogic* te, const Rect& frame) override;
+
     // Since each window has its own copy of the menus, if the structure
     // of the menus changes, it needs to be reloaded.
     void setNeedsUpdateMenubar();
 
 public:  // these are public so that WndProc (which cannot be a member function) can use them
     ClickCounter& clickCounter();
+    void updateIMEText(long lParam); // do NOT use LPARAM, we want to keep windows.h out of this!
+    void applyIMEText();
+    void cancelIMEText();
+    void showIMEWindow();
+    void hideIMEWindow();
     void updateCursor() const;
     bool menubarNeedsUpdate() const;
     void updateMenubar();

@@ -127,7 +127,7 @@ elseif (WIN32)
                              win32/Win32Menubar.cpp
                              win32/Win32Utils.cpp
                              win32/Win32Window.cpp)
-    list(APPEND UITK_LIBS d3d11 d2d1 dwrite shcore comctl32 WindowsApp)
+    list(APPEND UITK_LIBS imm32 d3d11 d2d1 dwrite shcore comctl32 WindowsApp)
 elseif (UNIX)  # note that APPLE is UNIX, so need to check that first
     list(APPEND UITK_HEADERS x11/X11Application.h
                              x11/X11Clipboard.h

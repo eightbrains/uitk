@@ -35,6 +35,7 @@
 
 #include <locale.h>
 
+#include <iostream>
 #include <list>
 #include <map>
 #include <mutex>
@@ -207,6 +208,7 @@ private:
 struct X11Application::Impl
 {
     Display *display;
+    XIM xim;
     // The database and strings are per-screen, with 0 assumed to be default
     std::map<std::string, std::string> xrdbStrings;
     std::vector<std::map<std::string, std::string>> xrdbScreenStrings;
@@ -270,10 +272,20 @@ X11Application::X11Application()
             XFree(resourceString);  // docs say MUST free this string
         }
     }
+
+    // Create the input method
+    char* modstr = XSetLocaleModifiers("");  // read from $XMODIFIERS env variable
+    mImpl->xim = XOpenIM(mImpl->display, 0, 0, 0);
+    if (!mImpl->xim) {
+        std::cerr << "Could not open input method in XMODIFIERS (" << modstr << ")" << std::endl;
+        XSetLocaleModifiers("@im=none");
+        mImpl->xim = XOpenIM(mImpl->display, 0, 0, 0);
+    }
 }
 
 X11Application::~X11Application()
 {
+    XCloseIM(mImpl->xim);
     XCloseDisplay(mImpl->display);
 }
 
@@ -347,10 +359,6 @@ int X11Application::run()
     Atom kPrimary = XInternAtom(mImpl->display, "PRIMARY", False);
     Atom kClipboardTargets = XInternAtom(mImpl->display, "TARGETS", False);
 
-    XIM xim = XOpenIM(mImpl->display, 0, 0, 0);
-    XIC xic = XCreateIC(xim, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
-                        NULL);
-
     bool done = false;
     XEvent event;
     while (!done) {
@@ -361,7 +369,24 @@ int X11Application::run()
         if (wit != mImpl->xwin2window.end()) {
             w = wit->second;
         } else {
+            // We only want to send IME events if a window is actually editing
+            // text. However, this is not for any of our windows. But we need
+            // to filter for the IME before continuing, as the IME does get
+            // some messages not to our window. If we do not filter here, the
+            // IME never becomes active and we do not filter below, either.
+            XFilterEvent(&event, None);  // might be IME enabling/disabling
             continue;  // we know nothing about this window, ignore event
+        }
+
+        // Check with XIM to see if this is an IME event, and ignore if it is.
+        // Note that if we are not editing, we do not want to send it to the
+        // IME, since that will look odd to the user if a widget handles
+        // alphabetical key presses. (The IME only gets the events if we
+        // call XFilterEvent()).
+        if (w->isEditing()) {
+            if (XFilterEvent(&event, None)) {
+                continue;
+            }
         }
 
         switch (event.type) {
@@ -491,6 +516,12 @@ int X11Application::run()
                     }
                 }
 
+                // A KeyPress event with ksym 0x0 indicates a IME conversion
+                // result, rather than a key press.  See
+                // https://www.x.org/releases/X11R7.7/doc/libX11/libX11/libX11.html#Input_Method_Overview
+                // under "Synchronization Convenstions"
+                bool isIMEConversion = (event.type == KeyPress && ksym == 0x0);
+                
                 KeyEvent ke;
                 ke.type = (event.type == KeyPress ? KeyEvent::Type::kKeyDown
                                                   : KeyEvent::Type::kKeyUp);
@@ -498,18 +529,22 @@ int X11Application::run()
                 ke.nativeKey = ksym;
                 ke.keymods = toKeymods(event.xkey.state);
                 ke.isRepeat = false;  // TODO: figure this out
+                if (!isIMEConversion) {
+                    w->onKey(ke);
+                }
 
-                w->onKey(ke);
-
-                if (event.type == KeyPress && ke.keymods == 0 &&
+                bool noMods = !(ke.keymods & (~uitk::KeyModifier::kShift));
+                if (event.type == KeyPress && noMods &&
                     ((ksym >= 0x0020 && ksym <= 0xfdff) || // most languages
                      (ksym >= XK_braille_dot_1 && ksym <= XK_braille_dot_10) ||
-                     (ksym >= 0x10000000 && ksym < 0x11000000))) {
-                    char utf8[32];
+                     (ksym >= 0x10000000 && ksym < 0x11000000) ||
+                     ksym == 0x0 /* IME conversion */)) {
+                    XIC xic = static_cast<XIC>(w->xic());
+                    char utf8[1024];
                     Status status;
-                    int len = Xutf8LookupString(xic, &event.xkey, utf8, 32,
-                                                nullptr, &status);
-                    utf8[len] = '\0';  // just in case
+                    int len = Xutf8LookupString(xic, &event.xkey, utf8, 1024,
+                                                NULL, &status);
+                    utf8[len] = '\0';  // Xutf8LookupString does not add \0
 
                     TextEvent te;
                     te.utf8 = utf8;
@@ -640,16 +675,13 @@ int X11Application::run()
             done = true;
         }
     }
-
-    XDestroyIC(xic);
-    XCloseIM(xim);
 }
 
 void X11Application::exitRun()
 {
-    // We do not need to do anything here because this should only be called from
-    // Application::quit(), which will have closed all the windows, causing us to
-    // exit.
+    // We do not need to do anything here because this should only be called
+    // from Application::quit(), which will have closed all the windows, causing
+    // us to exit.
 }
 
 Theme::Params X11Application::themeParams() const
@@ -660,6 +692,11 @@ Theme::Params X11Application::themeParams() const
 void* X11Application::display() const
 {
     return (void*)mImpl->display;
+}
+
+void* X11Application::xim() const
+{
+    return (void*)mImpl->xim;
 }
 
 void X11Application::registerWindow(long unsigned int xwindow,

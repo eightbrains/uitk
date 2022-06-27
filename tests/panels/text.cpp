@@ -260,7 +260,7 @@ public:
         addChild(mTallLineHeightSlider);
         mTallLineHeightSlider->setOnValueChanged([this](SliderLogic *) {
             auto t = mTallSpacings->richText();  // copy
-            t.setLineHeightMultiple(mTallLineHeightSlider->doubleValue());
+            t.setLineHeightMultiple(float(mTallLineHeightSlider->doubleValue()));
             mTallSpacings->setRichText(t);
         });
     }
@@ -323,8 +323,8 @@ private:
     {
         Text t("lorem ipsum dolor\nsit amet consectetur\nadipiscing elit", Font(), Color::kTextDefault);
         t.setStrikethrough(22, 4);  // all platforms draw their own strikethrough
-        t.setCharacterSpacing(PicaPt(mCharSpacingSlider->doubleValue()));
-        t.setLineHeightMultiple(mLineHeightSlider->doubleValue());
+        t.setCharacterSpacing(PicaPt(float(mCharSpacingSlider->doubleValue())));
+        t.setLineHeightMultiple(float(mLineHeightSlider->doubleValue()));
         mSpacings->setRichText(t);
     }
 };

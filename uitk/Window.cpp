@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -656,6 +656,13 @@ void Window::setFocusWidget(Widget *w)
     bool isDifferent = (w != oldFocusedWidget);
 
     mImpl->focusedWidget = w;
+    if (w) {
+        auto origin = w->convertToWindowFromLocal(w->bounds().upperLeft());
+        mImpl->window->setTextEditing(w->asTextEditorLogic(),
+                                      Rect(origin.x, origin.y, w->bounds().width, w->bounds().height));
+    } else {
+        mImpl->window->setTextEditing(nullptr, Rect::kZero);
+    }
 
     // Call keyFocusEnded after setting, to avoid an infinite loop
     // in case oldFocusedWidget calls resignKeyFocus().
@@ -973,6 +980,12 @@ void Window::onLayout(const DrawContext& dc)
     }
     mImpl->rootWidget->layout(context);
     mImpl->needsLayout = false;
+
+    // Focus widget's frame may have changed; update so that IME position
+    // will be correct.
+    if (focusWidget()) {
+        setFocusWidget(focusWidget());
+    }
 }
 
 void Window::onDraw(DrawContext& dc)

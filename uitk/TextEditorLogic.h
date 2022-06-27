@@ -36,6 +36,7 @@ class DrawContext;
 class Font;
 struct PicaPt;
 struct Point;
+struct Rect;
 class TextLayout;
 class Window;
 
@@ -46,13 +47,20 @@ struct TextEvent;
 class TextEditorLogic : public CutPasteable
 {
 public:
+    /// Note that it is not possible to advance one character by simply adding
+    /// one to an index. Index is a byte offset into the UTF-8 text, and one
+    /// glyph may be multiple bytes. Instead, used nextChar(), nextWord(), etc.
     using Index = int;
+
     static constexpr int kInvalidIndex = -1;
 
     struct Selection
     {
-        Index start;
-        Index end;
+        Index start;  /// this is a byte index into the UTF-8 text
+        Index end;    /// this is a byte index into the UTF-8 text
+                      /// (and may go beyond the last byte if the selection
+                      /// end is at the end of the text, in which case
+                      /// end = utf8.size())
 
         enum class CursorLocation {
             kStart,        /// cursor movement is based off the start index
@@ -86,6 +94,27 @@ public:
             }
             return Index(-1);  // cannot happen but makes MSVC happy
         }
+    };
+
+    // This is text that is currently in its temporary (usually phonetic)
+    // form while the user is converting it to its final form. It should
+    // replace the selection (including if the selection is empty, as
+    // it represents the caret in that case). However, it has not been
+    // committed by the user, so it should not be part of the value of
+    // the control.
+    struct IMEConversion
+    {
+        Index start;  // this is a byte index
+        std::string text;
+        // The cursor should be displayed at start + cursorOffset
+        int cursorOffset = 0;  // this is a byte offset
+
+        IMEConversion() : start(kInvalidIndex) {}
+        IMEConversion(Index start_, const std::string& text_)
+            : start(start_), text(text_), cursorOffset(int(text.size()))
+        {}
+
+        bool isEmpty() const { return text.empty(); }
     };
 
     TextEditorLogic();
@@ -122,9 +151,17 @@ public:
 
     virtual Index indexAtPoint(const Point& p) const = 0;
     virtual Point pointAtIndex(Index i) const = 0;
+    virtual Rect glyphRectAtIndex(Index i) const = 0;
 
     virtual Selection selection() const = 0;
     virtual void setSelection(const Selection& sel) = 0;
+
+    virtual IMEConversion imeConversion() const = 0;
+    virtual void setIMEConversion(const IMEConversion& conv) = 0;
+
+    virtual std::string textWithConversion() const = 0;
+    // Text rect, in widget coordinates. Used to position the input method editor window.
+    virtual Point textUpperLeft() const = 0;
 
     /// Handles mouse events, except for right-click for context menu.
     /// Returns true if consumed the event.

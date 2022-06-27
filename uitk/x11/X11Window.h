@@ -75,6 +75,7 @@ public:
     void* nativeHandle() override;
     IWindowCallbacks& callbacks() override;
     void callWithLayoutContext(std::function<void(const DrawContext&)> f) override;
+    void setTextEditing(TextEditorLogic *te, const Rect& frame) override;
 
     void onResize();
     void onLayout();
@@ -86,6 +87,13 @@ public:
     void onDeactivated();
     bool onWindowShouldClose();
     void onWindowWillClose();
+
+public:
+    void* xic() const;
+    bool isEditing() const;
+    int imeMove(int ximDir, int arg);
+    void imeUpdate(const char *utf8, int start, int len, int newOffset);
+    void imeDone();
 
 private:
     struct Impl;

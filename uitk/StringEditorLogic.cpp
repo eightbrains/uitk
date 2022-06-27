@@ -25,6 +25,7 @@
 #include "Application.h"
 #include "Clipboard.h"
 #include "Widget.h"
+#include "private/Utils.h"
 
 #include <nativedraw.h>
 
@@ -45,8 +46,10 @@ struct StringEditorLogic::Impl
 {
     std::string stringUTF8;
     Selection selection = Selection(0);
+    IMEConversion imeConversion = IMEConversion();
     std::shared_ptr<TextLayout> layout;
     float layoutDPI = 0;
+    PicaPt layoutLineHeight = PicaPt(12.0f);
     bool needsLayout = true;
 };
 
@@ -106,17 +109,7 @@ TextEditorLogic::Index StringEditorLogic::endOfText() const
 
 TextEditorLogic::Index StringEditorLogic::prevChar(Index i) const
 {
-    if (i <= 0) {
-        return 0;
-    }
-
-    // See UTF8 encoding table in nextChar(). If byte is 10xxxxxx it is part
-    // of a multibyte code point, so keep going.
-    i -= 1;
-    while (i >= 0 && (unsigned char)mImpl->stringUTF8[i] >= 0x80 && (unsigned char)mImpl->stringUTF8[i] < 0xc0) {
-        i -= 1;
-    }
-    return i;
+    return prevCodePointUtf8(mImpl->stringUTF8.c_str(), i);
 }
 
 TextEditorLogic::Index StringEditorLogic::nextChar(Index i) const
@@ -125,16 +118,7 @@ TextEditorLogic::Index StringEditorLogic::nextChar(Index i) const
         return Index(mImpl->stringUTF8.size());
     }
     
-    // UTF8 encoding is:
-    // 0x0000 - 0x007f:  0xxxxxxx
-    // 0x0080 - 0x07ff:  110xxxxx 10xxxxxx
-    // 0x0800 - 0xffff:  1110xxxx 10xxxxxx 10xxxxxx
-    // 0x0080 - 0x07ff:  11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-    int len = 1;
-    if (((unsigned char)mImpl->stringUTF8[i] & 0b11000000) == (unsigned char)0b11000000) { len += 1; }
-    if (((unsigned char)mImpl->stringUTF8[i] & 0b11100000) == (unsigned char)0b11100000) { len += 1; }
-    if (((unsigned char)mImpl->stringUTF8[i] & 0b11110000) == (unsigned char)0b11110000) { len += 1; }
-    return i + len;
+    return nextCodePointUtf8(mImpl->stringUTF8.c_str(), i);
 }
 
 TextEditorLogic::Index StringEditorLogic::startOfWord(Index i) const
@@ -215,9 +199,16 @@ bool StringEditorLogic::needsLayout() const
 void StringEditorLogic::layoutText(const DrawContext& dc, const Font& font,
                                const Color& color, const PicaPt& width)
 {
+    if (mImpl->imeConversion.isEmpty()) {
+        Text t(mImpl->stringUTF8, font, color);
+        mImpl->layout = dc.createTextLayout(t, Size(width, Widget::kDimGrow));
+    } else {
+        Text t(textWithConversion(), font, color);
+        t.setUnderlineStyle(kUnderlineSingle, mImpl->imeConversion.start, int(mImpl->imeConversion.text.size()));
+        mImpl->layout = dc.createTextLayout(t, Size(width, Widget::kDimGrow));
+    }
     mImpl->layoutDPI = dc.dpi();
-    mImpl->layout = dc.createTextLayout(mImpl->stringUTF8.c_str(), font, color,
-                                        Size(width, Widget::kDimGrow));
+    mImpl->layoutLineHeight = font.pointSize();
     mImpl->needsLayout = false;
 }
 
@@ -228,9 +219,33 @@ float StringEditorLogic::layoutDPI() const
     return mImpl->layoutDPI;
 }
 
+Rect StringEditorLogic::glyphRectAtIndex(Index i) const
+{
+    // Note that i >= mImpl->stringUTF8.size() is okay (and expected)
+
+    if (mImpl->stringUTF8.empty()) {
+        return Rect(PicaPt::kZero, PicaPt::kZero, PicaPt::kZero, mImpl->layoutLineHeight);
+    }
+
+    if (mImpl->layout) {
+        if (i == 0) {
+            return mImpl->layout->glyphs()[0].frame;
+        } else if (i < mImpl->layout->glyphs().size()) {
+            return mImpl->layout->glyphs()[i].frame;
+        } else {
+            return Rect(mImpl->layout->glyphs().back().frame.maxX(), PicaPt::kZero,
+                        PicaPt::kZero, mImpl->layoutLineHeight);
+        }
+    }
+
+    return Rect(PicaPt::kZero, PicaPt::kZero, PicaPt::kZero, mImpl->layoutLineHeight);
+}
+
 Point StringEditorLogic::pointAtIndex(Index i) const
 {
-    if (mImpl->layout && i >= 0 && i <= Index(mImpl->stringUTF8.size())) {
+    // Note that i >= mImpl->stringUTF8.size() is okay (and expected); pointAtIndex()
+    // will return the farthest side of the last glyph.
+    if (mImpl->layout && i >= 0) {
         return mImpl->layout->pointAtIndex(long(i));
     }
     return Point(PicaPt::kZero, PicaPt::kZero);
@@ -265,6 +280,32 @@ void StringEditorLogic::setSelection(const Selection& sel)
             clip.setX11SelectionString(textForRange(sel.start, sel.end));
         }
     }
+}
+
+StringEditorLogic::IMEConversion StringEditorLogic::imeConversion() const
+{
+    return mImpl->imeConversion;
+}
+
+void StringEditorLogic::setIMEConversion(const IMEConversion& conv)
+{
+    assert(conv.text.empty() || conv.start >= 0);
+
+    mImpl->imeConversion = conv;
+    mImpl->needsLayout = true;
+}
+
+std::string StringEditorLogic::textWithConversion() const
+{
+    std::string s = mImpl->stringUTF8;  // copy
+    auto sel = selection();
+    s.replace(sel.start, sel.end - sel.start, mImpl->imeConversion.text);
+    return s;
+}
+
+Point StringEditorLogic::textUpperLeft() const
+{
+    return Point::kZero;
 }
 
 }  // namespace uitk
