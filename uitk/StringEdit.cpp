@@ -35,6 +35,9 @@ PicaPt calcScrollOffset(const StringEditorLogic& editor, const Size& viewSize,
 {
     auto sel = editor.selection();
     auto idx = sel.cursorIndex(0);
+    if (!editor.imeConversion().isEmpty()) {
+        idx += editor.imeConversion().cursorOffset;
+    }
     auto r = Rect(PicaPt::kZero, PicaPt::kZero, viewSize.width, viewSize.height);
     auto textWidth = editor.layout()->metrics().width;
     if (textWidth <= r.width) {
