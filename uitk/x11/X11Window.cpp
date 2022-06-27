@@ -22,10 +22,13 @@
 
 #include "X11Window.h"
 
+#include "../private/Utils.h"
 #include "../Application.h"
 #include "../Cursor.h"
 #include "../Events.h"
 #include "../OSCursor.h"
+#include "../TextEditorLogic.h"
+#include "../private/Utils.h"
 #include "X11Application.h"
 
 #include <string.h>  // for memset()
@@ -67,6 +70,168 @@ bool hasWMProperty(Display *d, ::Window xwin, const char *prop)
     return false;
 }
 
+void setIMEPosition(XIC xic, int windowX, int windowY)
+{
+    // I cannot figure out a way to set the spot location if you are using
+    // preedit callbacks. (Indeed, the docs says that XNSpotLocation is only
+    // applicable if XIMPreeditPosition is used.) However, it seems that
+    // GTK applications are somehow able to set the location.
+    XVaNestedList preedit_attr;
+    XPoint spot;
+    spot.x = windowX;
+    spot.y = windowY;
+    XVaNestedList attr = XVaCreateNestedList(0, XNSpotLocation, &spot, NULL);
+    auto result = XSetICValues(xic, XNPreeditAttributes, attr, NULL);
+    XFree(attr);
+}
+
+void addCodePoint(std::string *utf8, uint32_t utf32)
+{
+    if (utf32 < 0x0080) {
+        char c = (utf32 & 0b01111111);
+        utf8->push_back(c);
+    } else if (utf32 < 0x0800) {
+        char c1 = (0b110 << 5) | ((utf32 & 0b11111000000) >> 6);
+        char c2 = ( 0b10 << 6) |  (utf32 & 0b00000111111);
+        utf8->push_back(c1);
+        utf8->push_back(c2);
+    } else if (utf32 < 0x10000) {
+        char c1 = (0b1110 << 4) | ((utf32 & 0b1111000000000000) >> 12) ;
+        char c2 = (  0b10 << 6) | ((utf32 & 0b0000111111000000) >> 6);
+        char c3 = (  0b10 << 6) |  (utf32 & 0b0000000000111111);
+        utf8->push_back(c1);
+        utf8->push_back(c2);
+        utf8->push_back(c3);
+    } else {
+        char c1 = (0b11110 << 3) | ((utf32 & 0b111000000000000000000) >>18);
+        char c2 = (   0b10 << 6) | ((utf32 & 0b000111111000000000000) >>12);
+        char c3 = (   0b10 << 6) | ((utf32 & 0b000000000111111000000) >> 6);
+        char c4 = (   0b10 << 6) |  (utf32 & 0b000000000000000111111);
+        utf8->push_back(c1);
+        utf8->push_back(c2);
+        utf8->push_back(c3);
+        utf8->push_back(c4);
+    }
+}
+
+// macOS and win32 do this using the native functions.
+// Note that std::c16rtomb() cannot convert from UTF-16 to UTF-8
+// Also note that wchar_t is implementation-defined and may NOT be the
+// same size as char16_t! (Windows uses 2 bytes, GCC on Linux uses 4)
+std::string convertUtf16ToUtf8(const char16_t *utf16)
+{
+    std::string utf8;
+
+    const char16_t *c = utf16;
+    while (*c != '\0') {
+        if (*c < 0xd800) {
+            addCodePoint(&utf8, uint32_t(*c));
+        } else {
+            uint32_t utf32 = 0;
+            utf32 = uint32_t((*c - 0xd800) * 0x0400);
+            c++;
+            if (*c == '\0') {
+                break; // unexpected end: don't add this (invalid) code point
+            }
+            if (*c >= 0xdc00) {  // this should always be true
+                utf32 += uint32_t(*c - 0xdc00);
+            }
+            utf32 += uint32_t(0x10000);
+            addCodePoint(&utf8, utf32);
+        }
+        c++;
+    }
+
+    return utf8;
+}
+
+bool testUtf16Conversion() {
+    struct ConvTest {
+        const char16_t *utf16;
+        std::string utf8result;
+        ConvTest(const char16_t *u16, const char *u8)
+            : utf16(u16), utf8result(u8)
+        {}
+    };
+    std::vector<ConvTest> tests = {
+        ConvTest( u"Z\0", "Z" ),            // 005a -> 00 5a
+        ConvTest( u"\u00a3\0",  "\u00a3" ),  // 00a3 -> c2 a3
+        ConvTest( u"\u0939\0",  "\u0939" ),  // 0930 -> e0 a4 b9
+        ConvTest( u"\u20ac\0",  "\u20ac" ),  // 20ac -> e2 82 ac
+        ConvTest( u"\ud55c\0",  "\ud55c" ),  // d55c -> ed 95 9c
+        ConvTest( u"\U00010348\0", u8"\U00010348" ), // asdf
+        ConvTest( u"\U00010437\0", u8"\U00010437" )  // d801 dc37 -> 01 
+    };
+    for (auto &t : tests) {
+        assert(convertUtf16ToUtf8(t.utf16) == t.utf8result);
+    }
+    return true;
+}
+static bool tested = testUtf16Conversion();
+
+// IME has been enabled
+int preeditStart(XIM xim, XPointer clientData, XPointer callData)
+{
+    return -1;  // preedit length has no limit
+}
+
+// Caret moves
+void preeditCaret(XIM xim, XPointer clientData,
+                  XIMPreeditCaretCallbackStruct *callData)
+{
+    auto *w = (X11Window*)clientData;
+    if (w && callData) {
+        int arg = -1;
+        if (callData->direction == XIMAbsolutePosition) {
+            arg = callData->position;
+        }
+        int newOffset = w->imeMove(int(callData->direction), arg);
+        callData->position = newOffset; // return the new position
+    }
+}
+
+// Preedit text has changed
+void preeditDraw(XIM xim, XPointer clientData,
+                 XIMPreeditDrawCallbackStruct *callData)
+{
+    auto *w = (X11Window*)clientData;
+    if (w && callData) {
+        // The text is a mess. The Xlib docs say that the result will either
+        // be multibyte or wchar. But wchar is implementation dependent, and
+        // is 4 bytes on GCC/Linux. I assume that this means it is encoded as
+        // UTF-32, but who knows?!
+        if (callData->text) {
+            if (callData->text->encoding_is_wchar) {
+                std::string utf8;
+                if (sizeof(wchar_t) == 4) {
+                    for (uint32_t *c = (uint32_t*)callData->text->string.wide_char;
+                         *c != 0;
+                         ++c) {
+                        addCodePoint(&utf8, *c);
+                    }
+                } else {  // sizeof(wchar_t) == 2)
+                    utf8 = convertUtf16ToUtf8((char16_t*)callData->text->string.wide_char);
+                }
+                w->imeUpdate(utf8.c_str(), callData->chg_first,
+                             callData->chg_length, callData->caret);
+            } else {
+                w->imeUpdate(callData->text->string.multi_byte,
+                             callData->chg_first, callData->chg_length,
+                             callData->caret);
+            }
+        } else {
+            w->imeUpdate(nullptr, callData->chg_first, callData->chg_length,
+                         callData->caret);
+        }
+    }
+}
+
+// IME has been disabled
+void preeditDone(XIM xim, XPointer client_data, XPointer callData)
+{
+    // nothing to deallocate
+}
+
 }  // namespace
 
 static X11Window* gActiveWindow = nullptr;
@@ -75,6 +240,7 @@ struct X11Window::Impl {
     IWindowCallbacks& callbacks;
     Display *display;
     ::Window xwindow = 0;
+    XIC xic = nullptr;
     int xscreenNo = 0;
     int width;
     int height;
@@ -82,6 +248,8 @@ struct X11Window::Impl {
     float dpi = 96.0f;
     std::shared_ptr<DrawContext> dc;
     std::string title;
+    TextEditorLogic *textEditor = nullptr;
+    Rect textRect;
     bool showing = false;
 
     bool drawRequested = false;
@@ -109,6 +277,10 @@ struct X11Window::Impl {
         x11app.unregisterWindow(this->xwindow);
 
         this->dc = nullptr;
+
+        XDestroyIC(this->xic);
+        this->xic = nullptr;
+
         XDestroyWindow(this->display, this->xwindow);
         this->xwindow = 0;
     }
@@ -153,6 +325,48 @@ X11Window::X11Window(IWindowCallbacks& callbacks,
         setTitle(title);
     }
 
+    XIMCallback startCallback, caretCallback, drawCallback, doneCallback;
+    startCallback.client_data = (XPointer)this;
+    startCallback.callback = (XIMProc)preeditStart;
+    caretCallback.client_data = (XPointer)this;
+    caretCallback.callback = (XIMProc)preeditCaret;
+    drawCallback.client_data = (XPointer)this;
+    drawCallback.callback = (XIMProc)preeditDraw;
+    doneCallback.client_data = (XPointer)this;
+    doneCallback.callback = (XIMProc)preeditDone;
+    XVaNestedList preeditAttr = XVaCreateNestedList(
+        0,
+        XNPreeditStartCallback, &startCallback,
+        XNPreeditCaretCallback, &caretCallback,
+        XNPreeditDrawCallback, &drawCallback,
+        XNPreeditDoneCallback, &doneCallback,
+        NULL);
+
+    mImpl->xic = XCreateIC(static_cast<XIM>(x11app.xim()),
+                           XNInputStyle, XIMPreeditCallbacks | XIMStatusNothing,
+                           XNClientWindow, mImpl->xwindow,
+                           XNPreeditAttributes, preeditAttr,
+                           NULL);
+    if (!mImpl->xic) {
+        // This XIM module doesn't support preedit callbacks,
+        // Try something more basic.
+        mImpl->xic = XCreateIC(static_cast<XIM>(x11app.xim()),
+                           XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
+                           XNClientWindow, mImpl->xwindow,
+                           XNPreeditAttributes, preeditAttr,
+                           NULL);
+    }
+    if (!mImpl->xic) {
+        // Ok, well, let's make it really basic.
+        mImpl->xic = XCreateIC(static_cast<XIM>(x11app.xim()),
+                           XNInputStyle, XIMPreeditNone | XIMStatusNothing,
+                           XNClientWindow, mImpl->xwindow,
+                           XNPreeditAttributes, preeditAttr,
+                           NULL);
+    }
+    assert(mImpl->xic);
+    XFree(preeditAttr);
+
     // Now that window can be properly displayed, turn on receiving events
     // See https://tronche.com/gui/x/xlib/events/processing-overview.html
     // for information on the masks and the events generated.
@@ -178,6 +392,103 @@ X11Window::~X11Window()
         mImpl->destroyWindow();
     }
 }
+
+void* X11Window::xic() const { return mImpl->xic; }
+
+int X11Window::imeMove(int ximDir, int arg)
+{
+    auto *edit = mImpl->textEditor;
+    if (!edit) {
+        return 0;
+    }
+
+    auto conv = edit->imeConversion();
+
+    switch ((XIMCaretDirection)ximDir) {
+        case XIMForwardChar:
+        case XIMForwardWord: {
+            if (conv.cursorOffset < conv.text.size()) {
+                conv.cursorOffset = nextCodePointUtf8(conv.text.c_str(), conv.cursorOffset);
+            }
+            break;
+        }
+        case XIMBackwardChar:
+        case XIMBackwardWord: {
+            conv.cursorOffset = prevCodePointUtf8(conv.text.c_str(), conv.cursorOffset);
+            break;
+        }
+        case XIMCaretUp:
+        case XIMPreviousLine:
+        case XIMLineStart:
+            conv.cursorOffset = 0;
+            break;
+        case XIMCaretDown:
+        case XIMNextLine:
+        case XIMLineEnd:
+            conv.cursorOffset = conv.text.size();  // after last glyph
+            break;
+        case XIMAbsolutePosition:
+            conv.cursorOffset = arg;
+            break;
+        case XIMDontChange:
+        default:
+            break;
+    }
+
+    edit->setIMEConversion(conv);
+    postRedraw();
+
+    return conv.cursorOffset;
+}
+
+void X11Window::imeUpdate(const char *utf8, int startCP, int lenCP,
+                          int newOffsetCP)
+{
+    // https://www.x.org/releases/X11R7.7/doc/libX11/libX11/libX11.html#Input_Method_Overview states that start and len will never be negative
+
+    auto *edit = mImpl->textEditor;
+    if (!edit) {
+        return;
+    }
+    auto conv = edit->imeConversion();
+
+    if (conv.start < 0) {  // empty conversion start is set to kInvalidIndex
+        conv.start = edit->selection().start;
+    }
+
+    auto r = edit->glyphRectAtIndex(conv.start);
+    int x = int(std::round((mImpl->textRect.x + r.x).toPixels(mImpl->dpi)));
+    int y = int(std::round((mImpl->textRect.y + r.y).toPixels(mImpl->dpi)));
+    setIMEPosition(mImpl->xic, x, y);
+
+    // Note that the indices are *code points* NOT byte indices.
+    auto cpToIdx = utf8IndicesForCodePointIndices(conv.text.c_str());
+    int start = cpToIdx[startCP];
+    int len = cpToIdx[startCP + lenCP] - start;
+
+    if (utf8) {
+        if (len > 0) {  // replace:  delete then insert as normal
+            conv.text.erase(start, len);
+        }
+        conv.text.insert(start, utf8);
+    } else {  // delete
+        conv.text.erase(start, len);
+    }
+
+    // The new offset is specified in the new preedit text
+    cpToIdx = utf8IndicesForCodePointIndices(conv.text.c_str());
+    conv.cursorOffset = cpToIdx[newOffsetCP];
+
+    edit->setIMEConversion(conv);
+
+    postRedraw();
+}
+
+void X11Window::imeDone()
+{
+}
+
+bool X11Window::isEditing() const { return (mImpl->textEditor != nullptr); }
 
 bool X11Window::isShowing() const { return mImpl->showing; }
 
@@ -428,6 +739,12 @@ void X11Window::callWithLayoutContext(std::function<void(const DrawContext&)> f)
     f(*mImpl->dc);
 }
 
+void X11Window::setTextEditing(TextEditorLogic *te, const Rect& frame)
+{
+    mImpl->textEditor = te;
+    mImpl->textRect = frame;
+}
+
 void X11Window::onResize()
 {
     mImpl->updateDrawContext();
@@ -485,11 +802,15 @@ void X11Window::onKey(const KeyEvent& e)
 
 void X11Window::onText(const TextEvent& e)
 {
+    if (mImpl->textEditor) {
+        mImpl->textEditor->setIMEConversion(TextEditorLogic::IMEConversion());
+    }
     mImpl->callbacks.onText(e);
 }
 
 void X11Window::onActivated(const Point& currentMousePos)
 {
+    XSetICFocus(mImpl->xic);
     mImpl->callbacks.onActivated(currentMousePos);
 }
 

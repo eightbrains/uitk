@@ -31,6 +31,70 @@ namespace uitk {
 // linked, we just won't provide a body for these, and the libnativedraw ones
 // will be used.
 
+std::vector<int> codePointIndicesForUTF8Indices(const char *utf8)
+{
+    std::vector<int> indices;
+    int cpIdx = 0;
+    int i = 0;
+    while (utf8[i] != '\0') {
+        int next = nextCodePointUtf8(utf8, i);
+        for (int j = i;  j < next; ++j) {
+            indices.push_back(cpIdx);
+        }
+        i = next;
+        cpIdx += 1;
+    }
+    return indices;
+}
+
+std::vector<int> utf8IndicesForCodePointIndices(const char *utf8)
+{
+    std::vector<int> indices;
+    int cpIdx = 0;
+    int i = 0;
+    while (utf8[i] != '\0') {
+        int next = nextCodePointUtf8(utf8, i);
+        indices.push_back(i);
+        i = next;
+        cpIdx += 1;
+    }
+    indices.push_back(i);
+    return indices;
+}
+
+int nextCodePointUtf8(const char *utf8, int currentIdx)
+{
+    if (utf8[currentIdx] == '\0') {
+        return currentIdx;
+    }
+    
+    // UTF8 encoding is:
+    // 0x0000 - 0x007f:  0xxxxxxx
+    // 0x0080 - 0x07ff:  110xxxxx 10xxxxxx
+    // 0x0800 - 0xffff:  1110xxxx 10xxxxxx 10xxxxxx
+    // 0x0080 - 0x07ff:  11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
+    int len = 1;
+    if (((unsigned char)utf8[currentIdx] & 0b11000000) == (unsigned char)0b11000000) { len += 1; }
+    if (((unsigned char)utf8[currentIdx] & 0b11100000) == (unsigned char)0b11100000) { len += 1; }
+    if (((unsigned char)utf8[currentIdx] & 0b11110000) == (unsigned char)0b11110000) { len += 1; }
+    return currentIdx + len;
+}
+
+int prevCodePointUtf8(const char *utf8, int currentIdx)
+{
+    if (currentIdx <= 0) {
+        return 0;
+    }
+
+    // See UTF8 encoding table in nextCodePoint(). If byte is 10xxxxxx it is
+    // part of a multibyte code point, so keep going.
+    currentIdx -= 1;
+    while (currentIdx >= 0 && (unsigned char)utf8[currentIdx] >= 0x80 && (unsigned char)utf8[currentIdx] < 0xc0) {
+        currentIdx -= 1;
+    }
+    return currentIdx;
+}
+
 std::string baseDirectoryOfPath(const std::string& path)
 {
     auto idx = path.rfind('/');

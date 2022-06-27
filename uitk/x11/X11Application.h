@@ -59,6 +59,7 @@ public:
     // This returns the Display. It is void* to avoid including Xlib.h 
     // which pollutes the namespace badly (in particular, Font).
     void* display() const;
+    void* xim() const;
 
     void registerWindow(long unsigned int xwindow, X11Window *window);
     void unregisterWindow(long unsigned int xwindow);

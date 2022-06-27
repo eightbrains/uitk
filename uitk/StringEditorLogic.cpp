@@ -25,6 +25,7 @@
 #include "Application.h"
 #include "Clipboard.h"
 #include "Widget.h"
+#include "private/Utils.h"
 
 #include <nativedraw.h>
 
@@ -108,17 +109,7 @@ TextEditorLogic::Index StringEditorLogic::endOfText() const
 
 TextEditorLogic::Index StringEditorLogic::prevChar(Index i) const
 {
-    if (i <= 0) {
-        return 0;
-    }
-
-    // See UTF8 encoding table in nextChar(). If byte is 10xxxxxx it is part
-    // of a multibyte code point, so keep going.
-    i -= 1;
-    while (i >= 0 && (unsigned char)mImpl->stringUTF8[i] >= 0x80 && (unsigned char)mImpl->stringUTF8[i] < 0xc0) {
-        i -= 1;
-    }
-    return i;
+    return prevCodePointUtf8(mImpl->stringUTF8.c_str(), i);
 }
 
 TextEditorLogic::Index StringEditorLogic::nextChar(Index i) const
@@ -127,16 +118,7 @@ TextEditorLogic::Index StringEditorLogic::nextChar(Index i) const
         return Index(mImpl->stringUTF8.size());
     }
     
-    // UTF8 encoding is:
-    // 0x0000 - 0x007f:  0xxxxxxx
-    // 0x0080 - 0x07ff:  110xxxxx 10xxxxxx
-    // 0x0800 - 0xffff:  1110xxxx 10xxxxxx 10xxxxxx
-    // 0x0080 - 0x07ff:  11110xxx 10xxxxxx 10xxxxxx 10xxxxxx
-    int len = 1;
-    if (((unsigned char)mImpl->stringUTF8[i] & 0b11000000) == (unsigned char)0b11000000) { len += 1; }
-    if (((unsigned char)mImpl->stringUTF8[i] & 0b11100000) == (unsigned char)0b11100000) { len += 1; }
-    if (((unsigned char)mImpl->stringUTF8[i] & 0b11110000) == (unsigned char)0b11110000) { len += 1; }
-    return i + len;
+    return nextCodePointUtf8(mImpl->stringUTF8.c_str(), i);
 }
 
 TextEditorLogic::Index StringEditorLogic::startOfWord(Index i) const
@@ -307,6 +289,8 @@ StringEditorLogic::IMEConversion StringEditorLogic::imeConversion() const
 
 void StringEditorLogic::setIMEConversion(const IMEConversion& conv)
 {
+    assert(conv.text.empty() || conv.start >= 0);
+
     mImpl->imeConversion = conv;
     mImpl->needsLayout = true;
 }
