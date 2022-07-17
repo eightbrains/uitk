@@ -37,6 +37,7 @@
 #include "Dialog.h"
 #include "Events.h"
 #include "FileDialog.h"
+#include "Icon.h"
 #include "Label.h"
 #include "ListView.h"
 #include "NumberEdit.h"

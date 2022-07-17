@@ -30,6 +30,7 @@
 namespace uitk {
 
 class Clipboard;
+class IconPainter;
 class OSMenubar;
 class OSApplication;
 class Shortcuts;
@@ -128,6 +129,9 @@ public:
 
     /// Gets the application's theme.
     std::shared_ptr<Theme> theme() const;
+
+    /// Gets the application's icon painter.
+    std::shared_ptr<IconPainter> iconPainter() const;
 
     void onSystemThemeChanged();
 

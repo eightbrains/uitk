@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -1027,9 +1027,14 @@ void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaP
 }
 
 void VectorBaseTheme::clipScrollView(UIContext& ui, const Rect& frame,
-                                     const WidgetStyle& style, WidgetState state) const
+                                     const WidgetStyle& style, WidgetState state, bool drawsFrame) const
 {
-    clipFrame(ui, frame, mScrollViewStyles[int(state)].merge(style));
+    auto s = mScrollViewStyles[int(state)].merge(style);
+    if (!drawsFrame) {
+        s.borderWidth = PicaPt::kZero;
+        s.borderColor = Color::kTransparent;
+    }
+    clipFrame(ui, frame, s);
 }
 
 void VectorBaseTheme::drawScrollView(UIContext& ui, const Rect& frame,

@@ -29,6 +29,7 @@ using namespace uitk;
 // identical .h files.
 #include "panels/widgets.cpp"
 #include "panels/text.cpp"
+#include "panels/icons.cpp"
 #include "panels/cursors.cpp"
 #include "panels/dialogs.cpp"
 
@@ -62,7 +63,7 @@ public:
     void layout(const LayoutContext& context) override
     {
         auto em = context.theme.params().labelFont.pointSize();
-        auto chooserWidth = 10.0f * em;
+        auto chooserWidth = context.dc.roundToNearestPixel(10.0f * em);
         auto &r = bounds();
         mPanelChooser->setFrame(Rect(PicaPt::kZero, PicaPt::kZero, chooserWidth, r.height));
         mPanels->setFrame(Rect(chooserWidth, PicaPt::kZero, r.maxX() - chooserWidth, r.height));
@@ -153,6 +154,7 @@ public:
         auto *root = new RootWidget();
         root->addPanel("Widgets", new widgets::AllWidgetsPanel());
         root->addPanel("Text", new text::Panel());
+        root->addPanel("Icons", new icons::Panel());
         root->addPanel("Cursors", new cursor::Panel());
         root->addPanel("Dialogs", new dialogs::Panel());
         addChild(root);

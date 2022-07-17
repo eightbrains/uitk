@@ -27,6 +27,7 @@
 #include "ShortcutKey.h"
 #include "Window.h"
 #include "themes/EmpireTheme.h"
+#include "themes/StandardIconPainter.h"
 
 #if defined(__APPLE__)
 #include "macos/MacOSApplication.h"
@@ -49,6 +50,7 @@ struct Application::Impl
 
     std::unique_ptr<OSApplication> osApp;
     std::shared_ptr<Theme> theme;
+    std::shared_ptr<StandardIconPainter> iconPainter;
     std::unique_ptr<OSMenubar> menubar;
     std::unique_ptr<Shortcuts> shortcuts;
     std::vector<Window*> windows;  // we do not own these
@@ -189,6 +191,14 @@ std::shared_ptr<Theme> Application::theme() const
 #endif
     }
     return mImpl->theme;
+}
+
+std::shared_ptr<IconPainter> Application::iconPainter() const
+{
+    if (!mImpl->iconPainter) {
+        mImpl->iconPainter = std::make_unique<StandardIconPainter>();
+    }
+    return mImpl->iconPainter;
 }
 
 Clipboard& Application::clipboard() const

@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -171,7 +171,7 @@ public:
                               const std::string& placeholder, TextEditorLogic& editor, int horizAlign, 
                               const WidgetStyle& style, WidgetState state, bool hasFocus) const = 0;
     virtual void clipScrollView(UIContext& ui, const Rect& frame,
-                                const WidgetStyle& style, WidgetState state) const = 0;
+                                const WidgetStyle& style, WidgetState state, bool drawsFrame) const = 0;
     virtual void drawScrollView(UIContext& ui, const Rect& frame,
                                 const WidgetStyle& style, WidgetState state) const = 0;
     virtual void drawListView(UIContext& ui, const Rect& frame,

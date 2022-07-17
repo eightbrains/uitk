@@ -11,6 +11,7 @@ set(UITK_HEADERS Application.h
                  Events.h
                  FileDialog.h
                  Global.h
+                 Icon.h
                  IncDecWidget.h
                  Label.h
                  ListView.h
@@ -43,6 +44,8 @@ set(UITK_HEADERS Application.h
                  themes/Theme.h
                  themes/EmpireTheme.h
                  themes/VectorBaseTheme.h
+                 themes/IconPainter.h
+                 themes/StandardIconPainter.h
                  )
 set(UITK_SOURCES Application.cpp
                  Button.cpp
@@ -51,6 +54,7 @@ set(UITK_SOURCES Application.cpp
                  Cursor.cpp
                  Dialog.cpp
                  FileDialog.cpp
+                 Icon.cpp
                  IncDecWidget.cpp
                  Label.cpp
                  ListView.cpp
@@ -78,6 +82,7 @@ set(UITK_SOURCES Application.cpp
                  themes/Theme.cpp
                  themes/EmpireTheme.cpp
                  themes/VectorBaseTheme.cpp
+                 themes/StandardIconPainter.cpp
                  )
 set(UITK_LIBS "")
 

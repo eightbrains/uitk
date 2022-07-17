@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -268,7 +268,8 @@ void ScrollView::draw(UIContext& context)
     }
 
     context.dc.save();
-    context.theme.clipScrollView(context, mImpl->contentRect, style(themeState()), themeState());
+    context.theme.clipScrollView(context, mImpl->contentRect, style(themeState()), themeState(),
+                                 mImpl->drawsFrame == Tristate::kTrue);
 
     // It would be nicer to be able to Super::draw() here (and have the scrollbars on top),
     // but that would require that we have a content widget that everything is added to.

@@ -77,11 +77,10 @@ EmpireTheme::EmpireTheme()
 
 EmpireTheme::EmpireTheme(const Params& params)
     : VectorBaseTheme(params,
-                      PicaPt::fromPixels(0.5, 72),  // borderWidth
-                      PicaPt(4)                     // borderRadius
+                      PicaPt::fromPixels(0.5, 96),  // borderWidth
+                      PicaPt::fromPixels(3, 96)   // borderRadius
                      )
 {
 }
-
 
 }  // namespace uitk
