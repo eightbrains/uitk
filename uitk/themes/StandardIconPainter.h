@@ -28,6 +28,7 @@
 #include <nativedraw.h>
 
 #include <vector>
+#include <functional>
 
 namespace uitk {
 

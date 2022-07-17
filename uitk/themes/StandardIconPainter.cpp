@@ -24,6 +24,9 @@
 
 #include <nativedraw.h>
 
+#define _USE_MATH_DEFINES  // spec doesn't include M_PI, nor does MVSC
+#include <math.h>
+
 namespace uitk {
 
 // Techniques used:
@@ -763,7 +766,7 @@ void StandardIconPainter::drawPrint(DrawContext& dc, const Size& size, const Col
 
     auto topInset = dc.roundToNearestPixel(0.25f * r.height);
     auto bottomInset = dc.roundToNearestPixel(0.2f * r.height);
-    auto borderRadius = 0.075 * r.width;
+    auto borderRadius = calcBorderRadius(r);
 //    auto separation = dc.roundToNearestPixel(0.05f * r.width);
     auto separation = PicaPt::kZero;
     auto paperOutInset = dc.roundToNearestPixel(0.2f * r.width);
@@ -1786,11 +1789,11 @@ void StandardIconPainter::drawStar(DrawContext& dc, const Size& size, const Colo
         if (i == 0) {
             path->moveTo(half1);
         }
-        path->cubicTo((1.0 - pointyness) * half1 + pointyness * outerPt,
-                      (1.0 - pointyness) * half2 + pointyness * outerPt,
+        path->cubicTo((1.0f - pointyness) * half1 + pointyness * outerPt,
+                      (1.0f - pointyness) * half2 + pointyness * outerPt,
                       half2);
-        path->cubicTo((1.0 - pointyness) * half2 + pointyness * innerPt,
-                      (1.0 - pointyness) * half3 + pointyness * innerPt,
+        path->cubicTo((1.0f - pointyness) * half2 + pointyness * innerPt,
+                      (1.0f - pointyness) * half3 + pointyness * innerPt,
                       half3);
     }
 
@@ -2053,7 +2056,7 @@ void StandardIconPainter::drawConversation(DrawContext& dc, const Size& size, co
     r.inset(0.5f * sw, 0.5f * sw);
 
     auto br = 0.1f * r.width;
-    auto bubbleWidth = dc.roundToNearestPixel((0.65 * r.width));
+    auto bubbleWidth = dc.roundToNearestPixel((0.65f * r.width));
     auto bubbleHeight = dc.roundToNearestPixel((0.7f * r.height));
     auto topLeft = r.y;
     auto topRight = r.maxY() - bubbleHeight;
@@ -2245,7 +2248,7 @@ void StandardIconPainter::drawArrow(DrawContext& dc, const Rect& r, float angleD
 void StandardIconPainter::drawExclamationPoint(DrawContext& dc, const Rect& r,
                                                const PicaPt& strokeWidth) const
 {
-    std::vector<Point> pts = { Point(r.midX(), r.y), Point(r.midX(), r.y + 0.666 * r.height) };
+    std::vector<Point> pts = { Point(r.midX(), r.y), Point(r.midX(), r.y + 0.666f * r.height) };
     dc.drawLines(pts);
     auto radius = 1.0f * strokeWidth;
     dc.drawEllipse(Rect(r.midX() - radius, r.maxY() - radius, 2.0f * radius, 2.0f * radius), kPaintFill);
@@ -2264,7 +2267,7 @@ void StandardIconPainter::drawPlusOrMinus(DrawContext& dc, const Rect& r, const 
 
     auto onePx = dc.onePixel();
     int strokePx = int(std::round(strokeWidth / onePx));
-    int sizePx = std::round(r.height / onePx);
+    int sizePx = int(std::round(r.height / onePx));
     auto path = dc.createBezierPath();
     if (strokePx & 0x1) {  // odd stroke width; need odd size so height/2 is in middle of pixel
         if ((sizePx & 0x1) == 0) {
@@ -2317,7 +2320,7 @@ Rect StandardIconPainter::drawMagnifyingGlass(DrawContext& dc, const Rect& r, co
     Rect iconRect(r.x + 0.5f * (glassSize - iconSize), r.y + 0.5f * (glassSize - iconSize),
                   iconSize, iconSize);
 
-    auto toCircle = 0.707 * 0.5f * glassRect.width;
+    auto toCircle = 0.707f * 0.5f * glassRect.width;
     std::vector<Point> handle = {
         Point(glassRect.midX() + toCircle, glassRect.midY() + toCircle),
         Point(r.maxX() - 0.5f * strokeWidth, r.maxY() - 0.5f * strokeWidth)

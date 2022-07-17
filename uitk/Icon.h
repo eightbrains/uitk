@@ -25,6 +25,8 @@
 
 #include "Widget.h"
 
+#include <functional>
+
 namespace uitk {
 
 // Design note: Icon::Standard just looks strange. This definition probably
