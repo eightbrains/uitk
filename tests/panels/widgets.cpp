@@ -775,6 +775,7 @@ public:
 
     void layout(const LayoutContext& context)
     {
+        auto spacing = context.dc.roundToNearestPixel(context.theme.params().labelFont.pointSize());
         auto x = PicaPt::kZero;
         auto pref = mSizing->preferredSize(context);
         mSizing->setFrame(Rect(x, PicaPt::kZero, pref.width, pref.height));
@@ -792,12 +793,12 @@ public:
         mProgress->setFrame(Rect(x, mSliders->frame().maxY(), pref.width, pref.height));
         pref = mText->preferredSize(context);
         mText->setFrame(Rect(x, mProgress->frame().maxY(), pref.width, pref.height));
-        pref = mScroll->preferredSize(context);
-        mScroll->setFrame(Rect(x, mText->frame().maxY(), pref.width, pref.height));
 
-        x += PicaPt(400);
+        x += PicaPt(350);
         pref = mListView->preferredSize(context);
         mListView->setFrame(Rect(x, PicaPt::kZero, pref.width, pref.height));
+        pref = mScroll->preferredSize(context);
+        mScroll->setFrame(Rect(x, mListView->frame().maxY() + spacing, pref.width, pref.height));
 
         Super::layout(context);
     }
