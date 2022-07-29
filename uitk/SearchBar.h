@@ -20,8 +20,8 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_ICON_H
-#define UITK_ICON_H
+#ifndef UITK_SEARCH_BAR_H
+#define UITK_SEARCH_BAR_H
 
 #include "Widget.h"
 
@@ -29,28 +29,37 @@
 
 namespace uitk {
 
-class Icon : public Widget
+class Icon;
+
+class SearchBar : public Widget
 {
     using Super = Widget;
 public:
-    explicit Icon(Theme::StandardIcon icon);
-    explicit Icon(Theme::Icon drawFunc);
+    SearchBar();
+    ~SearchBar();
 
-    /// Returns true if the icon is Theme::StandardIcon::kNone and there is no
-    /// custom Theme::Icon.
-    bool isEmpty() const;
+    Icon* icon() const;
 
-    Icon* setIcon(Theme::Icon icon);
-    Icon* setIcon(Theme::StandardIcon icon);
+    const std::string& text() const;
+    SearchBar* setText(const std::string& text);
 
-    const Color& color() const;
-    Icon* setColor(const Color& fg);
-    /// Sets the color, but does not request a redraw. This is useful when
-    /// using the icon as a child of another object, so that the icon can
-    /// draw using the parent's style.
-    void setColorNoRedraw(const Color& fg);
+    const std::string& placeholderText() const;
+    SearchBar* setPlaceholderText(const std::string& text);
+
+    int alignment() const;
+    /// Sets the text alignment; vertical alignment may be ignored.
+    SearchBar* setAlignment(int alignment);
+
+    /// Called whenever the text changes in response to user input.
+    /// Is not called when the text is changed directly through setText().
+    void setOnTextChanged(std::function<void(const std::string&)> onChanged);
+
+    /// Called whenever the text is commited via Enter/Return or losing
+    /// focus.
+    void setOnValueChanged(std::function<void(SearchBar*)> onChanged);
 
     Size preferredSize(const LayoutContext& context) const override;
+    void layout(const LayoutContext& context) override;
     void draw(UIContext& context) override;
 
 private:
@@ -58,5 +67,5 @@ private:
     std::unique_ptr<Impl> mImpl;
 };
 
-} // namespace uitk
-#endif // UITK_ICON_H
+}  // namespace uitk
+#endif // UITK_SEARCH_BAR_H

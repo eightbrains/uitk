@@ -42,6 +42,12 @@ namespace uitk {
 //   most angles are constructed as a line from start to start + (side1, side2);
 // - Using height to measure lengths of the design is better than the width, since the
 //   height of an icon is usually more important than its width.
+
+void StandardIconPainter::drawEmpty(DrawContext& dc, const Size& size, const Color& fg) const
+{
+    // This is an empty icon (useful for layout if there only sometimes is an icon)
+}
+
 void StandardIconPainter::drawX(DrawContext& dc, const Size& size, const Color& fg) const
 {
     auto sw = setStroke(dc, size, fg);
@@ -181,7 +187,13 @@ void StandardIconPainter::drawSearch(DrawContext& dc, const Size& size, const Co
 {
     auto sw = setStroke(dc, size, fg);
     auto r = calcContentRect(size);
-    drawMagnifyingGlass(dc, r, sw);
+    if (int(std::round(r.height / dc.onePixel())) != 12) {
+        drawMagnifyingGlass(dc, r, sw);
+    } else {
+        // 12 pixels is a special case: the adjustment so that we could (optionally) draw
+        // a plus or minus makes the stem too small.
+        drawMagnifyingGlass(dc, r, sw, kDontAdjust);
+    }
 }
 
 void StandardIconPainter::drawHistory(DrawContext& dc, const Size& size, const Color& fg) const
@@ -231,6 +243,25 @@ void StandardIconPainter::drawMenu(DrawContext& dc, const Size& size, const Colo
     dc.drawLines({ Point(x2, c.y), Point(r.y + 0.9f * r.width, c.y) });
     dc.drawLines({ Point(r.x, c.y + dy), Point(r.x + sw, c.y + dy) });
     dc.drawLines({ Point(x2, c.y + dy), Point(r.maxX(), c.y + dy) });
+}
+
+void StandardIconPainter::drawCheckmark(DrawContext& dc, const Size& size, const Color& fg) const
+{
+    auto sw = setStroke(dc, size, fg);
+    auto r = calcContentRect(size);
+    auto margin = 0.707f * sw;
+    r.inset(margin, margin);  // compensate for the stroke
+    auto thirdW = (r.width - 2.0f * margin) / 3.0f;
+    auto thirdH = (r.height - 2.0f * margin) / 3.0f;
+
+    dc.save();
+    dc.setStrokeEndCap(kEndCapRound);
+    dc.setStrokeJoinStyle(kJoinRound);
+    Point p1(r.x, r.y + 2.0f * thirdH);
+    Point p2(r.x + thirdW, r.y + 3.0f * thirdH);
+    Point p3(r.x + 3.0f * thirdW, r.y);
+    dc.drawLines({ p1, p2, p3 });
+    dc.restore();
 }
 
 void StandardIconPainter::drawAdd(DrawContext& dc, const Size& size, const Color& fg) const
@@ -902,6 +933,7 @@ void StandardIconPainter::drawBoldStyle(DrawContext& dc, const Size& size, const
     // the height, and the point size of a font has no relationship with its pixel height.
     // Also, this way everything is consistent. across platforms.
     auto aspectRatio = 0.75f;
+    auto indent = dc.roundToNearestPixel(0.1333f * r.height);
     auto thickness = dc.roundToNearestPixel(0.1333f * r.height);
     auto bottomWidth = aspectRatio * r.height;
     auto topWidth = 0.925f * bottomWidth;
@@ -937,9 +969,9 @@ void StandardIconPainter::drawBoldStyle(DrawContext& dc, const Size& size, const
         path->close();
     };
     auto path = dc.createBezierPath();
-    addHalfB(path, Rect(r.x, r.y, topWidth, topHeight), thickness);
+    addHalfB(path, Rect(r.x + indent, r.y, topWidth, topHeight), thickness);
     auto y = r.y + topHeight - thickness;
-    addHalfB(path, Rect(r.x, y, bottomWidth, r.height - y), thickness);
+    addHalfB(path, Rect(r.x + indent, y, bottomWidth, r.height - y), thickness);
     dc.drawPath(path, kPaintFill);
 }
 
@@ -2290,7 +2322,8 @@ void StandardIconPainter::drawPlusOrMinus(DrawContext& dc, const Rect& r, const 
     dc.drawPath(path, kPaintStroke);
 }
 
-Rect StandardIconPainter::drawMagnifyingGlass(DrawContext& dc, const Rect& r, const PicaPt& strokeWidth) const
+Rect StandardIconPainter::drawMagnifyingGlass(DrawContext& dc, const Rect& r, const PicaPt& strokeWidth,
+                                              GlassOptions opt /*=kAdjustForGlyphInGlass*/) const
 {
     auto glassSize = dc.roundToNearestPixel(0.8f * r.height);
 
@@ -2302,15 +2335,17 @@ Rect StandardIconPainter::drawMagnifyingGlass(DrawContext& dc, const Rect& r, co
     iconSize = std::max(3.0f * strokeWidth, iconSize);
     int strokePx = int(std::round(strokeWidth / onePx));
     int iconPx = int(std::round(iconSize / onePx));
-    if (strokePx & 0x1) {  // stroke is odd:  iconPx needs to be odd
-        if ((iconPx & 0x1) == 0) {
-            iconSize += onePx;
-            glassSize += onePx;
-        }
-    } else {  // stroke is even:  iconPx needs to be even
-        if ((iconPx & 0x1) == 1) {
-            iconSize += onePx;
-            glassSize += onePx;
+    if (kAdjustForGlyphInGlass) {
+        if (strokePx & 0x1) {  // stroke is odd:  iconPx needs to be odd
+            if ((iconPx & 0x1) == 0) {
+                iconSize += onePx;
+                glassSize += onePx;
+            }
+        } else {  // stroke is even:  iconPx needs to be even
+            if ((iconPx & 0x1) == 1) {
+                iconSize += onePx;
+                glassSize += onePx;
+            }
         }
     }
     auto glassRect = Rect(r.x, r.y, glassSize, glassSize);
@@ -2392,7 +2427,8 @@ void StandardIconPainter::drawAlignedLines(DrawContext& dc, const Rect& r, const
     if (align == Alignment::kJustify) {
         offsets = justify6;
     }
-    auto y = r.x + 0.5 * strokeWidth;
+    auto yOffset = dc.roundToNearestPixel(0.5f * ((r.height - strokeWidth) - float(nLines - 1) * dy));
+    auto y = r.x + 0.5 * strokeWidth + yOffset;
     for (int i = 0;  i < nLines;  ++i) {
         PicaPt x1, x2;
         switch (align) {

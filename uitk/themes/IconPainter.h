@@ -34,6 +34,7 @@ class IconPainter
 public:
     virtual ~IconPainter() {}
 
+    virtual void drawEmpty(DrawContext& dc, const Size& size, const Color& fg) const = 0;
     virtual void drawX(DrawContext& dc, const Size& size, const Color& fg) const = 0;
     virtual void drawXCircle(DrawContext& dc, const Size& size, const Color& fg) const = 0;
     virtual void drawPrevScreen(DrawContext& dc, const Size& size, const Color& fg) const = 0;
@@ -47,6 +48,7 @@ public:
     virtual void drawSearch(DrawContext& dc, const Size& size, const Color& fg) const = 0;
     virtual void drawHistory(DrawContext& dc, const Size& size, const Color& fg) const = 0;
     virtual void drawMenu(DrawContext& dc, const Size& size, const Color& fg) const = 0;
+    virtual void drawCheckmark(DrawContext& dc, const Size& size, const Color& fg) const = 0;
     virtual void drawAdd(DrawContext& dc, const Size& size, const Color& fg) const = 0;
     virtual void drawRemove(DrawContext& dc, const Size& size, const Color& fg) const = 0;
     virtual void drawAddCircle(DrawContext& dc, const Size& size, const Color& fg) const = 0;

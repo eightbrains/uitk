@@ -68,6 +68,7 @@ NumberEdit::NumberEdit()
 {
     mImpl->stringEdit = new StringEdit();
     mImpl->stringEdit->setAlignment(Alignment::kRight | Alignment::kVCenter);
+    mImpl->stringEdit->setUseClearButton(StringEdit::UseClearButton::kNo);
     mImpl->stringEdit->setOnValueChanged([this](StringEdit *se) {
         // Force resetting the text, in case a float is entered but not enough format digits
         // to display what was entered.

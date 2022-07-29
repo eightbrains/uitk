@@ -47,6 +47,14 @@ public:
     /// single line widgets.
     StringEdit* setAlignment(int alignment);
 
+    enum UseClearButton {
+        kNo = 0,
+        kYes,
+        kTheme,     // default
+    };
+    UseClearButton useClearButton() const;
+    StringEdit* setUseClearButton(UseClearButton use);
+
     CutPasteable* asCutPasteable() override;
     TextEditorLogic* asTextEditorLogic() override;
 

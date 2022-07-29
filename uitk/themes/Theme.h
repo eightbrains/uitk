@@ -78,6 +78,129 @@ public:
         Color nonNativeMenubarBackgroundColor;
         Font labelFont;
         Font nonNativeMenubarFont;
+
+        bool useClearTextButton = false;
+        bool useClearTextButtonForSearch = false;
+    };
+
+    /// Draws an icon in the given color. Function need not save/restore the
+    /// DrawContext unless clipping is used. The design of the icon is assumed
+    /// to fill the rectangle, although generally icons are square and should
+    /// center themselves (aligned to a pixel boundary!) if size is not
+    /// square. Margins will taken care of at a higher level. Function should
+    /// good at multiple DPIs and with both odd and even numbers of pixels.
+    using Icon = std::function<void(DrawContext&, const Theme&, const Rect&, const Color& fg)>;
+
+    enum class StandardIcon {
+        kNone = 0,  // no icon at all
+        kEmpty = 1,  // an icon that draws nothing (useful for layout)
+
+        kCloseX = 2,
+        kCloseXCircle,
+        kPrevScreen,
+        kNextScreen,
+        kTwistyClosed,
+        kTwistyOpen,
+        kError,
+        kWarning,
+        kInfo,
+        kHelp,
+        kSearch,
+        kHistory,
+        kMenu,
+        kCheckmark,
+        kAdd,
+        kRemove,
+        kAddCircle,
+        kRemoveCircle,
+        kExpand,
+        kContract,
+        kMoreHoriz,
+        kMoreVert,
+        kLocked,
+        kUnlocked,
+        kSettings,
+        kChevronLeft,
+        kChevronRight,
+        kChevronUp,
+        kChevronDown,
+        kChevronLeftCircle,
+        kChevronRightCircle,
+        kChevronUpCircle,
+        kChevronDownCircle,
+        kTriangleLeft,
+        kTriangleRight,
+        kTriangleUp,
+        kTriangleDown,
+        kTriangleLeftCircle,
+        kTriangleRightCircle,
+        kTriangleUpCircle,
+        kTriangleDownCircle,
+        kRefresh,
+        kArrowLeft,
+        kArrowRight,
+        kArrowUp,
+        kArrowDown,
+        kArrowLeftCircle,
+        kArrowRightCircle,
+        kArrowUpCircle,
+        kArrowDownCircle,
+        kMacCmd,
+        kMacShift,
+        kMacOption,
+
+        kNewFile = 300,
+        kOpenFile,
+        kSaveFile,
+        kPrint,
+        kExport,
+        kExternal,
+        kBoldStyle,
+        kItalicStyle,
+        kUnderlineStyle,
+        kAlignLeft,
+        kAlignCenter,
+        kAlignRight,
+        kAlignJustify,
+        kBulletList,
+        kNumericList,
+        kPlay,
+        kPause,
+        kStop,
+        kFastForward,
+        kFastReverse,
+        kSkipForward,
+        kSkipBackward,
+        kShuffle,
+        kLoop,
+        kVolumeMute,
+        kVolumeSoft,
+        kVolumeMedium,
+        kVolumeLoud,
+        kZoomIn,
+        kZoomOut,
+        kRecordAudio,
+        kRecordVideo,
+        kNoAudio,
+        kNoVideo,
+        kCamera,
+
+        kFolder = 500,
+        kFile,
+        kTrash,
+        kHome,
+        kPicture,
+        kDocument,
+        kEdit,
+        kUser,
+        kColor,
+        kStar,
+        kHeart,
+        kMail,
+        kAttachment,
+        kCalendar,
+        kChat,
+        kConversation
     };
 
 public:
@@ -93,12 +216,19 @@ public:
     /// is can be substantially above the top of the text, and seems to act like
     /// leading (which in these fonts is usually zero).
     virtual Size calcPreferredTextMargins(const DrawContext& dc, const Font& font) const = 0;
-    virtual Size calcPreferredButtonSize(const DrawContext& dc, const Font& font,
-                                         const std::string& text) const = 0;
+    /// Returns the standard height of a widget (button, single-line text edit,
+    /// combobox, etc.). This should be used as the height if possible, which
+    /// allows widgets to placed next to each other to have text baselines
+    /// align nicely. This is always an integer number of pixels.
+    virtual PicaPt calcStandardHeight(const DrawContext& dc, const Font& font) const = 0;
+    /// Returns icon height when used in a standard-height
+    virtual Size calcStandardIconSize(const DrawContext& dc, const Font& font) const = 0;
+    virtual Rect calcStandardIconRect(const DrawContext& dc, const Rect& frame, const Font& font) const = 0;
+    virtual PicaPt calcStandardIconSeparator(const DrawContext& dc, const Font& font) const = 0;
+    virtual Size calcPreferredButtonMargins(const DrawContext& dc, const Font& font) const = 0;
     virtual Size calcPreferredCheckboxSize(const DrawContext& dc,
                                            const Font& font) const = 0;
-    virtual Size calcPreferredSegmentSize(const DrawContext& dc, const Font& font,
-                                          const std::string& text) const = 0;
+    virtual Size calcPreferredSegmentMargins(const DrawContext& dc, const Font& font) const = 0;
     virtual Size calcPreferredComboBoxSize(const DrawContext& dc, const PicaPt& preferredMenuWidth) const = 0;
     virtual Size calcPreferredSliderThumbSize(const DrawContext& dc) const = 0;
     virtual Size calcPreferredProgressBarSize(const DrawContext& dc) const = 0;
@@ -131,28 +261,39 @@ public:
                            const WidgetStyle& style) const = 0;
     virtual void clipFrame(UIContext& ui, const Rect& frame,
                            const WidgetStyle& style) const = 0;
+    virtual void drawIcon(UIContext& ui, const Rect& r, const Icon& icon, const Color& color) const;
+    virtual void drawIcon(UIContext& ui, const Rect& r, StandardIcon icon, const Color& color) const;
     virtual WidgetStyle labelStyle(const WidgetStyle& style, WidgetState state) const = 0;
     enum class ButtonDrawStyle
     {
-        kNormal, kDialogDefault
+        kNormal,        /// normal button with a frame
+        kDialogDefault, /// button indicating Enter will press it
+        kNoDecoration,  /// icon button; no frame
+        kAccessory,     /// pressable pieces of a widget, like the X to clear text in a search widget
     };
     virtual void drawButton(UIContext& ui, const Rect& frame, ButtonDrawStyle buttonStyle,
                             const WidgetStyle& style, WidgetState state,
                             bool isOn) const = 0;
-    virtual const WidgetStyle& buttonTextStyle(WidgetState state, bool isOn) const = 0;
+    virtual const WidgetStyle& buttonTextStyle(WidgetState state, ButtonDrawStyle buttonStyle,
+                                               bool isOn) const = 0;
     virtual void drawCheckbox(UIContext& ui, const Rect& frame,
                               const WidgetStyle& style, WidgetState state,
                               bool isOn) const = 0;
-    virtual void drawSegmentedControl(UIContext& ui, const Rect& frame,
+    enum class SegmentDrawStyle
+    {
+        kNormal, kNoDecoration
+    };
+    virtual void drawSegmentedControl(UIContext& ui, const Rect& frame, SegmentDrawStyle drawStyle,
                                       const WidgetStyle& style,
                                       WidgetState state) const = 0;
-    virtual void drawSegment(UIContext& ui, const Rect& frame, WidgetState state,
-                             bool isButton, bool isOn,
+    virtual void drawSegment(UIContext& ui, const Rect& frame, SegmentDrawStyle drawStyle,
+                             WidgetState state, bool isButton, bool isOn,
                              int segmentIndex, int nSegments) const = 0;
     virtual void drawSegmentDivider(UIContext& ui, const Point& top, const Point& bottom,
-                                    const WidgetStyle& ctrlStyle,
-                                    WidgetState ctrlState) const = 0;
-    virtual const WidgetStyle& segmentTextStyle(WidgetState state, bool isOn) const = 0;
+                                    SegmentDrawStyle drawStyle,
+                                    const WidgetStyle& ctrlStyle, WidgetState ctrlState) const = 0;
+    virtual const WidgetStyle& segmentTextStyle(WidgetState state, SegmentDrawStyle drawStyle,
+                                                bool isOn) const = 0;
     virtual void drawComboBoxAndClip(UIContext& ui, const Rect& frame,
                                      const WidgetStyle& style, WidgetState state) const = 0;
     virtual void drawSliderTrack(UIContext& ui, SliderDir dir, const Rect& frame, const Point& thumbMid,
@@ -170,6 +311,12 @@ public:
     virtual void drawTextEdit(UIContext& ui, const Rect& frame, const PicaPt& scrollOffset,
                               const std::string& placeholder, TextEditorLogic& editor, int horizAlign, 
                               const WidgetStyle& style, WidgetState state, bool hasFocus) const = 0;
+    // It's not clear if we should draw the search icon here, or have SearchBar have an
+    // Icon object. The Icon object seems like it gives the user easier customizability.
+    // Plus, it is more consistent with the clear-text button for text edit; that pretty
+    // much needs to be a button order to have the same behavior
+    virtual void drawSearchBar(UIContext& ui, const Rect& frame, const WidgetStyle& style,
+                               WidgetState state) const = 0;
     virtual void clipScrollView(UIContext& ui, const Rect& frame,
                                 const WidgetStyle& style, WidgetState state, bool drawsFrame) const = 0;
     virtual void drawScrollView(UIContext& ui, const Rect& frame,

@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -130,7 +130,7 @@ public:
     Size preferredSize(const LayoutContext& context) const override
     {
         auto em = context.theme.params().labelFont.metrics(context.dc).lineHeight;
-        return Size(20.0f * em, 9.0f * em);
+        return Size(20.0f * em, 11.0f * em);
     }
 
     void layout(const LayoutContext& context) override
@@ -208,6 +208,17 @@ public:
         mDisabled->setOnClicked([this](Button*) { mLabel->setText(" :("); });
         addChild(mDisabled);
 
+        mIconAndText = new Button(Theme::StandardIcon::kSettings, "Config");
+        addChild(mIconAndText);
+
+        mIconOnly = new Button(Theme::StandardIcon::kSettings);
+        addChild(mIconOnly);
+
+        mUndecoratedNormal = new Button(Theme::StandardIcon::kSaveFile, "Save");
+        mUndecoratedNormal->setDrawStyle(Button::DrawStyle::kNoDecoration);
+        addChild(mUndecoratedNormal);
+
+        // Test state
         mOnOff = new Button("On/Off");
         mOnOff->setToggleable(true);
         addChild(mOnOff);
@@ -218,16 +229,26 @@ public:
         mOnOffDisabled->setEnabled(false);
         addChild(mOnOffDisabled);
 
+        mUndecorated1 = new Button(Theme::StandardIcon::kStar, "Yay");
+        mUndecorated1->setDrawStyle(Button::DrawStyle::kNoDecoration);
+        mUndecorated1->setToggleable(true);
+        mUndecorated1->setOn(false);
+        addChild(mUndecorated1);
+
+        mUndecorated2 = new Button(Theme::StandardIcon::kStar);
+        mUndecorated2->setDrawStyle(Button::DrawStyle::kNoDecoration);
+        mUndecorated2->setToggleable(true);
+        mUndecorated2->setOn(false);
+        addChild(mUndecorated2);
+
         mCheckbox = new Checkbox("Checkbox");
         addChild(mCheckbox);
     }
 
     Size preferredSize(const LayoutContext& context) const override
     {
-        auto button = context.theme.calcPreferredButtonSize(context.dc,
-                                                            context.theme.params().labelFont,
-                                                            mDisabled->label()->text());
-        return Size(5.0f * button.width, 5.5f * button.height);
+        auto button = mDisabled->preferredSize(context);
+        return Size(6.0f * button.width, 5.5f * button.height);
     }
 
     void layout(const LayoutContext& context) override
@@ -248,10 +269,24 @@ public:
         mDisabled->setFrame(Rect(mAngry->frame().maxX(), y, mDisabled->frame().width, mDisabled->frame().height));
         mLabel->setFrame(Rect(mDisabled->frame().maxX(), y, 3.0f * mLabel->frame().height, mLabel->frame().height));
 
+        auto em = context.theme.params().labelFont.pointSize();
+        mIconAndText->setFrame(Rect(context.dc.roundToNearestPixel(mLabel->frame().maxX()),
+                                    y, mIconAndText->frame().width, mIconAndText->frame().height));
+        mIconOnly->setFrame(Rect(mIconAndText->frame().maxX(), y,
+                                 mIconOnly->frame().width, mIconOnly->frame().height));
+        mUndecoratedNormal->setFrame(Rect(mIconOnly->frame().maxX(), y,
+                                          mUndecoratedNormal->frame().width,
+                                          mUndecoratedNormal->frame().height));
+
         y += 1.5f * mHappy->frame().height;
         mOnOff->setFrame(Rect(x, y, mOnOff->frame().width, mOnOff->frame().height));
         mOnOffDisabled->setFrame(Rect(mOnOff->frame().maxX(), y,
                                       mOnOffDisabled->frame().width, mOnOffDisabled->frame().height));
+
+        mUndecorated1->setFrame(Rect(mIconAndText->frame().x, y,
+                                     mIconAndText->frame().width, mIconAndText->frame().height));
+        mUndecorated2->setFrame(Rect(mIconOnly->frame().x, y,
+                                     mIconOnly->frame().width, mIconOnly->frame().height));
 
         y += 1.5f * mHappy->frame().height;
         mCheckbox->setFrame(Rect(x, y, mCheckbox->frame().width, mCheckbox->frame().height));
@@ -263,8 +298,13 @@ private:
     Button *mHappy;
     Button *mAngry;
     Button *mDisabled;
+    Button *mIconAndText;
+    Button *mIconOnly;
+    Button *mUndecoratedNormal;
     Button *mOnOff;
     Button *mOnOffDisabled;
+    Button *mUndecorated1;
+    Button *mUndecorated2;
     Checkbox *mCheckbox;
     Label *mLabel;
 };
@@ -288,13 +328,50 @@ public:
         mSelectMany = new SegmentedControl({"B", "I", "U"});
         mSelectMany->setAction(SegmentedControl::Action::kSelectMultiple);
         addChild(mSelectMany);
+
+        mIconAndText = new SegmentedControl();
+        mIconAndText->addItem(Theme::StandardIcon::kAlignLeft, "Left");
+        mIconAndText->addItem(Theme::StandardIcon::kAlignCenter, "Center");
+        mIconAndText->addItem(Theme::StandardIcon::kAlignRight, "Right");
+        mIconAndText->setAction(SegmentedControl::Action::kSelectOne);
+        addChild(mIconAndText);
+
+        mIconOnly = new SegmentedControl();
+        mIconOnly->addItem(Theme::StandardIcon::kBoldStyle);
+        mIconOnly->addItem(Theme::StandardIcon::kItalicStyle);
+        mIconOnly->addItem(Theme::StandardIcon::kUnderlineStyle);
+        mIconOnly->setAction(SegmentedControl::Action::kSelectMultiple);
+        addChild(mIconOnly);
+
+        mUndecoratedButtons = new SegmentedControl();
+        mUndecoratedButtons->setDrawStyle(SegmentedControl::DrawStyle::kNoDecoration);
+        mUndecoratedButtons->addItem(Theme::StandardIcon::kFolder);
+        mUndecoratedButtons->addItem(Theme::StandardIcon::kSaveFile);
+        mUndecoratedButtons->addItem(Theme::StandardIcon::kPrint);
+        addChild(mUndecoratedButtons);
+
+        mUndecoratedSelectOne = new SegmentedControl();
+        mUndecoratedSelectOne->setDrawStyle(SegmentedControl::DrawStyle::kNoDecoration);
+        mUndecoratedSelectOne->addItem(Theme::StandardIcon::kAlignLeft, "Left");
+        mUndecoratedSelectOne->addItem(Theme::StandardIcon::kAlignCenter, "Center");
+        mUndecoratedSelectOne->addItem(Theme::StandardIcon::kAlignRight, "Right");
+        mUndecoratedSelectOne->setAction(SegmentedControl::Action::kSelectOne);
+        mUndecoratedSelectOne->setAction(SegmentedControl::Action::kSelectOne);
+        addChild(mUndecoratedSelectOne);
+
+        mUndecoratedSelectMany = new SegmentedControl({"B", "I", "U"});
+        mUndecoratedSelectMany->setDrawStyle(SegmentedControl::DrawStyle::kNoDecoration);
+        mUndecoratedSelectMany->setAction(SegmentedControl::Action::kSelectMultiple);
+        addChild(mUndecoratedSelectMany);
     }
 
     Size preferredSize(const LayoutContext& context) const override
     {
         auto pref1 = mTooSmall->preferredSize(context);
         auto pref2 = mTooLarge->preferredSize(context);
-        return Size(pref1.width + pref1.height + 1.3f * pref2.width, 3.0f * pref1.height);
+        auto em = context.dc.roundToNearestPixel(context.theme.params().labelFont.pointSize());
+        return Size(pref1.width + pref1.height + 1.3f * pref2.width,
+                    5.0f * pref1.height + em);
     }
 
     void layout(const LayoutContext& context) override
@@ -303,15 +380,33 @@ public:
         auto prefLg = mTooLarge->preferredSize(context);
         auto prefOne = mSelectOne->preferredSize(context);
         auto prefMany = mSelectMany->preferredSize(context);
+        auto prefIconText = mIconAndText->preferredSize(context);
+        auto prefIcon = mIconOnly->preferredSize(context);
+        auto prefUnButtons = mUndecoratedButtons->preferredSize(context);
+        auto prefUnOne = mUndecoratedSelectOne->preferredSize(context);
+        auto prefUnMany = mUndecoratedSelectMany->preferredSize(context);
 
         auto y = PicaPt::kZero;
-        mTooSmall->setFrame(Rect(PicaPt::kZero, y, 0.8f * prefSm.width, prefSm.height));
-        mTooLarge->setFrame(Rect(mTooSmall->frame().maxX() + 0.5f * prefSm.height, y,
-                                 1.333f * prefLg.width, prefLg.height));
-        y += 1.25f * prefSm.height;
+        auto spacing = context.dc.roundToNearestPixel(0.5f * prefSm.height);
+        mTooSmall->setFrame(Rect(PicaPt::kZero, y,
+                                 context.dc.roundToNearestPixel(0.8f * prefSm.width), prefSm.height));
+        mTooLarge->setFrame(Rect(mTooSmall->frame().maxX() + spacing, y,
+                                 context.dc.roundToNearestPixel(1.333f * prefLg.width), prefLg.height));
+        y += context.dc.roundToNearestPixel(1.25f * prefSm.height);
         mSelectOne->setFrame(Rect(PicaPt::kZero, y, prefOne.width, prefOne.height));
-        mSelectMany->setFrame(Rect(mSelectOne->frame().maxX() + 0.5f * prefSm.height, y,
+        mSelectMany->setFrame(Rect(mSelectOne->frame().maxX() + spacing, y,
                                    prefMany.width, prefMany.height));
+
+        y += context.dc.roundToNearestPixel(1.25f * prefSm.height);
+        mIconAndText->setFrame(Rect(PicaPt::kZero, y, prefIconText.width, prefIconText.height));
+        mIconOnly->setFrame(Rect(mIconAndText->frame().maxX() + spacing, y, prefIcon.width, prefIcon.height));
+
+        y += context.dc.roundToNearestPixel(1.25f * prefSm.height);
+        mUndecoratedButtons->setFrame(Rect(PicaPt::kZero, y, prefUnButtons.width, prefUnButtons.height));
+        mUndecoratedSelectOne->setFrame(Rect(mUndecoratedButtons->frame().maxX() + spacing, y,
+                                             prefUnOne.width, prefUnOne.height));
+        mUndecoratedSelectMany->setFrame(Rect(mUndecoratedSelectOne->frame().maxX() + spacing, y,
+                                              prefUnMany.width, prefUnMany.height));
 
         Super::layout(context);
     }
@@ -321,6 +416,11 @@ private:
     SegmentedControl *mTooLarge;
     SegmentedControl *mSelectOne;
     SegmentedControl *mSelectMany;
+    SegmentedControl *mIconAndText;
+    SegmentedControl *mIconOnly;
+    SegmentedControl *mUndecoratedButtons;
+    SegmentedControl *mUndecoratedSelectOne;
+    SegmentedControl *mUndecoratedSelectMany;
 };
 
 class ComboBoxTest : public Widget
@@ -491,24 +591,35 @@ public:
         mString = new StringEdit();
         mString->setPlaceholderText("Edit string");
         addChild(mString);
+
+        mSearch = new SearchBar();
+        mSearch->setPlaceholderText("Search");
+        addChild(mSearch);
     }
 
     Size preferredSize(const LayoutContext& context) const override
     {
         auto pref = mString->preferredSize(context);
-        return Size(PicaPt(200.0), 2.0f * pref.height);
+        return Size(PicaPt(200.0), 3.0f * pref.height);
     }
 
     void layout(const LayoutContext& context) override
     {
+        auto spacing = context.dc.roundToNearestPixel(0.25f * context.theme.params().labelFont.pointSize());
         auto pref = mString->preferredSize(context);
-        mString->setFrame(Rect(PicaPt::kZero, PicaPt::kZero, bounds().width, pref.height));
+        auto y = PicaPt::kZero;
+        mString->setFrame(Rect(PicaPt::kZero, y, bounds().width, pref.height));
+
+        y = mString->frame().maxY() + spacing;
+        pref = mSearch->preferredSize(context);
+        mSearch->setFrame(Rect(PicaPt::kZero, y, bounds().width, pref.height));
 
         Super::layout(context);
     }
 
 private:
     StringEdit *mString;
+    SearchBar *mSearch;
 };
 
 class ScrollTest : public Widget

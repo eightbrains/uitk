@@ -20,43 +20,52 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_ICON_H
-#define UITK_ICON_H
+#ifndef UITK_LABEL_CELL_H
+#define UITK_LABEL_CELL_H
 
 #include "Widget.h"
 
-#include <functional>
+#include <string>
 
 namespace uitk {
 
-class Icon : public Widget
-{
+class Icon;
+class Label;
+
+/// This is a convenience class that handles (optional) icon + (optional) text.
+/// It's raison d'etre is to allow widgets like Button and SegmentedControl
+/// to reuse code, so it is mostly expected to be an internal class, but is
+/// exposed in case anyone else needs it. (Note that the convention is for
+/// the owner of LabelCell to export the label() and icon() calls itself,
+/// since the existence of this class is an implementation detail that has
+/// no value for the user to know about.)
+class LabelCell : public Widget {
     using Super = Widget;
 public:
-    explicit Icon(Theme::StandardIcon icon);
-    explicit Icon(Theme::Icon drawFunc);
+    LabelCell();
+    ~LabelCell();
 
-    /// Returns true if the icon is Theme::StandardIcon::kNone and there is no
-    /// custom Theme::Icon.
-    bool isEmpty() const;
+    // Q: since the pointer always exists, why not make this a reference?
+    // A: because C++ makes us play @#$! compiler with . and ->, and
+    //    everywhere else we return a pointer, so nobody is going to
+    //    remember to put a . instead of a -> here.
+    Label* label() const;  // pointer always exists
+    Icon* icon() const;  // pointer always exists
 
-    Icon* setIcon(Theme::Icon icon);
-    Icon* setIcon(Theme::StandardIcon icon);
-
-    const Color& color() const;
-    Icon* setColor(const Color& fg);
     /// Sets the color, but does not request a redraw. This is useful when
     /// using the icon as a child of another object, so that the icon can
     /// draw using the parent's style.
-    void setColorNoRedraw(const Color& fg);
+    void setColorNoRedraw(const Color& c);
 
     Size preferredSize(const LayoutContext& context) const override;
-    void draw(UIContext& context) override;
+    void layout(const LayoutContext& context) override;
+    void draw(UIContext& ui) override;
 
 private:
     struct Impl;
     std::unique_ptr<Impl> mImpl;
 };
 
-} // namespace uitk
-#endif // UITK_ICON_H
+}  // namespace uitk
+#endif // UITK_LABEL_CELL_H
+

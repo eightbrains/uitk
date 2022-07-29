@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -40,6 +40,10 @@ public:
 
     void clearItems();
     SegmentedControl* addItem(const std::string& name);
+    SegmentedControl* addItem(Theme::StandardIcon icon);
+    SegmentedControl* addItem(const Theme::Icon& icon);
+    SegmentedControl* addItem(Theme::StandardIcon icon, const std::string& name);
+    SegmentedControl* addItem(const Theme::Icon& icon, const std::string& name);
 
     enum class Action {
         kButton,            /// segment acts as a momentary push-button (like Button)
@@ -51,6 +55,15 @@ public:
 
     bool isSegmentOn(int index) const;
     SegmentedControl* setSegmentOn(int index, bool on);
+
+    enum class DrawStyle {
+        kNormal = 0,
+        kNoDecoration   /// no border or background; like iOS 7 and later
+    };
+    DrawStyle drawStyle() const;
+    /// Sets the drawing style of the segmented control. Calling this on
+    /// derived classes is likely to have no effect.
+    SegmentedControl* setDrawStyle(DrawStyle s);
 
     // Sets a function that will be called when a segment is clicked.
     // The single argument is the segment currently clicked; if the action is

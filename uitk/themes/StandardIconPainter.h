@@ -35,6 +35,7 @@ namespace uitk {
 class StandardIconPainter : public IconPainter
 {
 public:
+    void drawEmpty(DrawContext& dc, const Size& size, const Color& fg) const override;
     void drawX(DrawContext& dc, const Size& size, const Color& fg) const override;
     void drawXCircle(DrawContext& dc, const Size& size, const Color& fg) const override;
     void drawPrevScreen(DrawContext& dc, const Size& size, const Color& fg) const override;
@@ -48,6 +49,7 @@ public:
     void drawSearch(DrawContext& dc, const Size& size, const Color& fg) const override;
     void drawHistory(DrawContext& dc, const Size& size, const Color& fg) const override;
     void drawMenu(DrawContext& dc, const Size& size, const Color& fg) const override;
+    void drawCheckmark(DrawContext& dc, const Size& size, const Color& fg) const override;
     void drawAdd(DrawContext& dc, const Size& size, const Color& fg) const override;
     void drawRemove(DrawContext& dc, const Size& size, const Color& fg) const override;
     void drawAddCircle(DrawContext& dc, const Size& size, const Color& fg) const override;
@@ -174,7 +176,9 @@ protected:
     virtual void drawPlusOrMinus(DrawContext& dc, const Rect& r, const PicaPt& strokeWidth,
                                  PlusMinusGlyph glyph) const;
     /// Returns the rectangle for drawing within the glass part
-    virtual Rect drawMagnifyingGlass(DrawContext& dc, const Rect& r, const PicaPt& strokeWidth) const;
+    enum GlassOptions { kAdjustForGlyphInGlass, kDontAdjust };
+    virtual Rect drawMagnifyingGlass(DrawContext& dc, const Rect& r, const PicaPt& strokeWidth,
+                                     GlassOptions opt = kAdjustForGlyphInGlass) const;
     enum LockGlyph { kLocked, kUnlocked };
     virtual void drawLock(DrawContext& dc, const Rect& r, const PicaPt& strokeWidth,
                           LockGlyph glyph) const;

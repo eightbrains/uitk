@@ -37,13 +37,15 @@ public:
     void setParams(const Params& params) override;
 
     Size calcPreferredTextMargins(const DrawContext& dc, const Font& font) const override;
-    Size calcPreferredButtonSize(const DrawContext& dc, const Font& font,
-                                 const std::string& text) const override;
+    PicaPt calcStandardHeight(const DrawContext& dc, const Font& font) const override;
+    Size calcStandardIconSize(const DrawContext& dc, const Font& font) const override;
+    Rect calcStandardIconRect(const DrawContext& dc, const Rect& frame, const Font& font) const override;
+    PicaPt calcStandardIconSeparator(const DrawContext& dc, const Font& font) const override;
+    Size calcPreferredButtonMargins(const DrawContext& dc, const Font& font) const override;
     // Returns the size for the checkbox, not the checkbox + text
     Size calcPreferredCheckboxSize(const DrawContext& dc,
                                    const Font& font) const override;
-    Size calcPreferredSegmentSize(const DrawContext& dc, const Font& font,
-                                  const std::string& text) const override;
+    Size calcPreferredSegmentMargins(const DrawContext& dc, const Font& font) const override;
     Size calcPreferredComboBoxSize(const DrawContext& dc,
                                    const PicaPt& preferredMenuWidth) const override;
     Size calcPreferredSliderThumbSize(const DrawContext& dc) const override;
@@ -72,21 +74,22 @@ public:
     void drawButton(UIContext& ui, const Rect& frame, ButtonDrawStyle buttonStyle,
                     const WidgetStyle& style, WidgetState state,
                     bool isOn) const override;
-    const WidgetStyle& buttonTextStyle(WidgetState state, bool isOn) const override;
+    const WidgetStyle& buttonTextStyle(WidgetState state, ButtonDrawStyle buttonStyle,
+                                       bool isOn) const override;
     void drawCheckbox(UIContext& ui, const Rect& frame,
                       const WidgetStyle& style, WidgetState state,
                       bool isOn) const override;
-    void drawSegmentedControl(UIContext& ui,
-                              const Rect& frame,
-                              const WidgetStyle& style,
-                              WidgetState state) const override;
-    void drawSegment(UIContext& ui, const Rect& frame, WidgetState state,
+    void drawSegmentedControl(UIContext& ui, const Rect& frame, SegmentDrawStyle drawStyle,
+                              const WidgetStyle& style, WidgetState state) const override;
+    void drawSegment(UIContext& ui, const Rect& frame, SegmentDrawStyle drawStyle,
+                     WidgetState state,
                      bool isButton, bool isOn,
                      int segmentIndex, int nSegments) const override;
     void drawSegmentDivider(UIContext& ui, const Point& top, const Point& bottom,
-                            const WidgetStyle& ctrlStyle,
-                            WidgetState ctrlState) const override;
-    const WidgetStyle& segmentTextStyle(WidgetState state, bool isOn) const override;
+                            SegmentDrawStyle drawStyle,
+                            const WidgetStyle& ctrlStyle, WidgetState ctrlState) const override;
+    const WidgetStyle& segmentTextStyle(WidgetState state, SegmentDrawStyle drawStyle,
+                                        bool isOn) const override;
     void drawComboBoxAndClip(UIContext& ui, const Rect& frame,
                              const WidgetStyle& style, WidgetState state) const override;
     void drawSliderTrack(UIContext& ui, SliderDir dir, const Rect& frame, const Point& thumbMid,
@@ -104,6 +107,8 @@ public:
     void drawTextEdit(UIContext& ui, const Rect& frame, const PicaPt& scrollOffset,
                       const std::string& placeholder, TextEditorLogic& editor, int horizAlign, 
                       const WidgetStyle& style, WidgetState state, bool hasFocus) const override;
+    void drawSearchBar(UIContext& ui, const Rect& frame, const WidgetStyle& style,
+                               WidgetState state) const override;
     void clipScrollView(UIContext& ui, const Rect& frame,
                         const WidgetStyle& style, WidgetState state, bool drawsFrame) const override;
     void drawScrollView(UIContext& ui, const Rect& frame,
@@ -137,6 +142,9 @@ protected:
     WidgetStyle mLabelStyles[5];
     WidgetStyle mButtonStyles[5];
     WidgetStyle mButtonOnStyles[5];
+    WidgetStyle mButtonUndecoratedStyles[5];
+    WidgetStyle mButtonUndecoratedOnStyles[5];
+    WidgetStyle mButtonAccessoryStyles[5];
     WidgetStyle mButtonDefaultDialogStyles[5];
     WidgetStyle mCheckboxStyles[5];
     WidgetStyle mCheckboxOnStyles[5];
@@ -144,6 +152,9 @@ protected:
     WidgetStyle mSegmentStyles[5];  // style for individual segment (button-style)
     WidgetStyle mSegmentOffStyles[5];  // style for individual segment (off)
     WidgetStyle mSegmentOnStyles[5];  // style for individual segment (on)
+    WidgetStyle mSegmentUndecoratedStyles[5];  // style for individual segment (button-style)
+    WidgetStyle mSegmentUndecoratedOffStyles[5];  // style for individual segment (off)
+    WidgetStyle mSegmentUndecoratedOnStyles[5];  // style for individual segment (on)
     WidgetStyle mComboBoxStyles[5];
     WidgetStyle mComboBoxIconAreaStyles[5];
     WidgetStyle mSliderTrackStyles[5];
@@ -152,6 +163,7 @@ protected:
     WidgetStyle mScrollbarThumbStyles[5];
     WidgetStyle mProgressBarStyles[5];
     WidgetStyle mTextEditStyles[5];
+    WidgetStyle mSearchBarStyles[5];
     WidgetStyle mScrollViewStyles[5];
     WidgetStyle mListViewStyles[5];
     WidgetStyle mMenuItemStyles[5];
