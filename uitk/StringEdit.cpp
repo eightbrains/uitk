@@ -155,6 +155,7 @@ struct StringEdit::Impl
             case UseClearButton::kTheme:
                 return this->themeWantsClearButton;
         }
+        return this->themeWantsClearButton;  // for MSVC
     }
 
     void updateClearButton()

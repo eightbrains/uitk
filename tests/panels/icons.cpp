@@ -238,8 +238,8 @@ public:
 
         // TODO: this is a hack, we really need an onInit() or onDpiChanged() or something
         if (mSizeEdit->intValue() <= 0) {
-            int maxPx = PicaPt(72.0f) / context.dc.onePixel();
-            int defaultPx = em / context.dc.onePixel();
+            int maxPx = int(PicaPt(72.0f) / context.dc.onePixel());
+            int defaultPx = int(em / context.dc.onePixel());
             mSizeEdit->setLimits(9, maxPx, 1);
             mSizeSlider->setLimits(9, maxPx, 1);
             mSizeEdit->setValue(defaultPx);

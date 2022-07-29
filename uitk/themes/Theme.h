@@ -27,6 +27,8 @@
 
 #include <nativedraw.h>
 
+#include <functional>
+
 namespace uitk {
 
 struct LayoutContext;

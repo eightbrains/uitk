@@ -720,6 +720,7 @@ const Theme::WidgetStyle& VectorBaseTheme::buttonTextStyle(WidgetState state, Bu
         case ButtonDrawStyle::kAccessory:
             return mButtonAccessoryStyles[int(state)];
     }
+    return mButtonStyles[int(state)];  // for MSVC (don't use 'default' so we get warnings if enum changes)
 }
 
 void VectorBaseTheme::drawCheckbox(UIContext& ui, const Rect& frame,
@@ -878,6 +879,7 @@ const Theme::WidgetStyle& VectorBaseTheme::segmentTextStyle(WidgetState state, S
                 return mSegmentUndecoratedOffStyles[int(state)];
             }
     }
+    return mSegmentOffStyles[int(state)];  //for MSVC (don't use 'default' so we get warnings if enum changes)
 }
 
 void VectorBaseTheme::drawComboBoxAndClip(UIContext& ui, const Rect& frame,
