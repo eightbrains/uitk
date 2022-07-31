@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -25,16 +25,23 @@
 
 #include "Widget.h"
 
-#include "Label.h"
-
 #include <functional>
 
 namespace uitk {
+
+class Icon;
+class Label;
+class LabelCell;
 
 class Button : public Widget {
     using Super = Widget;
 public:
     explicit Button(const std::string& text);
+    explicit Button(Theme::StandardIcon icon);
+    explicit Button(const Theme::Icon& icon);
+    Button(Theme::StandardIcon icon, const std::string& text);
+    Button(const Theme::Icon& icon, const std::string& text);
+
     ~Button();
 
     bool toggleable() const;
@@ -46,11 +53,16 @@ public:
 
     Button* setOnClicked(std::function<void(Button*)> onClicked);
 
-    Label* label() const;
+    Label* label() const;  // always exists
+    Icon* icon() const;  // always exists
 
     enum class DrawStyle {
         kNormal = 0,
-        kDialogDefault  /// this should be set by the dialog; you should not need to call this outside of a dialog
+        kDialogDefault, /// this should be set by the dialog;
+                        ///   you should not need to call this outside of a dialog
+        kNoDecoration,  /// no border or background; like iOS 7 and later. Useful for icon buttons.
+        kAccessory      /// style for buttons that are part of a widget, like the X button that
+                        ///      clears text
     };
     DrawStyle drawStyle() const;
     /// Sets the drawing style of the button. Calling this on
@@ -68,6 +80,9 @@ public:
     Widget::EventResult mouse(const MouseEvent &e) override;
 
     void draw(UIContext& context) override;
+
+protected:
+    LabelCell* cell() const;
 
 private:
     struct Impl;

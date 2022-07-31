@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -22,7 +22,9 @@
 
 #include "Button.h"
 
+#include "Icon.h"
 #include "Label.h"
+#include "LabelCell.h"
 #include "Events.h"
 #include "UIContext.h"
 #include "themes/Theme.h"
@@ -30,7 +32,7 @@
 namespace uitk {
 
 struct Button::Impl {
-    Label *label;
+    LabelCell *cell = nullptr;  // we do not own this
     DrawStyle drawStyle = DrawStyle::kNormal;
     std::function<void(Button*)> onClicked = nullptr;
     bool isOn = false;
@@ -40,9 +42,44 @@ struct Button::Impl {
 Button::Button(const std::string& text)
     : mImpl(new Impl())
 {
-    mImpl->label = new Label(text);
-    mImpl->label->setAlignment(Alignment::kCenter);
-    addChild(mImpl->label);  // takes ownership
+    mImpl->cell = new LabelCell();
+    mImpl->cell->label()->setText(text);
+    addChild(mImpl->cell);  // takes ownership
+}
+
+Button::Button(Theme::StandardIcon stdIcon)
+    : mImpl(new Impl())
+{
+    mImpl->cell = new LabelCell();
+    mImpl->cell->icon()->setIcon(stdIcon);
+    addChild(mImpl->cell);  // takes ownership
+}
+
+Button::Button(const Theme::Icon& icon)
+    : mImpl(new Impl())
+{
+    mImpl->cell = new LabelCell();
+    mImpl->cell->icon()->setIcon(icon);
+    addChild(mImpl->cell);  // takes ownership
+}
+
+
+Button::Button(Theme::StandardIcon stdIcon, const std::string& text)
+    : mImpl(new Impl())
+{
+    mImpl->cell = new LabelCell();
+    mImpl->cell->icon()->setIcon(stdIcon);
+    mImpl->cell->label()->setText(text);
+    addChild(mImpl->cell);  // takes ownership
+}
+
+Button::Button(const Theme::Icon& icon, const std::string& text)
+    : mImpl(new Impl())
+{
+    mImpl->cell = new LabelCell();
+    mImpl->cell->icon()->setIcon(icon);
+    mImpl->cell->label()->setText(text);
+    addChild(mImpl->cell);  // takes ownership
 }
 
 Button::~Button()
@@ -73,7 +110,11 @@ Button* Button::setOnClicked(std::function<void(Button*)> onClicked)
     return this;
 }
 
-Label* Button::label() const { return mImpl->label; }
+Label* Button::label() const { return mImpl->cell->label(); }
+
+Icon* Button::icon() const { return mImpl->cell->icon(); }
+
+LabelCell* Button::cell() const { return mImpl->cell; }
 
 Button::DrawStyle Button::drawStyle() const { return mImpl->drawStyle; }
 
@@ -110,16 +151,24 @@ void Button::performClick()
 
 Size Button::preferredSize(const LayoutContext& context) const
 {
-    return context.theme.calcPreferredButtonSize(context.dc, context.theme.params().labelFont,
-                                                 mImpl->label->text());
+    auto font = label()->font();
+    auto margins = context.theme.calcPreferredButtonMargins(context.dc, font);
+    auto pref = mImpl->cell->preferredSize(context);
+    return Size(pref.width + 2.0f * margins.width,
+                pref.height + 2.0f * margins.height);  // normally margins.height is zero
 }
 
 void Button::layout(const LayoutContext& context)
 {
-    Super::layout(context);
+    auto &r = bounds();
+    auto pref = mImpl->cell->preferredSize(context);
+    auto x = std::max(PicaPt::kZero, context.dc.roundToNearestPixel(0.5f * (r.width - pref.width)));
+    auto w = std::min(r.width, pref.width);
+    auto y = std::max(PicaPt::kZero, context.dc.roundToNearestPixel(0.5f * (r.height - pref.height)));
+    auto h = std::min(r.height, pref.height);
+    mImpl->cell->setFrame(Rect(x, y, w, h));
 
-    auto &r = frame();
-    mImpl->label->setFrame(Rect(PicaPt::kZero, PicaPt::kZero, r.width, r.height));
+    Super::layout(context);
 }
 
 Widget::EventResult Button::mouse(const MouseEvent &e)
@@ -156,11 +205,17 @@ void Button::draw(UIContext& context)
         case DrawStyle::kDialogDefault:
             bdStyle = Theme::ButtonDrawStyle::kDialogDefault;
             break;
+        case DrawStyle::kNoDecoration:
+            bdStyle = Theme::ButtonDrawStyle::kNoDecoration;
+            break;
+        case DrawStyle::kAccessory:
+            bdStyle = Theme::ButtonDrawStyle::kAccessory;
+            break;
     }
     context.theme.drawButton(context, bounds(), bdStyle, style(themeState), themeState, isOn());
-    mImpl->label->setThemeState(themeState);
-    auto ws = context.theme.buttonTextStyle(themeState, mImpl->isOn);
-    mImpl->label->setTextColorNoRedraw(ws.fgColor);
+    mImpl->cell->setThemeState(themeState);
+    auto ws = context.theme.buttonTextStyle(themeState, bdStyle, mImpl->isOn);
+    mImpl->cell->setColorNoRedraw(ws.fgColor);
 
     Super::draw(context);
 }

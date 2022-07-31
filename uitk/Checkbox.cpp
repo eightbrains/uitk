@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -22,6 +22,8 @@
 
 #include "Checkbox.h"
 
+#include "Label.h"
+#include "LabelCell.h"
 #include "UIContext.h"
 #include "themes/Theme.h"
 
@@ -61,7 +63,12 @@ void Checkbox::layout(const LayoutContext& context)
     auto font = context.theme.params().labelFont;
     auto f = frame();
     auto x = PicaPt::kZero + f.height + calcSpacing(context.dc, font);
-    label()->setFrame(Rect(x, PicaPt::kZero, f.width - x, f.height));
+    cell()->setFrame(Rect(x, PicaPt::kZero, f.width - x, f.height));
+    cell()->layout(context);
+
+    // Do NOT call Super::layout: we are inheriting from Button to get its
+    // mouse-handling, but we do not want to draw the text centered like
+    // Button does.
 }
 
 void Checkbox::draw(UIContext& context)

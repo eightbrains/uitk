@@ -61,27 +61,35 @@ struct Label::Impl
                                                  const Color& fg, const Size& size)
     {
         auto font = (this->usesThemeFont ? theme.params().labelFont : this->customFont);
-        auto margin = calcMargin(dc, theme);
+        auto fm = dc.fontMetrics(font);
+        auto margins = calcMargin(dc, theme);
         PicaPt w = size.width;
         if (size.width > PicaPt::kZero) {
-            w -= 2.0f * margin;
+            w -= 2.0f * margins.width;
         }
         PicaPt h = size.height;
         if (size.height > PicaPt::kZero) {
-            h -= 2.0f * margin;
+            // We want to keep the margins (so that, e.g. kTop is aligned to the bottom of
+            // the top margin), but because the descent counts as part of the bottom margin
+            // we need to adjust accordingly.
+            if (this->alignment & Alignment::kVCenter) {
+                h -= 2.0f * margins.height - 0.5f * fm.descent;
+            } else {
+                h -= 2.0f * margins.height - fm.descent;
+            }
         }
         auto wrap = (this->wordWrap ? kWrapWord : kWrapNone);
         return dc.createTextLayout(this->text, font, fg, Size(w, h), this->alignment, wrap);
     }
 
-    PicaPt calcMargin(const DrawContext& dc, const Theme& theme)
+    Font currentFont(const Theme& theme) const
     {
-        // Because the descent acts as the lower margin visually, all the other
-        // margins should be the descent.
-        auto font = (this->usesThemeFont ? theme.params().labelFont : this->customFont);
-        auto metrics = font.metrics(dc);
-        auto margin = dc.ceilToNearestPixel(metrics.descent);
-        return margin;
+        return (this->usesThemeFont ? theme.params().labelFont : this->customFont);
+    }
+
+    Size calcMargin(const DrawContext& dc, const Theme& theme)
+    {
+        return theme.calcPreferredTextMargins(dc, currentFont(theme));
     }
 };
 
@@ -181,8 +189,7 @@ Widget* Label::setFrame(const Rect& frame)
 
 Size Label::preferredSize(const LayoutContext& context) const
 {
-    auto &font = context.theme.params().labelFont;
-    auto fm = context.dc.fontMetrics(font);
+    auto fm = context.dc.fontMetrics(mImpl->currentFont(context.theme));
     auto margin = mImpl->calcMargin(context.dc, context.theme);
     auto constrainedWidth = kDimGrow;
     if (mImpl->wordWrap) {
@@ -192,11 +199,11 @@ Size Label::preferredSize(const LayoutContext& context) const
                                       Size(constrainedWidth, PicaPt::kZero))->metrics();
     bool isOneLine = (tm.height < 1.5f * fm.lineHeight);
     if (isOneLine) {
-        return Size(context.dc.ceilToNearestPixel(tm.width) + 2.0f * margin,
-                    context.dc.ceilToNearestPixel(fm.capHeight) + 2.0f * margin);
+        return Size(context.dc.ceilToNearestPixel(tm.width) + 2.0f * margin.width,
+                    context.dc.ceilToNearestPixel(fm.capHeight) + 2.0f * margin.height);
     } else {
-        return Size(context.dc.ceilToNearestPixel(tm.width) + 2.0f * margin,
-                    context.dc.ceilToNearestPixel(tm.height - (fm.ascent - fm.capHeight) - fm.descent) + 2.0f * margin);
+        return Size(context.dc.ceilToNearestPixel(tm.width) + 2.0f * margin.width,
+                    context.dc.ceilToNearestPixel(tm.height - (fm.ascent - fm.capHeight) - fm.descent) + 2.0f * margin.height);
     }
 }
 
@@ -223,13 +230,14 @@ void Label::draw(UIContext& ui)
     if (!mImpl->layout || fg.toRGBA() != mImpl->layoutRGBA) {
         mImpl->updateTextLayout(ui.dc, ui.theme, fg, r.size());
     }
-    auto margin = mImpl->calcMargin(ui.dc, ui.theme);
+    auto margins = mImpl->calcMargin(ui.dc, ui.theme);
     // This is really r.upperLeft() + margin, but r.upperLeft() is always (0, 0)
-    ui.dc.drawText(*mImpl->layout, Point(margin, margin));
+    auto metrics = ui.dc.fontMetrics(mImpl->currentFont(ui.theme));
+    ui.dc.drawText(*mImpl->layout, Point(margins.width, margins.height));
 
 #if DEBUG_BASELINE
     auto onePx = ui.dc.onePixel();
-    auto y = ui.dc.roundToNearestPixel(pt.y + margin) +
+    auto y = ui.dc.roundToNearestPixel(pt.y + margins.height) +
              ui.dc.floorToNearestPixel(metrics.ascent) +
              0.5 * onePx;
 
@@ -245,4 +253,3 @@ void Label::draw(UIContext& ui)
 }
 
 }  // namespace uitk
-

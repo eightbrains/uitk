@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -124,6 +124,47 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mButtonOnStyles[DOWN].fgColor = params.accentedBackgroundTextColor;
     mButtonOnStyles[SELECTED] = mButtonOnStyles[DOWN];
 
+    // Undecorated button (normal)
+    mButtonUndecoratedStyles[NORMAL].bgColor = Color::kTransparent;
+    mButtonUndecoratedStyles[NORMAL].fgColor = params.textColor;
+    mButtonUndecoratedStyles[NORMAL].borderColor = Color::kTransparent;
+    mButtonUndecoratedStyles[NORMAL].borderWidth = PicaPt::kZero;
+    mButtonUndecoratedStyles[NORMAL].borderRadius = mBorderRadius;
+    mButtonUndecoratedStyles[DISABLED] = mButtonUndecoratedStyles[NORMAL];
+    mButtonUndecoratedStyles[DISABLED].fgColor = params.disabledTextColor;
+    mButtonUndecoratedStyles[OVER] = mButtonUndecoratedStyles[NORMAL];
+    if (isDarkMode) {
+        mButtonUndecoratedStyles[OVER].fgColor = mButtonStyles[NORMAL].fgColor.lighter();
+    } else {
+        mButtonUndecoratedStyles[OVER].fgColor = mButtonStyles[NORMAL].fgColor.darker(0.025f);
+    }
+    mButtonUndecoratedStyles[DOWN] = mButtonUndecoratedStyles[NORMAL];
+    mButtonUndecoratedStyles[DOWN].fgColor = params.accentColor;
+    mButtonUndecoratedStyles[SELECTED] = mButtonUndecoratedStyles[DOWN];
+
+    // Undecorated button (ON)
+    copyStyles(mButtonUndecoratedStyles, mButtonUndecoratedOnStyles);
+    mButtonUndecoratedOnStyles[NORMAL].fgColor = params.accentColor;
+    mButtonUndecoratedOnStyles[DISABLED].fgColor = mButtonOnStyles[DISABLED].bgColor;
+    mButtonUndecoratedOnStyles[OVER].fgColor = params.accentColor.lighter();
+    mButtonUndecoratedOnStyles[DOWN].fgColor = params.textColor;
+    mButtonUndecoratedOnStyles[SELECTED] = mButtonUndecoratedOnStyles[DOWN];
+
+    // Accessory button, like the X that clear a text widget
+    copyStyles(mButtonStyles, mButtonAccessoryStyles);
+    mButtonAccessoryStyles[NORMAL].bgColor = Color::kTransparent;
+    mButtonAccessoryStyles[NORMAL].fgColor = Color(0.5f, 0.5f, 0.5f, params.textColor.alpha());
+    mButtonAccessoryStyles[NORMAL].borderColor = Color::kTransparent;
+    mButtonAccessoryStyles[NORMAL].borderWidth = PicaPt::kZero;
+    mButtonAccessoryStyles[DISABLED] = mButtonAccessoryStyles[NORMAL];
+    mButtonAccessoryStyles[DISABLED].fgColor = Color(mButtonAccessoryStyles[NORMAL].fgColor,
+                                                     0.75f * mButtonAccessoryStyles[NORMAL].fgColor.alpha());
+    mButtonAccessoryStyles[OVER] = mButtonAccessoryStyles[NORMAL];
+    mButtonAccessoryStyles[OVER].fgColor = mButtonAccessoryStyles[NORMAL].fgColor.lighter();
+    mButtonAccessoryStyles[DOWN] = mButtonAccessoryStyles[NORMAL];
+    mButtonAccessoryStyles[DOWN].fgColor = params.textColor;
+    mButtonAccessoryStyles[SELECTED] = mButtonAccessoryStyles[NORMAL];
+
     // Button that is default for a dialog
     copyStyles(mButtonStyles, mButtonDefaultDialogStyles);
     mButtonDefaultDialogStyles[NORMAL].bgColor = params.accentColor;
@@ -213,6 +254,13 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mSegmentOnStyles[DOWN].borderRadius = PicaPt::kZero;
     mSegmentOnStyles[DOWN].borderWidth = PicaPt::kZero;
 
+    // Segmented control, button action (undecorated)
+    copyStyles(mButtonUndecoratedStyles, mSegmentUndecoratedStyles);
+
+    // Segmented control, toggleable (undecorated)
+    copyStyles(mButtonUndecoratedStyles, mSegmentUndecoratedOffStyles);
+    copyStyles(mButtonUndecoratedOnStyles, mSegmentUndecoratedOnStyles);
+
     // ComboBox
     copyStyles(mButtonStyles, mComboBoxStyles);
     mComboBoxStyles[DOWN] = mComboBoxStyles[OVER];
@@ -297,6 +345,13 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mTextEditStyles[DOWN] = mTextEditStyles[NORMAL];
     mTextEditStyles[SELECTED] = mTextEditStyles[SELECTED];
 
+    // SearchBar
+    copyStyles(mTextEditStyles, mSearchBarStyles);
+    mSearchBarStyles[NORMAL].borderRadius = mBorderRadius;
+    mSearchBarStyles[DISABLED].borderRadius = mBorderRadius;
+    mSearchBarStyles[OVER].borderRadius = mBorderRadius;
+    mSearchBarStyles[DOWN].borderRadius = mBorderRadius;
+
     // ScrollView
     mScrollViewStyles[NORMAL].bgColor = Color::kTransparent;
     mScrollViewStyles[NORMAL].fgColor = params.textColor;
@@ -354,67 +409,80 @@ Size VectorBaseTheme::calcPreferredTextMargins(const DrawContext& dc, const Font
     return Size(margin, margin);
 }
 
-// Ideally all the widgets are the same size so that the naively placing them
-// next to each other aligns the text baselines nicely. Buttons are a good widget
-// to choose as the size, so this is called from the other preference-calculating
-// functions to get the height.
-Size VectorBaseTheme::calcPreferredButtonSize(const DrawContext& dc, const Font& font,
-                                              const std::string& text) const
+PicaPt VectorBaseTheme::calcStandardHeight(const DrawContext& dc, const Font& font) const
 {
     auto fm = dc.fontMetrics(font);
-    auto tm = dc.textMetrics(text.c_str(), font, kPaintFill);
-    auto em = tm.height;
-    auto margin = dc.ceilToNearestPixel(1.5 * fm.descent);
     // Height works best if the descent is part of the bottom margin,
     // because it looks visually empty even if there are a few descenders.
     // Now the ascent can be anything the font designer want it to be,
     // which is not helpful for computing accurate margins. But cap-height
     // is well-defined, so use that instead.
-    return Size(dc.ceilToNearestPixel(2.0f * em + tm.width) + 2.0f * margin,
-                dc.ceilToNearestPixel(fm.capHeight) + 2.0f * margin);
+    return dc.ceilToNearestPixel(fm.capHeight) + 2.0f * calcPreferredTextMargins(dc, font).height;
+}
+
+Size VectorBaseTheme::calcStandardIconSize(const DrawContext& dc, const Font& font) const
+{
+    auto fm = dc.fontMetrics(font);
+    auto size = dc.ceilToNearestPixel(fm.capHeight + fm.descent);
+    return Size(size, size);
+}
+
+Rect VectorBaseTheme::calcStandardIconRect(const DrawContext& dc, const Rect& frame, const Font& font) const
+{
+    auto size = calcStandardIconSize(dc, font);
+    auto x = frame.x + dc.roundToNearestPixel(0.5f * (frame.width - size.width));
+    auto y = frame.y + dc.roundToNearestPixel(0.5f * (frame.height - size.height));
+    return Rect(x, y, size.width, size.height);
+}
+
+PicaPt VectorBaseTheme::calcStandardIconSeparator(const DrawContext& dc, const Font& font) const
+{
+    return dc.roundToNearestPixel(0.1f * font.pointSize());
+}
+
+Size VectorBaseTheme::calcPreferredButtonMargins(const DrawContext& dc, const Font& font) const
+{
+    auto fm = dc.fontMetrics(font);
+    return Size(dc.ceilToNearestPixel(0.5f * (fm.capHeight + fm.descent)), PicaPt::kZero);
 }
 
 Size VectorBaseTheme::calcPreferredCheckboxSize(const DrawContext& dc,
                                                 const Font& font) const
 {
-    auto size = calcPreferredButtonSize(dc, font, "Ag");
-    return Size(size.height, size.height);
+    auto size = calcStandardHeight(dc, font);
+    return Size(size, size);
 }
 
-Size VectorBaseTheme::calcPreferredSegmentSize(const DrawContext& dc,
-                                               const Font& font,
-                                               const std::string& text) const
+Size VectorBaseTheme::calcPreferredSegmentMargins(const DrawContext& dc, const Font& font) const
 {
-    auto pref = calcPreferredButtonSize(dc, font, text);
-    auto tm = dc.textMetrics(text.c_str(), font, kPaintFill);
-    auto margin = tm.height;  // 0.5*em on either side
-    return Size(dc.ceilToNearestPixel(tm.width + margin),
-                pref.height);  // height is already ceil'd.
+    // The button y-margin is also zero, but specify zero here, in case the button margin
+    // becomes not zero some time (for instance, a custom layout).
+    return Size(calcPreferredButtonMargins(dc, font).width, PicaPt::kZero);
 }
 
 Size VectorBaseTheme::calcPreferredComboBoxSize(const DrawContext& dc,
                                                 const PicaPt& preferredMenuWidth) const
 {
-    auto height = calcPreferredButtonSize(dc, mParams.labelFont, "Ag").height;
+    auto height = calcStandardHeight(dc, mParams.labelFont);
     return Size(dc.ceilToNearestPixel(preferredMenuWidth + 0.8f * height), height);
 }
 
-Size VectorBaseTheme::calcPreferredSliderThumbSize(const DrawContext& ui) const
+Size VectorBaseTheme::calcPreferredSliderThumbSize(const DrawContext& dc) const
 {
-    auto buttonHeight = calcPreferredButtonSize(ui, mParams.labelFont, "Ag").height;
-    return Size(buttonHeight, buttonHeight);
+    auto height = calcStandardHeight(dc, mParams.labelFont);
+    return Size(height, height);
 }
 
 Size VectorBaseTheme::calcPreferredProgressBarSize(const DrawContext& dc) const
 {
-    auto buttonHeight = calcPreferredButtonSize(dc, mParams.labelFont, "Ag").height;
-    return Size(PicaPt(144.0f), buttonHeight);
+    auto height = calcStandardHeight(dc, mParams.labelFont);
+    return Size(PicaPt(144.0f), height);
 }
 
 Size VectorBaseTheme::calcPreferredTextEditSize(const DrawContext& dc, const Font& font) const
 {
-    auto buttonHeight = calcPreferredButtonSize(dc, mParams.labelFont, "Ag").height;
-    return Size(Widget::kDimGrow, buttonHeight);
+    auto height = calcStandardHeight(dc, mParams.labelFont);
+    return Size(Widget::kDimGrow, height);
 }
 
 Rect VectorBaseTheme::calcTextEditRectForFrame(const Rect& frame, const DrawContext& dc,
@@ -431,8 +499,8 @@ Rect VectorBaseTheme::calcTextEditRectForFrame(const Rect& frame, const DrawCont
 
 Size VectorBaseTheme::calcPreferredIncDecSize(const DrawContext& dc) const
 {
-    auto buttonHeight = calcPreferredButtonSize(dc, mParams.labelFont, "Ag").height;
-    return Size(0.5f * buttonHeight, buttonHeight);
+    auto height = calcStandardHeight(dc, mParams.labelFont);
+    return Size(0.5f * height, height);
 }
 
 PicaPt VectorBaseTheme::calcPreferredScrollbarThickness(const DrawContext& dc) const
@@ -446,7 +514,7 @@ Size VectorBaseTheme::calcPreferredMenuItemSize(const DrawContext& dc,
                                                 MenuItemAttribute itemAttr,
                                                 PicaPt *shortcutWidth) const
 {
-    auto height = dc.ceilToNearestPixel(calcPreferredButtonSize(dc, mParams.labelFont, text).height);
+    auto height = calcStandardHeight(dc, mParams.labelFont);
     auto metrics = calcPreferredMenuItemMetrics(dc, height);
     auto textMetrics = dc.textMetrics(text.c_str(), mParams.labelFont, kPaintFill);
     auto twidth = dc.ceilToNearestPixel(textMetrics.width);
@@ -490,12 +558,12 @@ PicaPt VectorBaseTheme::calcPreferredMenuVerticalMargin() const
 
 PicaPt VectorBaseTheme::calcPreferredMenubarItemHorizMargin(const DrawContext& dc, const PicaPt& height) const
 {
-    return dc.ceilToNearestPixel(0.5f * calcPreferredButtonSize(dc, mParams.labelFont, "Ag").height);
+    return dc.ceilToNearestPixel(0.5f * calcStandardHeight(dc, mParams.labelFont));
 }
 
 void VectorBaseTheme::drawCheckmark(UIContext& ui, const Rect& r, const WidgetStyle& style) const
 {
-    const auto strokeWidth = PicaPt(2);
+    const auto strokeWidth = PicaPt::fromPixels(2.0f, 96.0f);
     // We need to inset to compensate for the stroke, since the points will
     // be at the center of the stroke. Don't adjust to nearest pixel, because
     // we actually want the partial pixels, otherwise it is a pixel too much,
@@ -617,6 +685,9 @@ void VectorBaseTheme::drawButton(UIContext& ui, const Rect& frame, ButtonDrawSty
                 bs = &mButtonStyles[int(state)];
             }
             break;
+        case Theme::ButtonDrawStyle::kNoDecoration:
+        case Theme::ButtonDrawStyle::kAccessory:
+            return;
         case Theme::ButtonDrawStyle::kDialogDefault:
             bs = &mButtonDefaultDialogStyles[int(state)];
             break;
@@ -624,13 +695,32 @@ void VectorBaseTheme::drawButton(UIContext& ui, const Rect& frame, ButtonDrawSty
     drawFrame(ui, frame, bs->merge(style));
 }
 
-const Theme::WidgetStyle& VectorBaseTheme::buttonTextStyle(WidgetState state, bool isOn) const
+const Theme::WidgetStyle& VectorBaseTheme::buttonTextStyle(WidgetState state, ButtonDrawStyle buttonStyle,
+                                                           bool isOn) const
 {
-    if (isOn) {
-        return mButtonOnStyles[int(state)];
-    } else {
-        return mButtonStyles[int(state)];
+    switch (buttonStyle) {
+        case ButtonDrawStyle::kNormal:
+            if (isOn) {
+                return mButtonOnStyles[int(state)];
+            } else {
+                return mButtonStyles[int(state)];
+            }
+        case ButtonDrawStyle::kDialogDefault:
+            if (isOn) {
+                return mButtonOnStyles[int(state)]; // shouldn't happen
+            } else {
+                return mButtonDefaultDialogStyles[int(state)];
+            }
+        case ButtonDrawStyle::kNoDecoration:
+            if (isOn) {
+                return mButtonUndecoratedOnStyles[int(state)];
+            } else {
+                return mButtonUndecoratedStyles[int(state)];
+            }
+        case ButtonDrawStyle::kAccessory:
+            return mButtonAccessoryStyles[int(state)];
     }
+    return mButtonStyles[int(state)];  // for MSVC (don't use 'default' so we get warnings if enum changes)
 }
 
 void VectorBaseTheme::drawCheckbox(UIContext& ui, const Rect& frame,
@@ -653,9 +743,14 @@ void VectorBaseTheme::drawCheckbox(UIContext& ui, const Rect& frame,
 
 void VectorBaseTheme::drawSegmentedControl(UIContext& ui,
                                            const Rect& frame,
+                                           SegmentDrawStyle drawStyle,
                                            const WidgetStyle& style,
                                            WidgetState state) const
 {
+    if (drawStyle == SegmentDrawStyle::kNoDecoration) {
+        return;
+    }
+
     if (state == WidgetState::kDisabled) {
         drawFrame(ui, frame, mSegmentedControlStyles[int(state)].merge(style));
     } else {
@@ -663,9 +758,14 @@ void VectorBaseTheme::drawSegmentedControl(UIContext& ui,
     }
 }
 
-void VectorBaseTheme::drawSegment(UIContext& ui, const Rect& frame, WidgetState state,
+void VectorBaseTheme::drawSegment(UIContext& ui, const Rect& frame, SegmentDrawStyle drawStyle,
+                                  WidgetState state,
                                   bool isButton, bool isOn, int segmentIndex, int nSegments) const
 {
+    if (drawStyle == SegmentDrawStyle::kNoDecoration) {
+        return;
+    }
+
     auto &widgetStyle = mSegmentedControlStyles[int(WidgetState::kNormal)];
     Rect r(frame.x, frame.y + widgetStyle.borderWidth,
            frame.width, frame.height - 2.0f * widgetStyle.borderWidth);
@@ -740,8 +840,13 @@ void VectorBaseTheme::drawSegment(UIContext& ui, const Rect& frame, WidgetState 
 }
 
 void VectorBaseTheme::drawSegmentDivider(UIContext& ui, const Point& top, const Point& bottom,
-                                         const WidgetStyle& ctrlStyle, WidgetState ctrlState) const
+                                         SegmentDrawStyle drawStyle, const WidgetStyle& ctrlStyle,
+                                         WidgetState ctrlState) const
 {
+    if (drawStyle == SegmentDrawStyle::kNoDecoration) {
+        return;
+    }
+
     auto style = mSegmentedControlStyles[int(ctrlState)].merge(ctrlStyle);
     auto p1 = top;
     p1.y += style.borderWidth;
@@ -757,13 +862,24 @@ void VectorBaseTheme::drawSegmentDivider(UIContext& ui, const Point& top, const 
     ui.dc.drawLines({p1, p2});
 }
 
-const Theme::WidgetStyle& VectorBaseTheme::segmentTextStyle(WidgetState state, bool isOn) const
+const Theme::WidgetStyle& VectorBaseTheme::segmentTextStyle(WidgetState state, SegmentDrawStyle drawStyle,
+                                                            bool isOn) const
 {
-    if (isOn) {
-        return mSegmentOnStyles[int(state)];
-    } else {
-        return mSegmentOffStyles[int(state)];
+    switch (drawStyle) {
+        case SegmentDrawStyle::kNormal:
+            if (isOn) {
+                return mSegmentOnStyles[int(state)];
+            } else {
+                return mSegmentOffStyles[int(state)];
+            }
+        case SegmentDrawStyle::kNoDecoration:
+            if (isOn) {
+                return mSegmentUndecoratedOnStyles[int(state)];
+            } else {
+                return mSegmentUndecoratedOffStyles[int(state)];
+            }
     }
+    return mSegmentOffStyles[int(state)];  //for MSVC (don't use 'default' so we get warnings if enum changes)
 }
 
 void VectorBaseTheme::drawComboBoxAndClip(UIContext& ui, const Rect& frame,
@@ -1026,10 +1142,21 @@ void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaP
     }
 }
 
-void VectorBaseTheme::clipScrollView(UIContext& ui, const Rect& frame,
-                                     const WidgetStyle& style, WidgetState state) const
+void VectorBaseTheme::drawSearchBar(UIContext& ui, const Rect& frame, const WidgetStyle& style,
+                                    WidgetState state) const
 {
-    clipFrame(ui, frame, mScrollViewStyles[int(state)].merge(style));
+    drawFrame(ui, frame, mSearchBarStyles[int(state)].merge(style));
+}
+
+void VectorBaseTheme::clipScrollView(UIContext& ui, const Rect& frame,
+                                     const WidgetStyle& style, WidgetState state, bool drawsFrame) const
+{
+    auto s = mScrollViewStyles[int(state)].merge(style);
+    if (!drawsFrame) {
+        s.borderWidth = PicaPt::kZero;
+        s.borderColor = Color::kTransparent;
+    }
+    clipFrame(ui, frame, s);
 }
 
 void VectorBaseTheme::drawScrollView(UIContext& ui, const Rect& frame,

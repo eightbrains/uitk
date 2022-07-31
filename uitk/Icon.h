@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -20,40 +20,43 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
+#ifndef UITK_ICON_H
+#define UITK_ICON_H
 
-#define ND_NAMESPACE uitk
+#include "Widget.h"
 
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
+#include <functional>
 
-#include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "Clipboard.h"
-#include "ComboBox.h"
-#include "Cursor.h"
-#include "Dialog.h"
-#include "Events.h"
-#include "FileDialog.h"
-#include "Icon.h"
-#include "Label.h"
-#include "LabelCell.h"
-#include "ListView.h"
-#include "NumberEdit.h"
-#include "Menu.h"
-#include "OSMenubar.h"
-#include "ProgressBar.h"
-#include "ScrollView.h"
-#include "SearchBar.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
-#include "StackedWidget.h"
-#include "StringEdit.h"
-#include "UIContext.h"
-#include "Window.h"
+namespace uitk {
 
-#include <nativedraw.h>
+class Icon : public Widget
+{
+    using Super = Widget;
+public:
+    explicit Icon(Theme::StandardIcon icon);
+    explicit Icon(Theme::Icon drawFunc);
 
-#endif // UITK_H
+    /// Returns true if the icon is Theme::StandardIcon::kNone and there is no
+    /// custom Theme::Icon.
+    bool isEmpty() const;
+
+    Icon* setIcon(Theme::Icon icon);
+    Icon* setIcon(Theme::StandardIcon icon);
+
+    const Color& color() const;
+    Icon* setColor(const Color& fg);
+    /// Sets the color, but does not request a redraw. This is useful when
+    /// using the icon as a child of another object, so that the icon can
+    /// draw using the parent's style.
+    void setColorNoRedraw(const Color& fg);
+
+    Size preferredSize(const LayoutContext& context) const override;
+    void draw(UIContext& context) override;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
+};
+
+} // namespace uitk
+#endif // UITK_ICON_H

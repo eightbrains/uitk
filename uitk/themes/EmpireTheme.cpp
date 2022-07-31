@@ -47,6 +47,8 @@ Theme::Params EmpireTheme::EmpireTheme::darkModeParams(const Color& accent)
     params.nonNativeMenubarBackgroundColor = Color(0.275f, 0.275f, 0.275f);
     params.labelFont = Font("Arial", PicaPt::fromPixels(10.0f, 96.0f));  // Linux/Win defaults to 96 dpi
     params.nonNativeMenubarFont = params.labelFont;
+    params.useClearTextButton = false;  // not really appropriate for desktops
+    params.useClearTextButtonForSearch = true;  // varies, but seems typical
     return params;
 }
 
@@ -67,6 +69,8 @@ Theme::Params EmpireTheme::lightModeParams(const Color& accent)
     params.nonNativeMenubarBackgroundColor = Color(1.0f, 1.0f, 1.0f);
     params.labelFont = Font("Arial", PicaPt::fromPixels(10.0f, 96.0f));  // Linux/Win defaults to 96 dpi
     params.nonNativeMenubarFont = params.labelFont;
+    params.useClearTextButton = false;  // not really appropriate for desktops
+    params.useClearTextButtonForSearch = true;  // varies, but seems typical
     return params;
 }
 
@@ -77,11 +81,10 @@ EmpireTheme::EmpireTheme()
 
 EmpireTheme::EmpireTheme(const Params& params)
     : VectorBaseTheme(params,
-                      PicaPt::fromPixels(0.5, 72),  // borderWidth
-                      PicaPt(4)                     // borderRadius
+                      PicaPt::fromPixels(0.5, 96),  // borderWidth
+                      PicaPt::fromPixels(3, 96)   // borderRadius
                      )
 {
 }
-
 
 }  // namespace uitk

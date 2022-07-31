@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -52,7 +52,8 @@ struct Widget::Impl {
     {
         int userSetBorderMask = (int(Theme::WidgetStyle::kBorderWidthSet) |
                                  int(Theme::WidgetStyle::kBorderColorSet) |
-                                 int(Theme::WidgetStyle::kBorderRadiusSet));
+                                 int(Theme::WidgetStyle::kBorderRadiusSet) |
+                                 int(Theme::WidgetStyle::kBGColorSet));
         // typeid() == typeid() should be fast, see
         //     https://stackoverflow.com/a/13894738/218226
         // but it is (hopefully) faster to only do the check when a

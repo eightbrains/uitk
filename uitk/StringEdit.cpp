@@ -22,6 +22,8 @@
 
 #include "StringEdit.h"
 
+#include "Button.h"
+#include "Cursor.h"
 #include "Events.h"
 #include "MenuUITK.h"
 #include "StringEditorLogic.h"
@@ -29,6 +31,32 @@
 #include "Window.h"
 
 namespace uitk {
+
+namespace {
+
+class ButtonThatSetsCursor : public Button
+{
+    using Super = Button;
+public:
+    ButtonThatSetsCursor(Theme::StandardIcon icon)
+        : Button(icon)
+    {}
+    ~ButtonThatSetsCursor() {}
+
+    void mouseEntered() override
+    {
+        Super::mouseEntered();
+        window()->pushCursor(Cursor::arrow());
+    }
+
+    void mouseExited() override
+    {
+        Super::mouseExited();
+        window()->popCursor();
+    }
+};
+
+}  // namespace
 
 PicaPt calcScrollOffset(const StringEditorLogic& editor, const Size& viewSize,
                         int horizAlign, const PicaPt& currentScrollX)
@@ -109,10 +137,35 @@ struct StringEdit::Impl
     int alignment = Alignment::kLeft | Alignment::kVCenter;
     Rect editorTextRect;
     PicaPt scrollOffset = PicaPt::kZero;
+    UseClearButton useClearButton = UseClearButton::kTheme;
+    Button *clearButton = nullptr;  // we do not own this; this will be a child
     MenuUITK *popup = nullptr;  // we own this
     std::function<void(const std::string&)> onTextChanged;
     std::function<void(StringEdit*)> onValueChanged;
     bool textHasChanged = false;
+    bool themeWantsClearButton = false;
+
+    bool isUsingClearButton()
+    {
+        switch (this->useClearButton) {
+            case UseClearButton::kNo:
+                return false;
+            case UseClearButton::kYes:
+                return true;
+            case UseClearButton::kTheme:
+                return this->themeWantsClearButton;
+        }
+        return this->themeWantsClearButton;  // for MSVC
+    }
+
+    void updateClearButton()
+    {
+        bool vis = false;
+        if (isUsingClearButton()) {
+            vis = !editor.isEmpty();
+        }
+        this->clearButton->setVisible(vis);
+    }
 };
 
 StringEdit::StringEdit()
@@ -120,6 +173,7 @@ StringEdit::StringEdit()
 {
     mImpl->editor.onTextChanged = [this]() {
         mImpl->textHasChanged = true;
+        mImpl->updateClearButton();
         if (mImpl->onTextChanged) {
             mImpl->onTextChanged(mImpl->editor.string());
         }
@@ -131,6 +185,17 @@ StringEdit::StringEdit()
         mImpl->textHasChanged = false;
         resignKeyFocus();
     };
+
+    mImpl->clearButton = new ButtonThatSetsCursor(Theme::StandardIcon::kCloseXCircle);
+    mImpl->clearButton->setDrawStyle(Button::DrawStyle::kAccessory);
+    mImpl->clearButton->setOnClicked([this](Button*) {
+        setText("");
+        if (mImpl->onTextChanged) {  // this was a user action, so do callback
+            mImpl->onTextChanged(mImpl->editor.string());
+        }
+    });
+    addChild(mImpl->clearButton);  // we no longer own
+    mImpl->updateClearButton();
 }
 
 StringEdit::~StringEdit()
@@ -146,6 +211,7 @@ const std::string& StringEdit::text() const { return mImpl->editor.string(); }
 StringEdit* StringEdit::setText(const std::string& text)
 {
     mImpl->editor.setString(text);
+    mImpl->updateClearButton();
     setNeedsDraw();
     return this;
 }
@@ -169,6 +235,14 @@ StringEdit* StringEdit::setAlignment(int alignment)
     alignment = (alignment & Alignment::kHorizMask);
     mImpl->alignment = alignment | (mImpl->alignment & Alignment::kVertMask);
     setNeedsDraw();
+    return this;
+}
+
+StringEdit::UseClearButton StringEdit::useClearButton() const { return mImpl->useClearButton; }
+
+StringEdit* StringEdit::setUseClearButton(UseClearButton use)
+{
+    mImpl->useClearButton = use;
     return this;
 }
 
@@ -199,9 +273,22 @@ Size StringEdit::preferredSize(const LayoutContext& context) const
 
 void StringEdit::layout(const LayoutContext& context)
 {
+    // We will not have access to this value when we need it, so cache it here.
+    // Changing the theme will need to call layout, so it should always be correct.
+    mImpl->themeWantsClearButton = context.theme.params().useClearTextButton;
+    mImpl->updateClearButton();  // in case theme changed
+
+    auto &r = bounds();
+    if (mImpl->isUsingClearButton()) {
+        mImpl->clearButton->setFrame(Rect(r.maxX() - r.height, r.y, r.height, r.height));
+    } else {
+        mImpl->clearButton->setFrame(Rect(r.maxX(), r.y, PicaPt::kZero, r.height));
+    }
+    mImpl->editorTextRect = context.theme.calcTextEditRectForFrame(
+                                    Rect(r.x, r.y, mImpl->clearButton->frame().x, r.height), context.dc,
+                                    context.theme.params().labelFont);
+
     Super::layout(context);
-    mImpl->editorTextRect = context.theme.calcTextEditRectForFrame(bounds(), context.dc,
-                                                                   context.theme.params().labelFont);
 }
 
 void StringEdit::mouseEntered()
@@ -218,6 +305,10 @@ void StringEdit::mouseExited()
 
 Widget::EventResult StringEdit::mouse(const MouseEvent& e)
 {
+    if (mImpl->clearButton->frame().contains(e.pos)) {
+        return Super::mouse(e);
+    }
+
     bool consumed = false;
 
     auto me = e;
@@ -281,6 +372,7 @@ Widget::EventResult StringEdit::mouse(const MouseEvent& e)
         return Widget::EventResult::kConsumed;
     } else {
         return Super::mouse(e);
+//        return superResult;
     }
 }
 

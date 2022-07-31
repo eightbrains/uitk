@@ -11,8 +11,10 @@ set(UITK_HEADERS Application.h
                  Events.h
                  FileDialog.h
                  Global.h
+                 Icon.h
                  IncDecWidget.h
                  Label.h
+                 LabelCell.h
                  ListView.h
                  Menu.h
                  MenuUITK.h
@@ -27,6 +29,7 @@ set(UITK_HEADERS Application.h
                  ProgressBar.h
                  ScrollBar.h
                  ScrollView.h
+                 SearchBar.h
                  SegmentedControl.h
                  ShortcutKey.h
                  Slider.h
@@ -43,6 +46,8 @@ set(UITK_HEADERS Application.h
                  themes/Theme.h
                  themes/EmpireTheme.h
                  themes/VectorBaseTheme.h
+                 themes/IconPainter.h
+                 themes/StandardIconPainter.h
                  )
 set(UITK_SOURCES Application.cpp
                  Button.cpp
@@ -51,8 +56,10 @@ set(UITK_SOURCES Application.cpp
                  Cursor.cpp
                  Dialog.cpp
                  FileDialog.cpp
+                 Icon.cpp
                  IncDecWidget.cpp
                  Label.cpp
+                 LabelCell.cpp
                  ListView.cpp
                  Menu.cpp
                  MenubarUITK.cpp
@@ -63,6 +70,7 @@ set(UITK_SOURCES Application.cpp
                  ProgressBar.cpp
                  ScrollBar.cpp
                  ScrollView.cpp
+                 SearchBar.cpp
                  SegmentedControl.cpp
                  ShortcutKey.cpp
                  Slider.cpp
@@ -78,6 +86,7 @@ set(UITK_SOURCES Application.cpp
                  themes/Theme.cpp
                  themes/EmpireTheme.cpp
                  themes/VectorBaseTheme.cpp
+                 themes/StandardIconPainter.cpp
                  )
 set(UITK_LIBS "")
 

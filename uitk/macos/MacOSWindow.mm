@@ -513,6 +513,9 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
                                                    uitk::TextEditorLogic::Selection::CursorLocation::kEnd);
         }
         self.textEditor->setSelection(sel);
+        if (self.textEditor->onTextChanged) {
+            self.textEditor->onTextChanged();
+        }
 
         self.needsDisplay = YES;
     }

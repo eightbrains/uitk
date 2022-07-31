@@ -79,7 +79,7 @@ public:
             return Size(PicaPt::kZero, PicaPt::kZero);
         }
         auto font = context.theme.params().nonNativeMenubarFont;
-        auto h = context.theme.calcPreferredButtonSize(context.dc, font, "Ag").height;
+        auto h = context.theme.calcStandardHeight(context.dc, font);
         return Size(Widget::kDimGrow, h);
     }
 

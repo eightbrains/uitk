@@ -20,8 +20,8 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_STRING_EDIT_H
-#define UITK_STRING_EDIT_H
+#ifndef UITK_SEARCH_BAR_H
+#define UITK_SEARCH_BAR_H
 
 #include "Widget.h"
 
@@ -29,46 +29,26 @@
 
 namespace uitk {
 
-class StringEdit : public Widget
+class Icon;
+
+class SearchBar : public Widget
 {
     using Super = Widget;
 public:
-    StringEdit();
-    ~StringEdit();
+    SearchBar();
+    ~SearchBar();
+
+    Icon* icon() const;
 
     const std::string& text() const;
-    StringEdit* setText(const std::string& text);
+    SearchBar* setText(const std::string& text);
 
     const std::string& placeholderText() const;
-    StringEdit* setPlaceholderText(const std::string& text);
+    SearchBar* setPlaceholderText(const std::string& text);
 
     int alignment() const;
-    /// Sets the text alignment. Vertical alignment may be ignored for
-    /// single line widgets.
-    StringEdit* setAlignment(int alignment);
-
-    enum UseClearButton {
-        kNo = 0,
-        kYes,
-        kTheme,     // default
-    };
-    UseClearButton useClearButton() const;
-    StringEdit* setUseClearButton(UseClearButton use);
-
-    CutPasteable* asCutPasteable() override;
-    TextEditorLogic* asTextEditorLogic() override;
-
-    Size preferredSize(const LayoutContext& context) const override;
-    void layout(const LayoutContext& context) override;
-
-    EventResult mouse(const MouseEvent& e) override;
-    void mouseEntered() override;
-    void mouseExited() override;
-    void key(const KeyEvent& e) override;
-    void text(const TextEvent& e) override;
-    void keyFocusEnded() override;
-
-    void draw(UIContext& context) override;
+    /// Sets the text alignment; vertical alignment may be ignored.
+    SearchBar* setAlignment(int alignment);
 
     /// Called whenever the text changes in response to user input.
     /// Is not called when the text is changed directly through setText().
@@ -76,12 +56,16 @@ public:
 
     /// Called whenever the text is commited via Enter/Return or losing
     /// focus.
-    void setOnValueChanged(std::function<void(StringEdit*)> onChanged);
-    
+    void setOnValueChanged(std::function<void(SearchBar*)> onChanged);
+
+    Size preferredSize(const LayoutContext& context) const override;
+    void layout(const LayoutContext& context) override;
+    void draw(UIContext& context) override;
+
 private:
     struct Impl;
     std::unique_ptr<Impl> mImpl;
 };
 
 }  // namespace uitk
-#endif // UITK_STRING_EDIT_H
+#endif // UITK_SEARCH_BAR_H

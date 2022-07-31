@@ -470,6 +470,9 @@ void TextEditorLogic::cutToClipboard()
         copyToClipboard();
         deleteSelection();
     }
+    if (onTextChanged) {
+        onTextChanged();
+    }
 }
 
 void TextEditorLogic::pasteFromClipboard()
@@ -482,6 +485,9 @@ void TextEditorLogic::pasteFromClipboard()
         insertText(sel.start, clipString);
         sel.start += Index(clipString.size());
         setSelection(Selection(sel.start, sel.start, Selection::CursorLocation::kEnd));
+        if (onTextChanged) {
+            onTextChanged();
+        }
     }
 }
 

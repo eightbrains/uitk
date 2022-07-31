@@ -20,68 +20,52 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_STRING_EDIT_H
-#define UITK_STRING_EDIT_H
+#ifndef UITK_LABEL_CELL_H
+#define UITK_LABEL_CELL_H
 
 #include "Widget.h"
 
-#include <functional>
+#include <string>
 
 namespace uitk {
 
-class StringEdit : public Widget
-{
+class Icon;
+class Label;
+
+/// This is a convenience class that handles (optional) icon + (optional) text.
+/// It's raison d'etre is to allow widgets like Button and SegmentedControl
+/// to reuse code, so it is mostly expected to be an internal class, but is
+/// exposed in case anyone else needs it. (Note that the convention is for
+/// the owner of LabelCell to export the label() and icon() calls itself,
+/// since the existence of this class is an implementation detail that has
+/// no value for the user to know about.)
+class LabelCell : public Widget {
     using Super = Widget;
 public:
-    StringEdit();
-    ~StringEdit();
+    LabelCell();
+    ~LabelCell();
 
-    const std::string& text() const;
-    StringEdit* setText(const std::string& text);
+    // Q: since the pointer always exists, why not make this a reference?
+    // A: because C++ makes us play @#$! compiler with . and ->, and
+    //    everywhere else we return a pointer, so nobody is going to
+    //    remember to put a . instead of a -> here.
+    Label* label() const;  // pointer always exists
+    Icon* icon() const;  // pointer always exists
 
-    const std::string& placeholderText() const;
-    StringEdit* setPlaceholderText(const std::string& text);
-
-    int alignment() const;
-    /// Sets the text alignment. Vertical alignment may be ignored for
-    /// single line widgets.
-    StringEdit* setAlignment(int alignment);
-
-    enum UseClearButton {
-        kNo = 0,
-        kYes,
-        kTheme,     // default
-    };
-    UseClearButton useClearButton() const;
-    StringEdit* setUseClearButton(UseClearButton use);
-
-    CutPasteable* asCutPasteable() override;
-    TextEditorLogic* asTextEditorLogic() override;
+    /// Sets the color, but does not request a redraw. This is useful when
+    /// using the icon as a child of another object, so that the icon can
+    /// draw using the parent's style.
+    void setColorNoRedraw(const Color& c);
 
     Size preferredSize(const LayoutContext& context) const override;
     void layout(const LayoutContext& context) override;
+    void draw(UIContext& ui) override;
 
-    EventResult mouse(const MouseEvent& e) override;
-    void mouseEntered() override;
-    void mouseExited() override;
-    void key(const KeyEvent& e) override;
-    void text(const TextEvent& e) override;
-    void keyFocusEnded() override;
-
-    void draw(UIContext& context) override;
-
-    /// Called whenever the text changes in response to user input.
-    /// Is not called when the text is changed directly through setText().
-    void setOnTextChanged(std::function<void(const std::string&)> onChanged);
-
-    /// Called whenever the text is commited via Enter/Return or losing
-    /// focus.
-    void setOnValueChanged(std::function<void(StringEdit*)> onChanged);
-    
 private:
     struct Impl;
     std::unique_ptr<Impl> mImpl;
 };
 
 }  // namespace uitk
-#endif // UITK_STRING_EDIT_H
+#endif // UITK_LABEL_CELL_H
+

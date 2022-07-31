@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -23,7 +23,9 @@
 #include "SegmentedControl.h"
 
 #include "Events.h"
+#include "Icon.h"
 #include "Label.h"
+#include "LabelCell.h"
 #include "UIContext.h"
 #include "themes/Theme.h"
 
@@ -33,11 +35,13 @@ struct SegmentedControl::Impl
 {
     struct Item {
         std::string name;
+        Rect frame;
         Theme::WidgetState state = Theme::WidgetState::kNormal;
         bool isOn = false;
     };
     std::vector<Item> items;
     std::function<void(int)> onClicked;
+    DrawStyle drawStyle = DrawStyle::kNormal;
     Action action = Action::kButton;
 };
 
@@ -71,9 +75,54 @@ SegmentedControl* SegmentedControl::addItem(const std::string& name)
 {
     mImpl->items.push_back({name});
 
-    auto *label = new Label(name);
-    label->setAlignment(Alignment::kCenter);
-    addChild(label);  // calls setNeedsDraw(), we don't need to
+    auto *cell = new LabelCell();
+    cell->label()->setText(name);
+    cell->label()->setAlignment(Alignment::kCenter);
+    addChild(cell);  // calls setNeedsDraw(), we don't need to
+    return this;
+}
+
+SegmentedControl* SegmentedControl::addItem(Theme::StandardIcon icon)
+{
+    mImpl->items.push_back({""});
+
+    auto *cell = new LabelCell();
+    cell->icon()->setIcon(icon);
+    addChild(cell);
+    return this;
+}
+
+SegmentedControl* SegmentedControl::addItem(const Theme::Icon& icon)
+{
+    mImpl->items.push_back({""});
+
+    auto *cell = new LabelCell();
+    cell->icon()->setIcon(icon);
+    addChild(cell);
+    return this;
+}
+
+SegmentedControl* SegmentedControl::addItem(Theme::StandardIcon icon, const std::string& name)
+{
+    mImpl->items.push_back({name});
+
+    auto *cell = new LabelCell();
+    cell->icon()->setIcon(icon);
+    cell->label()->setText(name);
+    cell->label()->setAlignment(Alignment::kCenter);
+    addChild(cell);
+    return this;
+}
+
+SegmentedControl* SegmentedControl::addItem(const Theme::Icon& icon, const std::string& name)
+{
+    mImpl->items.push_back({name});
+
+    auto *cell = new LabelCell();
+    cell->icon()->setIcon(icon);
+    cell->label()->setText(name);
+    cell->label()->setAlignment(Alignment::kCenter);
+    addChild(cell);
     return this;
 }
 
@@ -114,6 +163,18 @@ SegmentedControl* SegmentedControl::setSegmentOn(int index, bool on)
     return this;
 }
 
+SegmentedControl::DrawStyle SegmentedControl::drawStyle() const
+{
+    return mImpl->drawStyle;
+}
+
+SegmentedControl* SegmentedControl::setDrawStyle(DrawStyle s)
+{
+    mImpl->drawStyle = s;
+    setNeedsDraw();
+    return this;
+}
+
 SegmentedControl* SegmentedControl::setOnClicked(std::function<void(int)> onClicked)
 {
     mImpl->onClicked = onClicked;
@@ -124,10 +185,11 @@ Size SegmentedControl::preferredSize(const LayoutContext& context) const
 {
     Size pref;
     auto font = context.theme.params().labelFont;
-    for (auto &item : mImpl->items) {
-        Size segPref = context.theme.calcPreferredSegmentSize(context.dc, font, item.name);
-        pref.width += segPref.width;
-        pref.height = std::max(pref.height, segPref.height);
+    auto margins = context.theme.calcPreferredSegmentMargins(context.dc, font);
+    for (auto *item : children()) {
+        auto segPref = item->preferredSize(context);
+        pref.width += segPref.width + 2.0f * margins.width;
+        pref.height = std::max(pref.height, segPref.height + 2.0f * margins.height);
     }
     return pref;
 }
@@ -137,13 +199,17 @@ void SegmentedControl::layout(const LayoutContext& context)
     if (!mImpl->items.empty()) {
         auto b = bounds();
         PicaPt total = PicaPt::kZero;
+        std::vector<PicaPt> prefs;
         std::vector<PicaPt> widths;
+        prefs.reserve(mImpl->items.size());
         widths.reserve(mImpl->items.size());
         auto font = context.theme.params().labelFont;
-        for (auto &item : mImpl->items) {
-            Size pref = context.theme.calcPreferredSegmentSize(context.dc, font, item.name);
-            widths.push_back(pref.width);
-            total += pref.width;
+        auto margins = context.theme.calcPreferredSegmentMargins(context.dc, font);
+        for (auto *item : children()) {
+            auto segPref = item->preferredSize(context);
+            prefs.push_back(segPref.width);
+            widths.push_back(segPref.width + 2.0f * margins.width);
+            total += widths.back();
         }
 
         if (total != b.width) {
@@ -157,7 +223,10 @@ void SegmentedControl::layout(const LayoutContext& context)
         auto x = PicaPt::kZero;
         int i = 0;
         for (auto child : children()) {
-            child->setFrame(Rect(x, PicaPt::kZero, widths[i], b.height));
+            auto w = std::min(prefs[i], widths[i]);
+            auto xMargin = context.dc.roundToNearestPixel(0.5f * (widths[i] - w));
+            child->setFrame(Rect(x + xMargin, PicaPt::kZero, w, b.height));
+            mImpl->items[i].frame = Rect(x, PicaPt::kZero, widths[i], b.height);
             x += widths[i];
             i++;
         }
@@ -178,7 +247,7 @@ Widget::EventResult SegmentedControl::mouse(const MouseEvent& e)
         result = EventResult::kConsumed;
     } else if (e.type == MouseEvent::Type::kButtonUp) {
         for (size_t i = 0;  i < mImpl->items.size();  ++i) {
-            if (children()[i]->frame().contains(e.pos)) {
+            if (mImpl->items[i].frame.contains(e.pos)) {
                 switch (mImpl->action) {
                     case Action::kSelectOne:
                         setSegmentOn(int(i), true);
@@ -237,24 +306,25 @@ void SegmentedControl::mouseExited()
 void SegmentedControl::draw(UIContext& context)
 {
     auto ctrlState = enabled() ? Theme::WidgetState::kNormal : Theme::WidgetState::kDisabled;
-    context.theme.drawSegmentedControl(context, bounds(), style(ctrlState), ctrlState);
+    auto ds = (mImpl->drawStyle == DrawStyle::kNoDecoration
+                    ? Theme::SegmentDrawStyle::kNoDecoration
+                    : Theme::SegmentDrawStyle::kNormal);
+    context.theme.drawSegmentedControl(context, bounds(), ds, style(ctrlState), ctrlState);
     int nItems = int(mImpl->items.size());
     for (int i = 0;  i < nItems;  ++i) {
         auto &item = mImpl->items[i];
         if (item.isOn || item.state != Theme::WidgetState::kNormal) {
-            context.theme.drawSegment(context, children()[i]->frame(), item.state,
+            context.theme.drawSegment(context, item.frame, ds, item.state,
                                       mImpl->action == Action::kButton,
                                       item.isOn, i, nItems);
         }
-        auto ws = context.theme.segmentTextStyle(item.state, item.isOn);
-        static_cast<Label*>(children()[i])->setTextColorNoRedraw(ws.fgColor);
+        auto ws = context.theme.segmentTextStyle(item.state, ds, item.isOn);
+        static_cast<LabelCell*>(children()[i])->setColorNoRedraw(ws.fgColor);
     }
 
-    const auto &childs = children();
-    for (size_t i = 1;  i < childs.size();  ++i) {
-        auto *child = childs[i];
-        context.theme.drawSegmentDivider(context, child->frame().upperLeft(), child->frame().lowerLeft(),
-                                         style(ctrlState), ctrlState);
+    for (auto &item : mImpl->items) {
+        context.theme.drawSegmentDivider(context, item.frame.upperLeft(), item.frame.lowerLeft(),
+                                         ds, style(ctrlState), ctrlState);
     }
 
     Super::draw(context);
