@@ -1109,6 +1109,11 @@ void Window::onMenuActivated(MenuId id)
     }
 }
 
+void Window::onThemeChanged()
+{
+    mImpl->rootWidget->themeChanged();
+}
+
 bool Window::onWindowShouldClose()
 {
     // Some X11 window managers let you click the close button even if it has 

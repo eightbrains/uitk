@@ -52,9 +52,10 @@ public:
     virtual void onKey(const KeyEvent& e) = 0;
     virtual void onText(const TextEvent& e) = 0;
     virtual void onActivated(const Point& currentMousePos) = 0;
+    virtual void onDeactivated() = 0;
     virtual void onMenuWillShow() = 0;
     virtual void onMenuActivated(MenuId id) = 0;
-    virtual void onDeactivated() = 0;
+    virtual void onThemeChanged() = 0;
     virtual bool onWindowShouldClose() = 0;
     virtual void onWindowWillClose() = 0;
 };

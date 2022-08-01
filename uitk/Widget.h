@@ -166,6 +166,11 @@ public:
 
     virtual void text(const TextEvent& e);
 
+    /// Called when the theme changes. Generally there is no need to overrid this,
+    /// but if anything like text, text font, or text color is cached, it should
+    /// be cleared here (as well as anywhere else relevant).
+    virtual void themeChanged();
+
     /// Draws the widget. Classes inheriting from Widget must draw the frame
     /// themselves with Theme::drawFrame() or the desired equivalent. (This
     /// permits widgets to draw the frame differently if they desire.

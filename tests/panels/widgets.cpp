@@ -135,31 +135,27 @@ public:
 
     void layout(const LayoutContext& context) override
     {
-        auto setToPref = [&context](Widget *w) {
-            auto pref = w->preferredSize(context);
-            w->setFrame(Rect(PicaPt(0), PicaPt(0), pref.width, pref.height));
-        };
-
-        for (auto *child : children()) {
-            setToPref(child);
-        }
-
         auto em = context.theme.params().labelFont.pointSize();
         auto wrappedWidth = 12.0f * em;
-        mWrapped->setSize(Size(wrappedWidth,
-                               mWrapped->preferredSize(context.withWidth(wrappedWidth)).height));
 
         PicaPt y(8);
-        mDefaultLabel->setPosition(Point(PicaPt(8), y));
-        mWrapped->setPosition(mDefaultLabel->frame().upperRight() + Point(PicaPt(8), PicaPt::kZero));
+        auto pref = mDefaultLabel->preferredSize(context);
+        mDefaultLabel->setFrame(Rect(PicaPt(8), y, pref.width, pref.height));
+        pref = mWrapped->preferredSize(context.withWidth(wrappedWidth));
+        mWrapped->setFrame(Rect(mDefaultLabel->frame().maxX() + PicaPt(8), PicaPt::kZero,
+                                wrappedWidth, pref.height));
         y += mWrapped->frame().height + PicaPt(8);
-        mHoriz->setPosition(Point(PicaPt(8), y));
-        mVert->setPosition(Point(mHoriz->frame().maxX() + PicaPt(8), y));
-        mWrapLabel->setPosition(Point(mVert->frame().maxX() + PicaPt(8), y));
+        pref = mHoriz->preferredSize(context);
+        mHoriz->setFrame(Rect(PicaPt(8), y, pref.width, pref.height));
+        pref = mVert->preferredSize(context);
+        mVert->setFrame(Rect(mHoriz->frame().maxX() + PicaPt(8), y, pref.width, pref.height));
+        pref = mWrapLabel->preferredSize(context);
+        mWrapLabel->setFrame(Rect(mVert->frame().maxX() + PicaPt(8), y, pref.width, pref.height));
 
+        pref = mLabel->preferredSize(context);
         mLabel->setFrame(Rect(mHoriz->frame().x, mHoriz->frame().maxY() + PicaPt(8),
                               15.0f * mHoriz->frame().height,
-                              3.0f * mLabel->frame().height));
+                              3.0f * pref.height));
 
         Super::layout(context);
     }
@@ -253,43 +249,41 @@ public:
 
     void layout(const LayoutContext& context) override
     {
-        auto setToPref = [&context](Widget *w) {
-            auto pref = w->preferredSize(context);
-            w->setFrame(Rect(PicaPt(0), PicaPt(0), pref.width, pref.height));
-        };
-
-        for (auto *child : children()) {
-            setToPref(child);
-        }
-
         auto x = PicaPt::kZero;
         auto y = PicaPt::kZero;
-        mHappy->setFrame(Rect(x, y, mHappy->frame().width, mHappy->frame().height));
-        mAngry->setFrame(Rect(mHappy->frame().maxX(), y, mAngry->frame().width, mAngry->frame().height));
-        mDisabled->setFrame(Rect(mAngry->frame().maxX(), y, mDisabled->frame().width, mDisabled->frame().height));
-        mLabel->setFrame(Rect(mDisabled->frame().maxX(), y, 3.0f * mLabel->frame().height, mLabel->frame().height));
+
+        auto pref = mHappy->preferredSize(context);
+        mHappy->setFrame(Rect(x, y, pref.width, pref.height));
+        pref = mAngry->preferredSize(context);
+        mAngry->setFrame(Rect(mHappy->frame().maxX(), y, pref.width, pref.height));
+        pref = mDisabled->preferredSize(context);
+        mDisabled->setFrame(Rect(mAngry->frame().maxX(), y, pref.width, pref.height));
+        pref = mLabel->preferredSize(context);
+        mLabel->setFrame(Rect(mDisabled->frame().maxX(), y, 3.0f * pref.height, pref.height));
 
         auto em = context.theme.params().labelFont.pointSize();
+        pref = mIconAndText->preferredSize(context);
         mIconAndText->setFrame(Rect(context.dc.roundToNearestPixel(mLabel->frame().maxX()),
-                                    y, mIconAndText->frame().width, mIconAndText->frame().height));
-        mIconOnly->setFrame(Rect(mIconAndText->frame().maxX(), y,
-                                 mIconOnly->frame().width, mIconOnly->frame().height));
-        mUndecoratedNormal->setFrame(Rect(mIconOnly->frame().maxX(), y,
-                                          mUndecoratedNormal->frame().width,
-                                          mUndecoratedNormal->frame().height));
+                                    y, pref.width, pref.height));
+        pref = mIconOnly->preferredSize(context);
+        mIconOnly->setFrame(Rect(mIconAndText->frame().maxX(), y, pref.width, pref.height));
+        pref = mUndecoratedNormal->preferredSize(context);
+        mUndecoratedNormal->setFrame(Rect(mIconOnly->frame().maxX(), y, pref.width, pref.height));
 
         y += 1.5f * mHappy->frame().height;
-        mOnOff->setFrame(Rect(x, y, mOnOff->frame().width, mOnOff->frame().height));
-        mOnOffDisabled->setFrame(Rect(mOnOff->frame().maxX(), y,
-                                      mOnOffDisabled->frame().width, mOnOffDisabled->frame().height));
+        pref = mOnOff->preferredSize(context);
+        mOnOff->setFrame(Rect(x, y, pref.width, pref.height));
+        pref = mOnOffDisabled->preferredSize(context);
+        mOnOffDisabled->setFrame(Rect(mOnOff->frame().maxX(), y, pref.width, pref.height));
 
-        mUndecorated1->setFrame(Rect(mIconAndText->frame().x, y,
-                                     mIconAndText->frame().width, mIconAndText->frame().height));
-        mUndecorated2->setFrame(Rect(mIconOnly->frame().x, y,
-                                     mIconOnly->frame().width, mIconOnly->frame().height));
+        pref = mUndecorated1->preferredSize(context);
+        mUndecorated1->setFrame(Rect(mIconAndText->frame().x, y, pref.width, pref.height));
+        pref = mUndecorated2->preferredSize(context);
+        mUndecorated2->setFrame(Rect(mIconOnly->frame().x, y, pref.width, pref.height));
 
         y += 1.5f * mHappy->frame().height;
-        mCheckbox->setFrame(Rect(x, y, mCheckbox->frame().width, mCheckbox->frame().height));
+        pref = mCheckbox->preferredSize(context);
+        mCheckbox->setFrame(Rect(x, y, pref.width, pref.height));
 
         Super::layout(context);
     }

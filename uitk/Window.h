@@ -253,6 +253,7 @@ public:
     void onDeactivated() override;
     void onMenuWillShow() override;
     void onMenuActivated(MenuId id) override;
+    void onThemeChanged() override;
     bool onWindowShouldClose() override;
     void onWindowWillClose() override;
 

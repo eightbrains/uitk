@@ -520,6 +520,13 @@ void Widget::text(const TextEvent& e)
 {
 }
 
+void Widget::themeChanged()
+{
+    for (auto *child : mImpl->children) {
+        child->themeChanged();
+    }
+}
+
 void Widget::draw(UIContext& context)
 {
     // If we are truly just a Widget (instead of a derived class that is

@@ -234,6 +234,9 @@ void Application::onSystemThemeChanged()
 {
     if (mImpl->theme) {
         mImpl->theme->setParams(mImpl->osApp->themeParams());
+        for (auto &w : mImpl->windows) {
+            w->onThemeChanged();
+        }
         // OS should invalidate windows
     }
 }
