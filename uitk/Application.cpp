@@ -39,6 +39,8 @@
 #include "x11/X11Application.h"
 #endif
 
+#include <unistd.h>
+
 #include <assert.h>
 #include <algorithm>
 
@@ -134,6 +136,14 @@ std::string Application::applicationName() const
 void Application::beep()
 {
     mImpl->osApp->beep();
+}
+
+std::string Application::currentPath() const
+{
+    char *cwd = getwd(nullptr);
+    std::string path(cwd);
+    free(cwd);
+    return path;
 }
 
 bool Application::isOriginInUpperLeft() const

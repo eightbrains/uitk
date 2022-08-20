@@ -1,6 +1,7 @@
 set(ND_NAMESPACE "uitk")
 
-set(UITK_HEADERS Application.h
+set(UITK_PUBLIC_HEADERS
+                 Application.h
                  Button.h
                  Checkbox.h
                  Clipboard.h
@@ -41,14 +42,19 @@ set(UITK_HEADERS Application.h
                  UIContext.h
                  Widget.h
                  Window.h
-                 private/MenuIterator.h
-                 private/Utils.h
                  themes/Theme.h
                  themes/EmpireTheme.h
                  themes/VectorBaseTheme.h
                  themes/IconPainter.h
                  themes/StandardIconPainter.h
+                 io/Directory.h
+                 io/File.h
+                 io/FileSystemNode.h
+                 io/IOError.h
                  )
+set(UITK_HEADERS ${UITK_PUBLIC_HEADERS}
+                 private/MenuIterator.h
+                 private/Utils.h)
 set(UITK_SOURCES Application.cpp
                  Button.cpp
                  Checkbox.cpp
@@ -87,6 +93,10 @@ set(UITK_SOURCES Application.cpp
                  themes/EmpireTheme.cpp
                  themes/VectorBaseTheme.cpp
                  themes/StandardIconPainter.cpp
+                 io/Directory.cpp
+                 io/File.cpp
+                 io/FileSystemNode.cpp
+                 io/IOError.cpp
                  )
 set(UITK_LIBS "")
 
@@ -221,3 +231,16 @@ if (APPLE)
     # callers do not need to have ARC enabled, hence PRIVATE is sufficient.
     target_compile_options(uitk PRIVATE "-fobjc-arc")
 endif()
+
+# set_target_properties(uitk PROPERTIES PUBLIC_HEADER "${UITK_PUBLIC_HEADERS}")
+# would install the headers automatically (without an install() command) along
+# with the exectuable. However, it uses the top-level source and not the
+# current source. So it's easier just to install them as files.
+foreach (file ${UITK_PUBLIC_HEADERS})  # this way keeps directory structure
+    get_filename_component(dir ${file} DIRECTORY)
+    install(FILES ${file} DESTINATION ${CMAKE_INSTALL_PREFIX}/include/${dir})
+endforeach()
+install(FILES uitk.h DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
+install(FILES ${LIBNATIVEDRAW_PREFIX}/include/nativedraw.h
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
+install(TARGETS uitk LIBRARY)
