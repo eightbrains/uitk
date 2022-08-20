@@ -22,10 +22,30 @@
 
 #include "Directory.h"
 
-#include <dirent.h>
+//#include <dirent.h>
 #include <errno.h>
 #include <sys/stat.h> // for mkdir()
-#include <unistd.h>   // for rmdir()  (seriously?!)
+// for rmdir() (seriously guys, why isn't this with mkdir()?!)
+#if defined(_WIN32) || defined(_WIN64)
+#include <direct.h>
+#else
+#include <unistd.h>
+#endif
+
+// Some macOS around Mojave (10.14) do not support std::filesystem, and
+// Ubuntu 18.04 has GCC 7.5, which also does not support std::filesystem yet.
+// (It may be supported with #include <experimental/filesystem> and linking
+// with -lstdc++fs, but all that is too much hassle)
+// Plus, it may not be very performant (see stdFilesystemEntries())
+#if defined(_WIN32) || defined(_WIN64)
+#define USE_STD_FILESYSTEM 1
+#else
+#define USE_STD_FILESYSTEM 0
+#endif
+
+#if USE_STD_FILESYSTEM
+#include <filesystem>
+#endif // USE_STD_FILESYSTEM
 
 namespace uitk {
 
@@ -43,39 +63,59 @@ std::string Directory::Entry::extension() const
     }
 }
 
-Directory::Directory()
+// I believe that std::filesystem::directory_entry::is_directory(), etc.
+// make a system call, so we need an extra stat() call. Plus we have to
+// extract the path. All this could make this function really slow, so I'm
+// not sure using this is a good idea, particularly on Unix.
+#if USE_STD_FILESYSTEM
+std::vector<Directory::Entry> stdFilesystemGetEntries(const Directory& dir, IOError::Error *err)
 {
-}
+    std::vector<Directory::Entry> entries;
 
-Directory::Directory(const std::string& path)
-    : FileSystemNode(path)
-{
-}
-
-IOError::Error Directory::mkdir()
-{
-    if (::mkdir(mPath.c_str(), 0777) < 0) {
-        IOError::fromErrno(errno);
+    // Note that we want to use the error code versions to avoid exceptions 
+    std::error_code ec, ec2;
+    for (auto const& entry : std::filesystem::directory_iterator(dir.path(), ec)) {
+        auto name = entry.path().filename().u8string();  // always UTF-8
+        if (name != "." && name != "..") {
+            auto stat = entry.status(ec2); // should not fail...
+            auto fileType = stat.type();
+            entries.push_back({ name,
+                                fileType == std::filesystem::file_type::directory,
+                                fileType == std::filesystem::file_type::regular,
+                                fileType == std::filesystem::file_type::symlink
+                              });
+        }
     }
-    return IOError::kNone;
-}
-
-IOError::Error Directory::remove()
-{
-    if (::rmdir(mPath.c_str()) < 0) {
-        return IOError::fromErrno(errno);
+    if (ec.value() != 0) {
+        // This is null if the path cannot be accessed, or if we are out of memory.
+        // Do some checks to give a better error.
+        if (!dir.exists()) {
+            *err = IOError::kPathDoesNotExist;
+        } else if (!dir.isDir()) {
+            *err = IOError::kPathComponentIsNotDir;
+        } else {
+            *err = IOError::kNoMemory;
+        }
     }
-    return IOError::kNone;
+    return entries;
 }
+#endif // USE_STD_FILESYSTEM
 
-std::vector<Directory::Entry> Directory::entries(IOError::Error *err) const
+#if defined(_WIN32) || defined(_WIN64)
+std::vector<Directory::Entry> windowsGetEntries(const Directory& dir, IOError::Error *err)
 {
-    std::vector<Entry> entries;
+    std::vector<Directory::Entry> entries;
+    return entries;
+}
+#endif // isWindows
 
-    // std::filesystem is not supported everywhere. macOS 10.14 (Mojave)
-    // and Ubuntu 18.04, for instance, do not support it.
+#if !(defined(_WIN32) || defined(_WIN64))
+std::vector<Directory::Entry> posixGetEntries(const Directory& dir, IOError::Error *err)
+{
+    std::vector<Directory::Entry> entries;
+
     struct dirent *entry;
-    DIR *d = opendir(mPath.c_str());
+    DIR *d = opendir(dir.path().c_str());
     if (d) {
         do {
             entry = readdir(d);
@@ -99,9 +139,9 @@ std::vector<Directory::Entry> Directory::entries(IOError::Error *err) const
         if (err) {
             // This is null if the path cannot be accessed, or if we are out of memory.
             // Do some checks to give a better error.
-            if (!exists()) {
+            if (!dir.exists()) {
                 *err = IOError::kPathDoesNotExist;
-            } else if (!isDir()) {
+            } else if (!dir.isDir()) {
                 *err = IOError::kPathComponentIsNotDir;
             } else {
                 *err = IOError::kNoMemory;
@@ -109,6 +149,52 @@ std::vector<Directory::Entry> Directory::entries(IOError::Error *err) const
         }
     }
     return entries;
+}
+#endif  // !isWindows
+
+
+//-----------------------------------------------------------------------------
+Directory::Directory()
+{
+}
+
+Directory::Directory(const std::string& path)
+    : FileSystemNode(path)
+{
+}
+
+IOError::Error Directory::mkdir()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    if (::_mkdir(mPath.c_str()) < 0) {
+#else
+    if (::mkdir(mPath.c_str(), 0777) < 0) {
+#endif
+        IOError::fromErrno(errno);
+    }
+    return IOError::kNone;
+}
+
+IOError::Error Directory::remove()
+{
+#if defined(_WIN32) || defined(_WIN64)
+    if (::_rmdir(mPath.c_str()) < 0) {
+#else
+    if (::rmdir(mPath.c_str()) < 0) {
+#endif
+        return IOError::fromErrno(errno);
+    }
+    return IOError::kNone;
+}
+
+std::vector<Directory::Entry> Directory::entries(IOError::Error *err) const
+{
+#if USE_STD_FILESYSTEM
+    return stdFilesystemGetEntries(*this, err);
+#else
+    return posixGetEntries(*this, err);
+#endif
+
 }
 
 } // namespace uitk

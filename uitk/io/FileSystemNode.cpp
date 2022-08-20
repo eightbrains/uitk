@@ -25,7 +25,6 @@
 #include <errno.h>
 #include <sys/stat.h>
 #include <stdio.h>  // for rename()
-#include <unistd.h> // for unlink()
 
 namespace uitk {
 
@@ -52,6 +51,17 @@ FileSystemNode::FileSystemNode(const std::string& path)
 
 FileSystemNode::~FileSystemNode()
 {
+}
+
+std::string FileSystemNode::calcWindowsPath() const
+{
+    auto mspath = mPath;  // copy
+    for (auto& c : mspath) {
+        if (c == '/') {
+            c = '\\';
+        }
+    }
+    return mspath;
 }
 
 const std::string& FileSystemNode::path() const { return mPath; }

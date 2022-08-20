@@ -39,7 +39,12 @@
 #include "x11/X11Application.h"
 #endif
 
+// getwd/_getcwd
+#if defined(_WIN32) || defined(_WIN64)
+#include <direct.h>
+#else
 #include <unistd.h>
+#endif
 
 #include <assert.h>
 #include <algorithm>
@@ -133,17 +138,27 @@ std::string Application::applicationName() const
     return mImpl->osApp->applicationName();
 }
 
-void Application::beep()
+std::string Application::tempDir() const
 {
-    mImpl->osApp->beep();
+    return mImpl->osApp->tempDir();
 }
 
 std::string Application::currentPath() const
 {
+#if defined(_WIN32) || defined(_WIN64)
+    // If buffer is nullptr, mallocs a buffer at least this big, more if necessary
+    char *cwd = _getcwd(nullptr, 256);
+#else
     char *cwd = getwd(nullptr);
+#endif
     std::string path(cwd);
     free(cwd);
     return path;
+}
+
+void Application::beep()
+{
+    mImpl->osApp->beep();
 }
 
 bool Application::isOriginInUpperLeft() const

@@ -25,6 +25,8 @@
 #include <iostream>
 #include <sstream>
 
+std::string getTempDir();
+
 class TestCase
 {
 public:
@@ -61,19 +63,6 @@ private:
 };
 
 //-----------------------------------------------------------------------------
-namespace {
-std::string tempDirectory()
-{
-#if defined(_WIN32) || defined(_WIN64)
-    return "c:/windows/temp";
-#else
-    return "/tmp";
-#endif  // Windows
-}
-
-}
-
-//-----------------------------------------------------------------------------
 using namespace uitk;
 
 class FileTest : public TestCase
@@ -83,7 +72,7 @@ public:
 
     std::string run() override
     {
-        auto tmpdir = tempDirectory();
+        auto tmpdir = getTempDir();
         File file(tmpdir + "/test_xkasdp.txt");
 
         // Init: ensure the file does not exist to being
@@ -262,7 +251,7 @@ public:
 
     std::string run() override
     {
-        auto tmpdir = tempDirectory();
+        auto tmpdir = getTempDir();
         std::string root = tmpdir + "/test_rootdir_chkewhf";
         std::string subdir = root + "/test_subdir";
         std::string subfile = root + "/test_file";
@@ -362,8 +351,25 @@ protected:
     }
 };
 
+#if defined(_WIN32) || defined(_WIN64)
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+std::string getTempDir()
+{
+    char path[MAX_PATH + 2];
+    GetTempPathA(MAX_PATH + 1, path);
+    std::string s(path);
+    if (!s.empty() && s.back() == '\\') {
+        s.pop_back();
+    }
+    return s;
+}
+#else
+std::string getTempDir() { return "/tmp"; }
+#endif
+
 //-----------------------------------------------------------------------------
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     std::vector<std::shared_ptr<TestCase>> tests = {
         std::make_shared<FileTest>(),

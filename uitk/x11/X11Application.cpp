@@ -300,6 +300,11 @@ std::string X11Application::applicationName() const
     return std::string(gBinaryName);
 }
 
+std::string tempDir() const
+{
+    return "/tmp";
+}
+
 void X11Application::beep()
 {
     if (mImpl->display) {

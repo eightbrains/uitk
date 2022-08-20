@@ -22,31 +22,96 @@
 
 #include "File.h"
 
+#include <assert.h>
 #include <errno.h>
 #include <fcntl.h> // for open()
-#include <sys/mman.h>
 #include <sys/types.h>
-#include <unistd.h> // for close() (seriously guys?!)
+
+// For fopen(), ftell(), fseeko()
+#if defined(_WIN32) || defined(_WIN64)
+#define ftello _ftelli64
+#define fseeko _fseeki64
+#endif
+
+// for unlink()
+#if defined(_WIN32) || defined(_WIN64)
+#include <io.h>  // also requires stdio.h which is already included
+#else
+#include <unistd.h>
+#endif
+
+// for mmap()
+#if defined(_WIN32) || defined(_WIN64)
+#define WIN32_LEAN_AND_MEAN
+#include <map>
+#include <windows.h>
+#include "../win32/Win32Utils.h"
+#else
+#include <sys/mman.h>
+#endif
 
 namespace uitk {
+
+#if defined(_WIN32) || defined(_WIN64)
+struct MappingInfo
+{
+    HANDLE hFile;
+    HANDLE hFileMap;
+};
+// Keep a global mapping table keyed on the mapped address (which should be unique!),
+// so that we can keep the implementation details (i.e. the OS handles) out of the
+// File::MappingAddress object definition.
+std::map<char*, MappingInfo> gWin32MappingInfo;
+
+IOError::Error win32ErrorToIOError(int win32err)
+{
+    switch (win32err) {
+        case ERROR_SUCCESS:
+            return IOError::kNone;
+        case ERROR_FILE_NOT_FOUND:
+        case ERROR_PATH_NOT_FOUND:
+            return IOError::kPathDoesNotExist;
+        case ERROR_ACCESS_DENIED:
+            return IOError::kNoPermission;
+        case ERROR_NOT_ENOUGH_MEMORY:
+        case ERROR_OUTOFMEMORY:
+            return IOError::kNoMemory;
+        default:
+            return IOError::kOther;
+    }
+}
+#endif // win32
 
 template <class T>
 void readFileContents(const std::string& path, T *contents, IOError::Error *err)
 {
+#if defined(_WIN32) || defined(_WIN64)
+    FILE *in;
+    errno_t e = fopen_s(&in, path.c_str(), "rb");   // with no "b" windows converts \n -> \r\n
+    if (e) {
+        if (err) {
+            *err = IOError::fromErrno(e);
+        }
+        return;
+    }
+#else
     FILE *in = fopen(path.c_str(), "rb");  // with no "b" windows converts \n -> \r\n
+    if (!in) {
+        if (err) {
+            *err = IOError::fromErrno(errno);
+        }
+        return;
+    }
+#endif
     if (in) {
         fseeko(in, 0, SEEK_END);
-        off_t size = ftello(in);
+        auto size = ftello(in);
         contents->resize(size);
         fseeko(in, 0, SEEK_SET);
         fread(contents->data(), size, 1, in);
         fclose(in);
         if (err) {
             *err = IOError::kNone;
-        }
-    } else {
-        if (err) {
-            *err = IOError::fromErrno(errno);
         }
     }
 }
@@ -59,82 +124,7 @@ File::File(const std::string& path)
     : FileSystemNode(path)
 {
 }
-/*
-const std::string& File::path() const { return mPath; }
 
-std::string File::directoryPath() const
-{
-    auto idx = mPath.rfind('/');
-    if (idx != std::string::npos) {
-        if (idx == 0) {
-            return "/";
-        } else {
-            return mPath.substr(0, idx - 1);
-        }
-    } else {
-        return "";
-    }
-}
-
-std::string File::extension() const
-{
-    auto idx = mPath.rfind('.');
-    if (idx != std::string::npos) {
-        if (idx == 0) {
-            return "";  // dotfiles have no extension
-        } else {
-            return mPath.substr(idx + 1, mPath.size() - (idx + 1));
-        }
-    } else {
-        return "";
-    }
-}
-
-bool File::exists() const
-{
-    struct stat info;
-    if (stat(mPath.c_str(), &info) != -1) {
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool File::isFile() const
-{
-    struct stat info;
-    if (stat(mPath.c_str(), &info) != -1) {
-        return (info.st_mode & S_IFREG);
-    } else {
-        return false;
-    }
-}
-
-bool File::isDir() const
-{
-    struct stat info;
-    if (stat(mPath.c_str(), &info) != -1) {
-        return (info.st_mode & S_IFDIR);
-    } else {
-        return false;
-    }
-}
-
-uint64_t File::size(IOError *err) const
-{
-    struct stat info;
-    if (stat(mPath.c_str(), &info) != -1) {
-        if (err) {
-            *err = IOError::kNone;
-        }
-        return info.st_size;
-    }
-    if (err) {
-        *err = errnoToIOError(errno);
-    }
-    return 0;
-}
-*/
 std::string File::readContentsAsString(IOError::Error *err) const
 {
     std::string contents;
@@ -161,7 +151,18 @@ IOError::Error File::writeContents(const std::vector<char>& contents)
 
 IOError::Error File::writeContents(const char *contents, uint64_t size)
 {
+#if defined(_WIN32) || defined(_WIN64)
+    FILE *out;
+    errno_t e = fopen_s(&out, mPath.c_str(), "wb");   // with no "b" windows converts \n -> \r\n
+    if (e) {
+        return IOError::fromErrno(e);
+    }
+#else
     FILE *out = fopen(mPath.c_str(), "wb");  // with no "b" windows converts \n -> \r\n
+    if (!out) {
+        return IOError::fromErrno(errno);
+    }
+#endif
     if (out) {
         fwrite(contents, size, 1, out);
         fclose(out);
@@ -183,7 +184,8 @@ File::MappedAddress File::mmap(IOError::Error *err) const
         return addr;
     }
 
-    // Newer mmap (macOS, Linux >= 2.6.12) return EINVAL for empty files
+    // Newer mmap (macOS, Linux >= 2.6.12) return EINVAL for empty files.
+    // Win32 also fails mapping an empty file.
     if (fileLen == 0) {
         if (err) {
             *err = IOError::kNone;
@@ -191,6 +193,39 @@ File::MappedAddress File::mmap(IOError::Error *err) const
         return addr;
     }
 
+#if defined(_WIN32) || defined(_WIN64)
+    auto path = win32UnicodeFromUTF8(calcWindowsPath());
+    HANDLE hFile = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (!hFile) {
+        if (err) {
+            *err = win32ErrorToIOError(GetLastError());
+        }
+        return addr;
+    }
+    HANDLE hFileMap = CreateFileMappingW(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
+    if (!hFileMap) {
+        if (err) {
+            *err = win32ErrorToIOError(GetLastError());
+        }
+        return addr;
+    }
+    addr.addr = (char *)MapViewOfFile(hFileMap, FILE_MAP_READ,
+                                      0, 0, // high and low bytes of offset (i.e 0)
+                                      0);   // map to end of file
+    if (!addr.addr) {
+        if (err) {
+            *err = win32ErrorToIOError(GetLastError());
+        }
+        CloseHandle(hFile);
+        return addr;
+    }
+    if (err) {
+        *err = IOError::kNone;
+    }
+    addr.len = fileLen;
+    assert(gWin32MappingInfo.find(addr.addr) == gWin32MappingInfo.end());
+    gWin32MappingInfo[addr.addr] = { hFile, hFileMap };
+#else
     auto fd = ::open(mPath.c_str(), O_RDONLY);
     if (fd == -1) {
         if (err) {
@@ -217,6 +252,7 @@ File::MappedAddress File::mmap(IOError::Error *err) const
             *err = IOError::fromErrno(errno);
         }
     }
+#endif
 
     return addr;
 }
@@ -226,7 +262,17 @@ void File::munmap(const File::MappedAddress& mapping)
     if (!mapping.addr) {
         return;
     }
+#if defined(_WIN32) || defined(_WIN64)
+    UnmapViewOfFile(mapping.addr);
+    auto infoIt = gWin32MappingInfo.find(mapping.addr);
+    if (infoIt != gWin32MappingInfo.end()) {
+        CloseHandle(infoIt->second.hFileMap);
+        CloseHandle(infoIt->second.hFile);
+        gWin32MappingInfo.erase(infoIt);
+    }
+#else
     ::munmap(mapping.addr, mapping.len);
+#endif
 }
 
 // ----
@@ -366,7 +412,11 @@ IOError::Error File::rename(const std::string& newPath)
 */
 IOError::Error File::remove()
 {
+#if defined(_WIN32) || defined(_WIN64)
+    if (::_unlink(mPath.c_str()) < 0) {
+#else
     if (::unlink(mPath.c_str()) < 0) {
+#endif
         return IOError::fromErrno(errno);
     }
     return IOError::kNone;

@@ -78,13 +78,16 @@ public:
     /// the About dialog, and can be useful for window titles).
     std::string applicationName() const;
 
+    /// Returns the current working directory of the process.
+    std::string currentPath() const;
+
+    /// Returns a temp directory for writing in.
+    std::string tempDir() const;
+
     /// Plays a beep, usually when a keypress is rejected. (This is used
     /// to produce the beep when a pressing a keyboard shortcut for a menu
     /// item, and we are not using native OS menus.)
     void beep();
-
-    /// Returns the current working directory of the process.
-    std::string currentPath() const;
 
     /// Returns true if the operating system's coordinate system has the
     /// origin in the upper left (Linux, Windows), otherwise false (macOS,

@@ -62,6 +62,9 @@ public:
     virtual IOError::Error remove() = 0;
 
 protected:
+    /// Returns the path using backslashes instead of forward slashes
+    std::string calcWindowsPath() const;
+
     std::string mPath;
 };
 

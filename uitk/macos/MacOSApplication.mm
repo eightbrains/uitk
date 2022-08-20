@@ -152,6 +152,11 @@ std::string MacOSApplication::applicationName() const
     return std::string(NSRunningApplication.currentApplication.localizedName.UTF8String);
 }
 
+std::string MacOSApplication::tempDir() const
+{
+    return "/tmp";
+}
+
 void MacOSApplication::beep()
 {
     NSBeep();
