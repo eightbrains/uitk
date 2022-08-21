@@ -32,6 +32,11 @@
 #include <unistd.h>
 #endif
 
+#if __unix__
+#include <sys/types.h>
+#include <dirent.h>
+#endif  // __unix__
+
 // Some macOS around Mojave (10.14) do not support std::filesystem, and
 // Ubuntu 18.04 has GCC 7.5, which also does not support std::filesystem yet.
 // (It may be supported with #include <experimental/filesystem> and linking

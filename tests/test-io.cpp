@@ -22,6 +22,8 @@
 
 #include <uitk/uitk.h>
 
+#include <string.h>  // for memcpy() (which is, of course, a string function!?)
+
 #include <iostream>
 #include <sstream>
 

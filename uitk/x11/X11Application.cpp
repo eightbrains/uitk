@@ -300,7 +300,7 @@ std::string X11Application::applicationName() const
     return std::string(gBinaryName);
 }
 
-std::string tempDir() const
+std::string X11Application::tempDir() const
 {
     return "/tmp";
 }
