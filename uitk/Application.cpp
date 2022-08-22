@@ -39,7 +39,7 @@
 #include "x11/X11Application.h"
 #endif
 
-// getwd/_getcwd
+// getcwd
 #if defined(_WIN32) || defined(_WIN64)
 #include <direct.h>
 #else
@@ -149,7 +149,9 @@ std::string Application::currentPath() const
     // If buffer is nullptr, mallocs a buffer at least this big, more if necessary
     char *cwd = _getcwd(nullptr, 256);
 #else
-    char *cwd = getwd(nullptr);
+    // macOS: arg2 (size) is ignored if arg1 is nullptr
+    // linux: if arg2 is 0, size automatically calculated
+    char *cwd = getcwd(nullptr, 0);
 #endif
     std::string path(cwd);
     free(cwd);
