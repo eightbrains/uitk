@@ -39,6 +39,13 @@
 #include "x11/X11Application.h"
 #endif
 
+// getcwd
+#if defined(_WIN32) || defined(_WIN64)
+#include <direct.h>
+#else
+#include <unistd.h>
+#endif
+
 #include <assert.h>
 #include <algorithm>
 
@@ -129,6 +136,26 @@ void Application::scheduleLater(Window* w, std::function<void()> f)
 std::string Application::applicationName() const
 {
     return mImpl->osApp->applicationName();
+}
+
+std::string Application::tempDir() const
+{
+    return mImpl->osApp->tempDir();
+}
+
+std::string Application::currentPath() const
+{
+#if defined(_WIN32) || defined(_WIN64)
+    // If buffer is nullptr, mallocs a buffer at least this big, more if necessary
+    char *cwd = _getcwd(nullptr, 256);
+#else
+    // macOS: arg2 (size) is ignored if arg1 is nullptr
+    // linux: if arg2 is 0, size automatically calculated
+    char *cwd = getcwd(nullptr, 0);
+#endif
+    std::string path(cwd);
+    free(cwd);
+    return path;
 }
 
 void Application::beep()

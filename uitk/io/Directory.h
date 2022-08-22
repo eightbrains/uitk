@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -20,43 +20,46 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
+#ifndef UITK_DIRECTORY_H
+#define UITK_DIRECTORY_H
 
-#define ND_NAMESPACE uitk
+#include <string>
+#include <vector>
 
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
+#include "FileSystemNode.h"
 
-#include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "Clipboard.h"
-#include "ComboBox.h"
-#include "Cursor.h"
-#include "Dialog.h"
-#include "Events.h"
-#include "FileDialog.h"
-#include "Icon.h"
-#include "Label.h"
-#include "LabelCell.h"
-#include "ListView.h"
-#include "NumberEdit.h"
-#include "Menu.h"
-#include "OSMenubar.h"
-#include "ProgressBar.h"
-#include "ScrollView.h"
-#include "SearchBar.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
-#include "StackedWidget.h"
-#include "StringEdit.h"
-#include "UIContext.h"
-#include "Window.h"
+namespace uitk {
 
-#include "io/Directory.h"
-#include "io/File.h"
+class Directory : public FileSystemNode
+{
+public:
+    Directory();
+    Directory(const std::string& path);
 
-#include <nativedraw.h>
+    /// Creates the directory. If parentPath() does not exist, the
+    /// the directory will not be created.
+    IOError::Error mkdir();
 
-#endif // UITK_H
+    IOError::Error remove() override;
+
+    struct Entry
+    {
+        std::string name;
+        bool isDir;
+        bool isFile;
+        bool isLink;
+
+        std::string extension() const;  /// does not include the "."
+    };
+
+    /// Returns the entries in the directory table. Note that this are only
+    /// the filename (or subdirectory name); they do NOT include the path().
+    /// This is to avoid duplicating all the parent's path for every entry,
+    /// which could be rather large for large directory trees. Results do
+    /// NOT include the special "." and ".." directories.
+    std::vector<Entry> entries(IOError::Error *err) const;
+};
+
+} // namespace uitk
+#endif // UITK_DIRECTORY_H
+

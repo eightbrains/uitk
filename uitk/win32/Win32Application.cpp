@@ -155,6 +155,17 @@ std::string Win32Application::applicationName() const
     return utf8FromWin32Unicode(path);
 }
 
+std::string Win32Application::tempDir() const
+{
+    wchar_t path[MAX_PATH + 2];
+    GetTempPathW(MAX_PATH + 1, path);
+    std::string spath(utf8FromWin32Unicode(path));
+    if (spath.back() == wchar_t('\\')) {
+        spath.pop_back();
+    }
+    return spath;
+}
+
 void Win32Application::beep()
 {
     MessageBeep(MB_OK);  // default beep

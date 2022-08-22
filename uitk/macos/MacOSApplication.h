@@ -42,6 +42,7 @@ public:
     void scheduleLater(Window* w, std::function<void()> f) override;
 
     std::string applicationName() const override;
+    std::string tempDir() const override;
 
     void beep() override;
 

@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -20,43 +20,32 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
+#ifndef UITK_IOERROR_H
+#define UITK_IOERROR_H
 
-#define ND_NAMESPACE uitk
+#include <string>
+#include <vector>
 
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
+namespace uitk {
 
-#include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "Clipboard.h"
-#include "ComboBox.h"
-#include "Cursor.h"
-#include "Dialog.h"
-#include "Events.h"
-#include "FileDialog.h"
-#include "Icon.h"
-#include "Label.h"
-#include "LabelCell.h"
-#include "ListView.h"
-#include "NumberEdit.h"
-#include "Menu.h"
-#include "OSMenubar.h"
-#include "ProgressBar.h"
-#include "ScrollView.h"
-#include "SearchBar.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
-#include "StackedWidget.h"
-#include "StringEdit.h"
-#include "UIContext.h"
-#include "Window.h"
+namespace IOError
+{
+    enum Error {
+        kNone = 0,
+        kNoPermission,
+        kSymlinkLoop,
+        kNameTooLong,
+        kPathDoesNotExist,
+        kPathComponentIsNotDir,
+        kDirectoryNotEmpty,
+        kNoMemory,
+        kOutOfSystemResources,  // EMFILE, ENFILE
+        kIOError,
+        kOther  /// EOVERFLOW, EBADF, etc.
+    };
 
-#include "io/Directory.h"
-#include "io/File.h"
+    Error fromErrno(int e);
+};
 
-#include <nativedraw.h>
-
-#endif // UITK_H
+} // namespace uitk
+#endif // UITK_IOERROR_H

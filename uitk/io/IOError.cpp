@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -20,43 +20,31 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
+#include "IOError.h"
 
-#define ND_NAMESPACE uitk
+#include <errno.h>
 
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
+namespace uitk {
+namespace IOError {
 
-#include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "Clipboard.h"
-#include "ComboBox.h"
-#include "Cursor.h"
-#include "Dialog.h"
-#include "Events.h"
-#include "FileDialog.h"
-#include "Icon.h"
-#include "Label.h"
-#include "LabelCell.h"
-#include "ListView.h"
-#include "NumberEdit.h"
-#include "Menu.h"
-#include "OSMenubar.h"
-#include "ProgressBar.h"
-#include "ScrollView.h"
-#include "SearchBar.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
-#include "StackedWidget.h"
-#include "StringEdit.h"
-#include "UIContext.h"
-#include "Window.h"
+Error fromErrno(int e)
+{
+    switch (e) {
+        case 0:             return IOError::kNone;
+        case EACCES:        return IOError::kNoPermission;
+        case ENAMETOOLONG:  return IOError::kNameTooLong;
+        case ELOOP:         return IOError::kSymlinkLoop;
+        case ENOTDIR:       return IOError::kPathComponentIsNotDir;
+        case ENOENT:        return IOError::kPathDoesNotExist;
+        case ENOMEM:        return IOError::kNoMemory;
+        case EIO:           return IOError::kIOError;
+        case ENOTEMPTY:     return IOError::kDirectoryNotEmpty;
+        case EMFILE: // fall through
+        case ENFILE:
+            return IOError::kOutOfSystemResources;
+        default:            return IOError::kOther;
+    }
+}
 
-#include "io/Directory.h"
-#include "io/File.h"
-
-#include <nativedraw.h>
-
-#endif // UITK_H
+} // namespace IOError
+} // namespace uitk
