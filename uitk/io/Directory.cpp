@@ -32,10 +32,10 @@
 #include <unistd.h>
 #endif
 
-#if __unix__
+#if !defined(_WIN32) && !defined(_WIN64)
 #include <sys/types.h>
 #include <dirent.h>
-#endif  // __unix__
+#endif  // !windows
 
 // Some macOS around Mojave (10.14) do not support std::filesystem, and
 // Ubuntu 18.04 has GCC 7.5, which also does not support std::filesystem yet.
