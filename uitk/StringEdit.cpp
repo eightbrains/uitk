@@ -391,6 +391,13 @@ void StringEdit::text(const TextEvent& e)
 
 void StringEdit::keyFocusEnded()
 {
+    // Clear selection, since a visible selection is associated with editing text.
+    // (Some programs, e.g. Firefox, keep their selection but do not show it until
+    // the widget gets focus again, but it is not clear if this is better, or if
+    // is consistent with macOS behavior)
+    auto idx = mImpl->editor.selection().start;
+    mImpl->editor.setSelection(TextEditorLogic::Selection(idx));
+
     // Call editor.onTextCommitted() so that we do not duplicate code and do not
     // need to have the code be a function in the class declaration. We assigned
     // a callback to this in the constructor.
