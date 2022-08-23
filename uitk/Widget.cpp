@@ -339,7 +339,9 @@ bool Widget::focused() const
 void Widget::resignKeyFocus() const
 {
     if (auto *w = window()) {
-        w->setFocusWidget(nullptr);
+        if (w->focusWidget() == this) {
+            w->setFocusWidget(nullptr);
+        }
     }
 }
 
@@ -427,6 +429,9 @@ Widget::EventResult Widget::mouse(const MouseEvent& e)
     auto result = EventResult::kIgnored;
     for (auto *child : mImpl->children) {
         result = mouseChild(e, child, result);
+        if (result == EventResult::kConsumed) {
+            break;
+        }
     }
 
     return result;

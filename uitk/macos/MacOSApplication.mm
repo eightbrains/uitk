@@ -111,6 +111,7 @@ Theme::Params MacOSApplication::themeParams() const
                               : EmpireTheme::lightModeParams(accentColor));
     params.accentColor = accentColor;
     params.windowBackgroundColor = Color(0.0f, 0.0f, 0.0f, 0.0f); // draw nothing
+    params.editableBackgroundColor = toUITKColor(NSColor.controlColor);
     params.nonEditableBackgroundColor = toUITKColor(NSColor.controlColor);
     params.textColor = textColor;
     params.disabledTextColor = toUITKColor(NSColor.disabledControlTextColor);

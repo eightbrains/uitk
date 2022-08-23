@@ -68,6 +68,7 @@ public:
     void text(const TextEvent& e) override;
     void keyFocusEnded() override;
 
+    void themeChanged() override;
     void draw(UIContext& context) override;
 
     /// Called whenever the text changes in response to user input.

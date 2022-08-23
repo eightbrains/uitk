@@ -505,13 +505,8 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
         //std::cout << "[debug] insertText: '" << utf8 << "', range: (" << replacementRange.location << ", " << replacementRange.length << ")" << std::endl;
 
         int endIdx = sel.start + int(utf8.size());
-        if (sel.end > sel.start) {
-            sel = uitk::TextEditorLogic::Selection(sel.start, endIdx,
-                                                   uitk::TextEditorLogic::Selection::CursorLocation::kEnd);
-        } else {
             sel = uitk::TextEditorLogic::Selection(endIdx, endIdx,
                                                    uitk::TextEditorLogic::Selection::CursorLocation::kEnd);
-        }
         self.textEditor->setSelection(sel);
         if (self.textEditor->onTextChanged) {
             self.textEditor->onTextChanged();
@@ -592,7 +587,7 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     // However, we should probably use NSStringFromSelector() and have a
     // bunch of ugly if's that call the appropriate functions. This would make
     // sure that things like emacs keybindings work, as well as any voice
-    // editing commands that macOS may have.a
+    // editing commands that macOS may have.
 }
 // ----
 

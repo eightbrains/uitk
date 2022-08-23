@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -54,7 +54,9 @@ public:
     Index lineBelow(Index i) const override;
 
     bool needsLayout() const override;
-    void layoutText(const DrawContext& dc, const Font& font, const Color& color, const PicaPt& width) override;
+    void setNeedsLayout() const override;
+    void layoutText(const DrawContext& dc, const Font& font, const Color& color,
+                    const Color& selectedColor, const PicaPt& width) override;
     const TextLayout* layout() const override;
     float layoutDPI() const override;
 

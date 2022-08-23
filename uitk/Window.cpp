@@ -646,6 +646,9 @@ void Window::setOnWindowWillClose(std::function<void(Window&)> onWillClose)
 void Window::setMouseGrab(Widget *w)
 {
     mImpl->grabbedWidget = w;
+    if (mImpl->focusedWidget != w) {
+        setFocusWidget(nullptr);
+    }
 }
 
 Widget* Window::mouseGrabWidget() const { return mImpl->grabbedWidget; }

@@ -305,7 +305,7 @@ void StringEdit::mouseExited()
 
 Widget::EventResult StringEdit::mouse(const MouseEvent& e)
 {
-    if (mImpl->clearButton->frame().contains(e.pos)) {
+    if (mImpl->clearButton->visible() && mImpl->clearButton->frame().contains(e.pos)) {
         return Super::mouse(e);
     }
 
@@ -372,7 +372,6 @@ Widget::EventResult StringEdit::mouse(const MouseEvent& e)
         return Widget::EventResult::kConsumed;
     } else {
         return Super::mouse(e);
-//        return superResult;
     }
 }
 
@@ -400,13 +399,19 @@ void StringEdit::keyFocusEnded()
     }
 }
 
+void StringEdit::themeChanged()
+{
+    mImpl->editor.setNeedsLayout();
+}
+
 void StringEdit::draw(UIContext& context)
 {
     // mouse() and key() do not have access to the DrawContext, so we need to postpone
     // layout until the draw.
     if (mImpl->editor.needsLayout() || mImpl->editor.layoutDPI() != context.dc.dpi()) {
         auto s = context.theme.textEditStyle(style(themeState()), themeState());
-        mImpl->editor.layoutText(context.dc, context.theme.params().labelFont, s.fgColor, PicaPt(1e6));
+        mImpl->editor.layoutText(context.dc, context.theme.params().labelFont, s.fgColor,
+                                 context.theme.params().accentedBackgroundTextColor, PicaPt(1e6));
     }
     // mouse() and key() will change the selection (since the caret is a selection)
     // if anything changes, but if the layout changed we cannot do the calculation

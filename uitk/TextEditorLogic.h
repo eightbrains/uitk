@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -144,8 +144,12 @@ public:
     virtual Index lineBelow(Index i) const = 0;
 
     virtual bool needsLayout() const = 0;
+    /// Marks the text as needing to be re-created. This is normally only called
+    /// internally, and should be called externally only in situations
+    /// where the text's color has changed, such as the theme changed.
+    virtual void setNeedsLayout() const = 0;
     virtual void layoutText(const DrawContext& dc, const Font& font, const Color& color,
-                            const PicaPt& width) = 0;
+                            const Color& selectedColor, const PicaPt& width) = 0;
     virtual const TextLayout* layout() const = 0;
     virtual float layoutDPI() const = 0;
 

@@ -153,7 +153,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     // Accessory button, like the X that clear a text widget
     copyStyles(mButtonStyles, mButtonAccessoryStyles);
     mButtonAccessoryStyles[NORMAL].bgColor = Color::kTransparent;
-    mButtonAccessoryStyles[NORMAL].fgColor = Color(0.5f, 0.5f, 0.5f, params.textColor.alpha());
+    mButtonAccessoryStyles[NORMAL].fgColor = params.textColor;
     mButtonAccessoryStyles[NORMAL].borderColor = Color::kTransparent;
     mButtonAccessoryStyles[NORMAL].borderWidth = PicaPt::kZero;
     mButtonAccessoryStyles[DISABLED] = mButtonAccessoryStyles[NORMAL];
@@ -334,7 +334,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     copyStyles(mSliderTrackStyles, mProgressBarStyles);
 
     // TextEdit
-    mTextEditStyles[NORMAL].bgColor = Color::kTransparent;
+    mTextEditStyles[NORMAL].bgColor = params.editableBackgroundColor;
     mTextEditStyles[NORMAL].fgColor = params.textColor;
     mTextEditStyles[NORMAL].borderColor = borderColor;
     mTextEditStyles[NORMAL].borderWidth = mBorderWidth;

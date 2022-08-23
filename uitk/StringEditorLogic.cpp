@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -196,11 +196,21 @@ bool StringEditorLogic::needsLayout() const
     return mImpl->needsLayout;
 }
 
+void StringEditorLogic::setNeedsLayout() const
+{
+    mImpl->needsLayout = true;
+}
+
 void StringEditorLogic::layoutText(const DrawContext& dc, const Font& font,
-                               const Color& color, const PicaPt& width)
+                                   const Color& color, const Color& selectedColor,
+                                   const PicaPt& width)
 {
     if (mImpl->imeConversion.isEmpty()) {
         Text t(mImpl->stringUTF8, font, color);
+        // Note: selection should be empty if there is IME text
+        if (mImpl->selection.start != mImpl->selection.end && selectedColor.toRGBA() != color.toRGBA()) {
+            t.setColor(selectedColor, mImpl->selection.start, mImpl->selection.end - mImpl->selection.start);
+        }
         mImpl->layout = dc.createTextLayout(t, Size(width, Widget::kDimGrow));
     } else {
         Text t(textWithConversion(), font, color);
@@ -273,6 +283,14 @@ TextEditorLogic::Selection StringEditorLogic::selection() const
 
 void StringEditorLogic::setSelection(const Selection& sel)
 {
+    // The color of selected text might be different than unselected text, so if
+    // re-layout if either the new or old selection length > 0. (If it is zero,
+    // we are just drawing the caret, so no need to update anything, and it is
+    // relatively expensive to recreate text)
+    if (mImpl->selection.start < mImpl->selection.end || sel.start < sel.end) {
+        mImpl->needsLayout = true;
+    }
+
     mImpl->selection = sel;
     if (sel.start < sel.end) {
         auto &clip = Application::instance().clipboard();
