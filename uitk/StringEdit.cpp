@@ -310,7 +310,7 @@ Widget::EventResult StringEdit::mouse(const MouseEvent& e)
     }
 
     bool consumed = false;
-
+    bool isInFrame = bounds().contains(e.pos);  // can be outside of frame on a drag and widget is grabbing
     auto me = e;
     me.pos = e.pos - mImpl->editorTextRect.upperLeft() -
              calcAlignmentOffset(mImpl->editor, mImpl->editorTextRect, mImpl->alignment) -
@@ -324,9 +324,9 @@ Widget::EventResult StringEdit::mouse(const MouseEvent& e)
                 }
             }
         }
-        consumed = mImpl->editor.handleMouseEvent(me);
+        consumed = mImpl->editor.handleMouseEvent(me, isInFrame);
     } else if (e.type == MouseEvent::Type::kDrag) {
-        consumed = mImpl->editor.handleMouseEvent(me);
+        consumed = mImpl->editor.handleMouseEvent(me, isInFrame);
     } else if (e.type == MouseEvent::Type::kButtonDown && e.button.button == MouseButton::kRight
                && e.button.nClicks == 1) {
         auto *w = window();
@@ -364,7 +364,7 @@ Widget::EventResult StringEdit::mouse(const MouseEvent& e)
         }
     } else if (e.type == MouseEvent::Type::kButtonDown && e.button.button == MouseButton::kMiddle && e.button.nClicks == 1) {
         // For middle-click paste on X11
-        consumed = mImpl->editor.handleMouseEvent(me);
+        consumed = mImpl->editor.handleMouseEvent(me, isInFrame);
     }
 
     if (consumed) {

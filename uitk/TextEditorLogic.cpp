@@ -56,7 +56,7 @@ void TextEditorLogic::handleMouseExited(Window *w)
     w->popCursor();
 }
 
-bool TextEditorLogic::handleMouseEvent(const MouseEvent& e)
+bool TextEditorLogic::handleMouseEvent(const MouseEvent& e, bool isInFrame)
 {
     auto calcIndex = [this](const Point& p) {
         auto idx = indexAtPoint(p);
@@ -110,11 +110,23 @@ bool TextEditorLogic::handleMouseEvent(const MouseEvent& e)
         if (std::abs((e.pos.x - mImpl->mouseDownPt.x).toPixels(72.0f)) > 1.0f ||
             std::abs((e.pos.y - mImpl->mouseDownPt.y).toPixels(72.0f)) > 1.0f)
         {
-            auto idx = calcIndex(e.pos);
-            if (idx >= mImpl->dragPivotIndex) {
-                setSelection(Selection(mImpl->dragPivotIndex, idx, Selection::CursorLocation::kEnd));
+            if (isInFrame) {
+                auto idx = calcIndex(e.pos);
+                if (idx >= mImpl->dragPivotIndex) {
+                    setSelection(Selection(mImpl->dragPivotIndex, idx, Selection::CursorLocation::kEnd));
+                } else {
+                    setSelection(Selection(idx, mImpl->dragPivotIndex, Selection::CursorLocation::kStart));
+                }
             } else {
-                setSelection(Selection(idx, mImpl->dragPivotIndex, Selection::CursorLocation::kStart));
+                // mouse can be outside of frame if dragging and widget is grabbing, in which
+                // case, select to the end or beginning, depending on which way the mouse is moving.
+                if (e.pos.x >= mImpl->mouseDownPt.x) {
+                    setSelection(Selection(mImpl->dragPivotIndex, endOfText(),
+                                           Selection::CursorLocation::kEnd));
+                } else {
+                    setSelection(Selection(startOfText(), mImpl->dragPivotIndex,
+                                           Selection::CursorLocation::kStart));
+                }
             }
         }
         return true;

@@ -171,7 +171,7 @@ public:
     /// Returns true if consumed the event.
     virtual void handleMouseEntered(Window *w);
     virtual void handleMouseExited(Window *w);
-    virtual bool handleMouseEvent(const MouseEvent& e);
+    virtual bool handleMouseEvent(const MouseEvent& e, bool isInFrame);
     virtual bool handleKeyEvent(const KeyEvent& e);  // returns true if consumed event
     virtual void handleTextEvent(const TextEvent& e);
     enum class SelectionMode { kReplace, kExtend };
