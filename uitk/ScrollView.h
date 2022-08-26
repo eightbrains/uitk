@@ -35,10 +35,13 @@ public:
 
     ScrollView* setFrame(const Rect& frame) override;
 
+    /// bounds().size() is the content size and bounds().upperLeft() is contentOffset
     const Rect& bounds() const override;
     ScrollView* setBounds(const Rect& bounds);
 
     ScrollView* setContentSize(const Size& size);
+    /// Scrolls the content. Note that (0, 0) is scrolled to the top
+    /// and (0, -(bounds().height - frame().height)) is scrolled to the bottom
     ScrollView* setContentOffset(const Point& offset);
 
     Size preferredSize(const LayoutContext& context) const override;

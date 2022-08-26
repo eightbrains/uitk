@@ -264,7 +264,7 @@ void ListView::setSelectedIndex(int index)
 void ListView::setSelectedIndices(const std::unordered_set<int> indices)
 {
     mImpl->selectedIndices = indices;
-    auto items = mImpl->content->children();
+    auto &items = mImpl->content->children();
     for (int idx : mImpl->selectedIndices) {
         if (idx >= 0 && idx < int(items.size())) {
             items[idx]->setThemeState(Theme::WidgetState::kSelected);
@@ -274,6 +274,24 @@ void ListView::setSelectedIndices(const std::unordered_set<int> indices)
 }
 
 int ListView::highlightedIndex() const { return mImpl->mouseOverIndex; }
+
+void ListView::scrollRowVisible(int index)
+{
+    auto &items = mImpl->content->children();
+    if (index < 0 || index >= int(items.size())) {
+        return;
+    }
+    auto r = items[index]->frame();
+    auto scrollOffset = items[index]->bounds().upperLeft();
+    auto minYVisible = -scrollOffset.y;
+    auto maxYVisible = r.height - scrollOffset.y;
+    if (r.y < minYVisible || r.maxY() > maxYVisible) {
+        auto newYOffset = r.midY() - 0.5f * frame().height;
+        newYOffset = std::max(PicaPt::kZero, newYOffset);
+        newYOffset = std::min(bounds().height - frame().height, newYOffset);
+        setContentOffset(Point(scrollOffset.x, -newYOffset));
+    }
+}
 
 Size ListView::contentPadding() const
 {

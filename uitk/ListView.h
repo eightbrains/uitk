@@ -79,6 +79,11 @@ public:
     void setSelectedIndex(int index);
     void setSelectedIndices(const std::unordered_set<int> indices);
 
+    /// Scrolls so that the requested row is visible. Note that this will not
+    /// work until layout() has been called, since it requires the correct
+    /// frames of the cell.
+    void scrollRowVisible(int index);
+
     Size contentPadding() const;
     /// Sets the padding between the edge of the ListView widget and the
     /// content.

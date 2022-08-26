@@ -166,7 +166,7 @@ public:
 
     virtual void text(const TextEvent& e);
 
-    /// Called when the theme changes. Generally there is no need to overrid this,
+    /// Called when the theme changes. Generally there is no need to override this,
     /// but if anything like text, text font, or text color is cached, it should
     /// be cleared here (as well as anywhere else relevant).
     virtual void themeChanged();
