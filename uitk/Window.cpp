@@ -1000,7 +1000,9 @@ void Window::onDraw(DrawContext& dc)
         onLayout(dc);
     }
 
-    UIContext context { *mImpl->theme, dc, mImpl->isActive };
+    Rect drawRect(PicaPt::kZero, PicaPt::kZero,
+                  mImpl->rootWidget->frame().width, mImpl->rootWidget->frame().height);
+    UIContext context { *mImpl->theme, dc, drawRect, mImpl->isActive };
     auto size = Size(PicaPt::fromPixels(float(dc.width()), dc.dpi()),
                      PicaPt::fromPixels(float(dc.height()), dc.dpi()));
     auto rootUL = mImpl->rootWidget->frame().upperLeft();

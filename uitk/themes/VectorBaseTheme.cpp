@@ -403,8 +403,7 @@ void VectorBaseTheme::setParams(const Params& params)
 Size VectorBaseTheme::calcPreferredTextMargins(const DrawContext& dc, const Font& font) const
 {
     auto fm = dc.fontMetrics(font);
-    auto tm = dc.textMetrics("Ag", font, kPaintFill);
-    auto em = tm.height;
+    auto em = fm.ascent + fm.descent;
     auto margin = dc.ceilToNearestPixel(1.5 * fm.descent);
     return Size(margin, margin);
 }

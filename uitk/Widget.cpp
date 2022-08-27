@@ -543,8 +543,22 @@ void Widget::draw(UIContext& context)
         context.theme.drawFrame(context, bounds(), style(Theme::WidgetState::kNormal));
     }
 
+    // Draw the children.
+    // We do not draw a child that is completely outside the draw rect.
+    // For the most part, this is not necessary, and is here mostly for
+    // the ScrollView. In particular, a ListView with thousands of items
+    // draws really slowly if it needs to draw thousands of invisible texts
+    // (especially since drawing text is fairly slow). So why not just
+    // put this in ScrollView, instead of needing to adjust the draw rect
+    // and create a new UIContext for each object? Because there is no way
+    // to guarantee that the all the items are directly owned by the
+    // ScrollView; if the caller puts all the items in a big widget and
+    // then the ScrollView just owns that, it will see that the big child
+    // intersects with the draw rect and draw then entire child.
     for (auto *child : mImpl->children) {
-        drawChild(context, child);
+        if (context.drawRect.intersects(child->frame())) {
+            drawChild(context, child);
+        }
     }
 }
 
@@ -553,7 +567,15 @@ void Widget::drawChild(UIContext& context, Widget *child)
     if (child->visible()) {
         auto ul = child->frame().upperLeft();
         context.dc.translate(ul.x, ul.y);
-        child->draw(context);
+
+        // Need to create a new context to update the draw rect.
+        // The context is not const, so we could just modify the context, but the
+        // reason it is not const is because the DrawContext is non-const.
+        auto newDrawRect = context.drawRect.intersectedWith(child->frame());
+        newDrawRect.translate(-ul.x, -ul.y);  // this is faster than .translated(), though less convenient
+        UIContext newContext = { context.theme, context.dc, newDrawRect, context.isWindowActive };
+        child->draw(newContext);
+
         context.dc.translate(-ul.x, -ul.y);
     }
 }

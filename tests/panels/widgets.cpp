@@ -513,7 +513,7 @@ public:
     {
         auto prefHeight = mInt->preferredSize(context).height;
         auto spacing = 0.5f * prefHeight;
-        return Size(PicaPt(200), 3.0f * prefHeight + 3.0f * spacing);
+        return Size(PicaPt(250), 3.0f * prefHeight + 3.0f * spacing);
     }
 
     void layout(const LayoutContext& context) override
@@ -523,7 +523,7 @@ public:
         auto sliderHeight = mInt->preferredSize(context).height;
         auto spacing = 0.25f * sliderHeight;
         auto labelWidth = 3.0f * sliderHeight;
-        auto sliderWidth = frame().width - spacing - labelWidth;
+        auto sliderWidth = frame().width - 2.0f * (spacing + labelWidth);
 
         mInt->setFrame(Rect(x, y, sliderWidth, sliderHeight));
         mIntEdit->setFrame(Rect(mInt->frame().maxX() + spacing, y, labelWidth, sliderHeight));

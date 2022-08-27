@@ -68,6 +68,14 @@ struct UIContext
 {
     const Theme& theme;
     DrawContext& dc;
+    /// This is the rectangle that is expected to draw in, in widget-local
+    /// coordinates (that is, (0, 0) is (0, 0) of this widget). Generally
+    /// this is the same as the bounds of the widget, however it might be
+    /// smaller if the widget is in a ScrollView (or something that is
+    /// a scrollview, like a ListView). Widget will not draw its children
+    /// if they do not intersect the drawRect, so you can normally ignore
+    /// this unless you are drawing lots of things manually.
+    Rect drawRect;
     bool isWindowActive;
 };
 

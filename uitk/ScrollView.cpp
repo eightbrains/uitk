@@ -279,13 +279,16 @@ void ScrollView::draw(UIContext& context)
     // add your children), we need to draw them ourselves.
 
     // Draw the children of the (non-existent) content widget.
-    Rect contentRect(-mImpl->bounds.x, -mImpl->bounds.y, frame().width, frame().height);
+    // Note that we do not want to draw all children that are not visible, but unfortunately,
+    // it might be grandchildren that are not visible (if, say, we own a big widget that
+    // owns all the items in a list). We just need to provide a UIContext with the correct
+    // drawRect and drawChild() will take care of not drawing the widgets in the tree that
+    // do not intersect with the drawRect.
     context.dc.translate(mImpl->bounds.x, mImpl->bounds.y);
+    Rect drawRect = context.drawRect.translated(-mImpl->bounds.x, -mImpl->bounds.y);
+    UIContext scrollContext = { context.theme, context.dc, drawRect, context.isWindowActive };
     for (auto *child : children()) {
-        if (child != mImpl->horizScroll && child != mImpl->vertScroll
-            && contentRect.intersects(child->frame())) {
-            drawChild(context, child);
-        }
+        drawChild(scrollContext, child);
     }
     context.dc.translate(-mImpl->bounds.x, -mImpl->bounds.y);
     context.dc.restore();
