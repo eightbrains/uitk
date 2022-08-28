@@ -2145,7 +2145,9 @@ void StandardIconPainter::drawConversation(DrawContext& dc, const Size& size, co
 
 PicaPt StandardIconPainter::setStroke(DrawContext& dc, const Size& size, const Color& fg) const
 {
-    auto w = std::max(dc.onePixel(), dc.roundToNearestPixel(size.height / 16.0f));
+    // Use a standard pixel as the minimum size; dc.onePixel() can be too small for good
+    // visibility.
+    auto w = std::max(dc.oneStandardPixel(), dc.roundToNearestPixel(size.height / 16.0f));
     dc.setFillColor(fg);
     dc.setStrokeColor(fg);
     dc.setStrokeWidth(w);
