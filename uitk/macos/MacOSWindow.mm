@@ -331,8 +331,23 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     me.pos = uitk::Point(uitk::PicaPt::fromPixels(pt.x, dpi),
                          uitk::PicaPt::fromPixels(self.frame.size.height - pt.y, dpi));
     me.keymods = toKeymods(e.modifierFlags);
-    me.scroll.dx = uitk::PicaPt::fromPixels(e.deltaX, dpi);
-    me.scroll.dy = uitk::PicaPt::fromPixels(e.deltaY, dpi);
+    CGFloat dx, dy;
+    if (e.hasPreciseScrollingDeltas) {  // trackpad
+        dx = e.scrollingDeltaX;
+        dy = e.scrollingDeltaY;
+    } else {                            // discrete mouse wheel
+        // What constant should we use? More complex controls seem to
+        // multiply by the font height they are using, but we do not
+        // have access to that information here (nor would it be a great
+        // choice for Apple to use with, say, NSTableView). And in macOS
+        // adjusts the scroll value depending on how quickly the events
+        // comes, so it would be difficult to scroll by one line, anyway.
+        // 12 seems to fit well with my system's behavior.
+        dx = 12.0f * e.scrollingDeltaX;
+        dy = 12.0f * e.scrollingDeltaY;
+    }
+    me.scroll.dx = uitk::PicaPt::fromPixels(dx, dpi);
+    me.scroll.dy = uitk::PicaPt::fromPixels(dy, dpi);
 
     [self doOnMouse:me];
 }

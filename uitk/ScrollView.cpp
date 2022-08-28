@@ -234,7 +234,7 @@ Widget::EventResult ScrollView::mouse(const MouseEvent& e)
     if (e.type == MouseEvent::Type::kScroll && result != EventResult::kConsumed) {
         auto minOffsetX = calcMinOffsetX(frame(), bounds());
         auto minOffsetY = calcMinOffsetY(frame(), bounds());
-        auto offsetX = std::min(PicaPt::kZero,std::max(e.scroll.dx + mImpl->bounds.x, minOffsetX));
+        auto offsetX = std::min(PicaPt::kZero, std::max(e.scroll.dx + mImpl->bounds.x, minOffsetX));
         auto offsetY = std::min(PicaPt::kZero, std::max(e.scroll.dy + mImpl->bounds.y, minOffsetY));
         setContentOffset(Point(offsetX, offsetY));
         if (Application::instance().shouldHideScrollbars()) {
@@ -284,6 +284,11 @@ void ScrollView::draw(UIContext& context)
     // owns all the items in a list). We just need to provide a UIContext with the correct
     // drawRect and drawChild() will take care of not drawing the widgets in the tree that
     // do not intersect with the drawRect.
+
+    // Align the bounds with pixel boundaries so icons work well. We cannot do this
+    // in setContentOffset() because we do not have the draw context.
+    mImpl->bounds.x = context.dc.roundToNearestPixel(mImpl->bounds.x);
+    mImpl->bounds.y = context.dc.roundToNearestPixel(mImpl->bounds.y);
     context.dc.translate(mImpl->bounds.x, mImpl->bounds.y);
     Rect drawRect = context.drawRect.translated(-mImpl->bounds.x, -mImpl->bounds.y);
     UIContext scrollContext = { context.theme, context.dc, drawRect, context.isWindowActive };
