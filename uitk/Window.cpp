@@ -345,10 +345,29 @@ struct Window::Impl
     }
 };
 
-Window::Window(const std::string& title, int width, int height,
+Window::Window(const std::string& title, const PicaPt& width, const PicaPt& height,
                Flags::Value flags /*= Flags::kNone*/)
-    : Window(title, -1, -1, width, height, flags)
+    : Window(title, -1, -1, width.toStandardPixels(), height.toStandardPixels(), flags)
 {
+    // The three major operating systems have different behaviors if we just do
+    // nothing: macOS puts it at (0, 0) which is the bottom left of the screen,
+    // Windows puts it at (0, 0) which is the upper left of the screen, and Linux
+    // window managers typically center the window. macOS apps typically remember
+    // their windows, but since that is not implemented (as of the writing of this
+    // comment). It is tempting to center the window, but some windows are popup menus
+    // or other kinds of non-main-application windows. So since the caller did not specify
+    // the location, whatever happens, happens, and the caller is responsible for
+    // centering it if that's what they would like.
+}
+
+Window::Window(const std::string& title,
+               const PicaPt& x, const PicaPt& y,
+               const PicaPt& width, const PicaPt& height,
+               Flags::Value flags /*= Flags::kNone*/)
+{
+    auto dpi = mImpl->window->dpi();
+    mImpl->window->setOSFrame(int(x.toPixels(dpi)), int(y.toPixels(dpi)),
+                              int(width.toPixels(dpi)), int(height.toPixels(dpi)));
 }
 
 Window::Window(const std::string& title, int x, int y, int width, int height,
@@ -435,6 +454,16 @@ void Window::toggleMinimize()
 void Window::toggleMaximize()
 {
     mImpl->window->toggleMaximize();
+}
+
+void Window::centerInScreen()
+{
+    auto osscreen = mImpl->window->osScreen();
+    auto osframe = osFrame();
+    setOSFrame(0.5f * (osscreen.desktopFrame.width - osframe.width),
+               0.5f * (osscreen.desktopFrame.height - osframe.height),
+               osframe.width,
+               osframe.height);
 }
 
 bool Window::isActive() const { return mImpl->isActive; }
@@ -536,7 +565,7 @@ void Window::move(const PicaPt& dx, const PicaPt& dy)
     }
 }
 
-OSWindow::OSRect Window::osFrame() const
+OSRect Window::osFrame() const
 {
     return mImpl->window->osFrame();
 }
@@ -546,7 +575,7 @@ void Window::setOSFrame(float x, float y, float width, float height)
     mImpl->window->setOSFrame(x, y, width, height);
 }
 
-OSWindow::OSPoint Window::convertWindowToOSPoint(const Point& windowPt) const
+OSPoint Window::convertWindowToOSPoint(const Point& windowPt) const
 {
     auto contentRect = mImpl->window->contentRect();
     auto osContentRect = mImpl->window->osContentRect();
@@ -558,6 +587,11 @@ OSWindow::OSPoint Window::convertWindowToOSPoint(const Point& windowPt) const
         return { osContentRect.x + (contentRect.x + windowPt.x).toPixels(dpi),
                  osContentRect.y + (contentRect.maxY() - windowPt.y).toPixels(dpi) };
     }
+}
+
+Screen Window::screen() const
+{
+    return Screen(mImpl->window->osScreen());
 }
 
 void Window::setNeedsDraw()
@@ -720,7 +754,7 @@ bool Window::beginModalDialog(Dialog *d)
     }
 
     mImpl->dialog.dialog = d;
-    mImpl->dialog.window.reset(new Window(d->title(), 10, 10, Flags::kDialog));
+    mImpl->dialog.window.reset(new Window(d->title(), -1, -1, 10, 10, Flags::kDialog));
     mImpl->dialog.window->addChild(d);
     mImpl->dialog.window->setOnWindowShouldClose([this](Window&) {
         Application::instance().scheduleLater(mImpl->dialog.window.get(), [this]() {

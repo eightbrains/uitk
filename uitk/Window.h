@@ -28,6 +28,7 @@
 
 #include "Global.h"
 #include "OSWindow.h"
+#include "Screen.h"
 
 namespace uitk {
 
@@ -65,10 +66,13 @@ public:
         };
     };
 
-    /// Creates a window with default (x, y) position.
-    /// width, height are in operating-system coordinates. The window is not
-    /// shown.
-    Window(const std::string& title, int width, int height,
+    /// Creates a window with default (x, y) position. The window is not shown.
+    Window(const std::string& title, const PicaPt& width, const PicaPt& height,
+           Flags::Value flags = Flags::kNormal);
+    /// Creates a window with give frame. The window is not shown.
+    Window(const std::string& title,
+           const PicaPt& x, const PicaPt& y,
+           const PicaPt& width, const PicaPt& height,
            Flags::Value flags = Flags::kNormal);
     /// Creates a window. x, y, width, height are in operating-system
     /// coordinates. The window is not shown.
@@ -80,6 +84,7 @@ public:
     Window* show(bool show);
     void toggleMinimize();
     void toggleMaximize();
+    void centerInScreen();
 
     bool isActive() const;
 
@@ -143,7 +148,7 @@ public:
 
     void move(const PicaPt& dx, const PicaPt& dy);
 
-    OSWindow::OSRect osFrame() const;
+    OSRect osFrame() const;
     /// Sets the window rectangle of the operating system's window, in operating
     /// system coordinates (pixels in Windows and X11, virtual-pixels in macOS).
     /// Note that this is NOT the content rect, as the operating system may include
@@ -153,12 +158,15 @@ public:
 
     /// Returns the point in the operating system's window manager of the
     /// point passed it. This is useful for positioning popup windows.
-    OSWindow::OSPoint convertWindowToOSPoint(const Point& windowPt) const;
+    OSPoint convertWindowToOSPoint(const Point& windowPt) const;
 
     /// Returns the content rect of the window, relative to the upper left of the
     /// drawable area. Usually this is the drawable area of the window, but on
     /// platforms where UITK draws the menus it is offset by the size of the menu.
     const Rect& contentRect() const;
+
+    /// Returns the screen this window is in. This should not be cached.
+    Screen screen() const;
 
     /// Takes ownership of the widget and adds as a child to the Window.
     /// Returns pointer the child added so that adding and assignment for later

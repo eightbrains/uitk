@@ -28,6 +28,7 @@ set(UITK_PUBLIC_HEADERS
                  OSMenubar.h
                  OSWindow.h
                  ProgressBar.h
+                 Screen.h
                  ScrollBar.h
                  ScrollView.h
                  SearchBar.h
@@ -74,6 +75,7 @@ set(UITK_SOURCES Application.cpp
                  NumericModel.cpp
                  OSMenubar.cpp
                  ProgressBar.cpp
+                 Screen.cpp
                  ScrollBar.cpp
                  ScrollView.cpp
                  SearchBar.cpp

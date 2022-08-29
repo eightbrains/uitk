@@ -106,7 +106,7 @@ public:
     }
 
     Document()
-        : Window(calcTitle(), 1024, 768)
+        : Window(calcTitle(), PicaPt::fromStandardPixels(1024), PicaPt::fromStandardPixels(768))
     {
         setOnMenuItemNeedsUpdate([this](MenuItem& item) {
             switch (item.id()) {
