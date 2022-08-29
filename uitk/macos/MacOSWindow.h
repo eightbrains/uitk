@@ -62,6 +62,8 @@ public:
 
     PicaPt borderWidth() const override;
 
+    OSScreen osScreen() const override;
+
     void postRedraw() const override;
 
     void beginModalDialog(OSWindow *w) override;

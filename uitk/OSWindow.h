@@ -60,23 +60,33 @@ public:
     virtual void onWindowWillClose() = 0;
 };
 
+struct OSPoint
+{
+    float x;
+    float y;
+};
+
+struct OSRect
+{
+    float x;
+    float y;
+    float width;
+    float height;
+};
+
+struct OSScreen
+{
+    /// This is the normal area where windows can go (excludes menubar in macOS,
+    /// system bar on Windows, etc.)
+    OSRect desktopFrame;
+    /// This is the actual area of the monitor (what a fullscreen window gets)
+    OSRect fullscreenFrame;
+    float dpi;
+};
+
 class OSWindow
 {
 public:
-    struct OSPoint
-    {
-        float x;
-        float y;
-    };
-
-    struct OSRect
-    {
-        float x;
-        float y;
-        float width;
-        float height;
-    };
-
     virtual ~OSWindow() {}
 
     virtual bool isShowing() const = 0;
@@ -110,6 +120,8 @@ public:
     virtual void setOSFrame(float x, float y, float width, float height) = 0;
 
     virtual PicaPt borderWidth() const = 0;
+
+    virtual OSScreen osScreen() const = 0;
 
     virtual void postRedraw() const = 0;
 

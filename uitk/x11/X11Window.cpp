@@ -610,7 +610,7 @@ Rect X11Window::contentRect() const
                 PicaPt::fromPixels(mImpl->height, mImpl->dpi));
 }
 
-OSWindow::OSRect X11Window::osContentRect() const
+OSRect X11Window::osContentRect() const
 {
     return osFrame();
 }
@@ -624,7 +624,7 @@ void X11Window::setContentSize(const Size& size)
 
 float X11Window::dpi() const { return mImpl->dpi; }
 
-OSWindow::OSRect X11Window::osFrame() const
+OSRect X11Window::osFrame() const
 {
     // Note that XGetWindowAttributes has x, y, but they refer to the distance
     // from the outer upper-left of the window to the inside upper left.
@@ -679,6 +679,18 @@ PicaPt X11Window::borderWidth() const
     XWindowAttributes wa;
     XGetWindowAttributes(mImpl->display, mImpl->xwindow, &wa);
     return PicaPt::fromPixels(wa.border_width, dpi());
+}
+
+OSScreen X11Window::osScreen() const
+{
+    XWindowAttributes xa;
+    XGetWindowAttributes(mImpl->display, mImpl->xwindow, &xa);
+    auto w = float(WidthOfScreen(xa.screen));
+    auto h = float(HeightOfScreen(xa.screen));
+    return { { 0.0f, 0.0f, w, h },
+             { 0.0f, 0.0f, w, h },
+             dpi()
+           };
 }
 
 void X11Window::postRedraw() const

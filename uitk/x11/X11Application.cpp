@@ -265,7 +265,7 @@ X11Application::X11Application()
     // Read the per-screen resources, in case you can set Xft.dpi separately
     // per-screen (which seems like a good idea).
     for (int sn = 0; sn < nScreens; ++sn) {
-        Screen *s = XScreenOfDisplay(mImpl->display, sn);
+        ::Screen *s = XScreenOfDisplay(mImpl->display, sn);
         auto resourceString = XScreenResourceString(s);
         if (resourceString) {
             readDatabase(resourceString, mImpl->xrdbScreenStrings[sn]);

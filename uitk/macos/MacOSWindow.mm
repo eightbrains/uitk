@@ -828,7 +828,7 @@ Rect MacOSWindow::contentRect() const
                 PicaPt::fromPixels(mImpl->contentView.frame.size.height, cv.dpi));
 }
 
-OSWindow::OSRect MacOSWindow::osContentRect() const
+OSRect MacOSWindow::osContentRect() const
 {
     // Since the lower left is at the bottom left of the window, oscontentrect.origin is
     // the same as the osframe.origin. The height, of osframe is higher, though, because
@@ -862,7 +862,7 @@ float MacOSWindow::dpi() const
     return mImpl->contentView.dpi;
 }
 
-OSWindow::OSRect MacOSWindow::osFrame() const
+OSRect MacOSWindow::osFrame() const
 {
     NSRect f = mImpl->window.frame;
     return OSRect{float(f.origin.x), float(f.origin.y),
@@ -881,6 +881,26 @@ PicaPt MacOSWindow::borderWidth() const
     } else {
         auto r = [mImpl->window frameRectForContentRect:NSMakeRect(0, 0, 100, 100)];
         return PicaPt::fromPixels(r.origin.x, dpi());
+    }
+}
+
+OSScreen MacOSWindow::osScreen() const
+{
+    NSScreen *screen = mImpl->window.screen;
+    if (screen) {
+        float uiDPI;
+        DrawContext::getScreenDPI((__bridge void *)screen, &uiDPI, nullptr, nullptr);
+        auto desktop = screen.visibleFrame;
+        auto fullscreen = screen.frame;
+        return {
+            { float(desktop.origin.x), float(desktop.origin.y),
+              float(desktop.size.width), float(desktop.size.height) },
+            { float(fullscreen.origin.x), float(fullscreen.origin.y),
+              float(fullscreen.size.width), float(fullscreen.size.height) },
+            uiDPI
+        };
+    } else {
+        return { OSRect{0, 0, 0, 0}, OSRect{0, 0, 0, 0}, 96.0f };
     }
 }
 

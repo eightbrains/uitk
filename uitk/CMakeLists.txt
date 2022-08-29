@@ -28,6 +28,7 @@ set(UITK_PUBLIC_HEADERS
                  OSMenubar.h
                  OSWindow.h
                  ProgressBar.h
+                 Screen.h
                  ScrollBar.h
                  ScrollView.h
                  SearchBar.h
@@ -74,6 +75,7 @@ set(UITK_SOURCES Application.cpp
                  NumericModel.cpp
                  OSMenubar.cpp
                  ProgressBar.cpp
+                 Screen.cpp
                  ScrollBar.cpp
                  ScrollView.cpp
                  SearchBar.cpp
@@ -102,8 +104,7 @@ set(UITK_LIBS "")
 
 set(LIBNATIVEDRAW_PREFIX "${CMAKE_BINARY_DIR}/libnativedraw")
 ExternalProject_Add(libnativedraw
-#                    GIT_REPOSITORY "https://github.com/eightbrains/libnativedraw"
-                    URL "file:///Users/xerxes/eightbrains/src/libnativedraw"
+                    GIT_REPOSITORY "https://github.com/eightbrains/libnativedraw"
                     PREFIX ${LIBNATIVEDRAW_PREFIX}
                     #UPDATE_DISCONNECTED true # not necessary to check github each build
                     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${LIBNATIVEDRAW_PREFIX} "-DCMAKE_CXX_FLAGS:STRING=-DND_NAMESPACE=${ND_NAMESPACE}"
