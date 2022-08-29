@@ -27,7 +27,7 @@
 
 namespace uitk {
 
-class OSScreen;
+struct OSScreen;
 
 class Screen
 {

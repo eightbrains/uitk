@@ -347,7 +347,7 @@ struct Window::Impl
 
 Window::Window(const std::string& title, const PicaPt& width, const PicaPt& height,
                Flags::Value flags /*= Flags::kNone*/)
-    : Window(title, -1, -1, width.toStandardPixels(), height.toStandardPixels(), flags)
+    : Window(title, PicaPt::kZero, PicaPt::kZero, width, height, flags)
 {
     // The three major operating systems have different behaviors if we just do
     // nothing: macOS puts it at (0, 0) which is the bottom left of the screen,
@@ -364,10 +364,12 @@ Window::Window(const std::string& title,
                const PicaPt& x, const PicaPt& y,
                const PicaPt& width, const PicaPt& height,
                Flags::Value flags /*= Flags::kNone*/)
+    : Window(title, int(std::round(x.toStandardPixels())), int(std::round(y.toStandardPixels())),
+             int(std::round(width.toStandardPixels())), int(std::round(height.toStandardPixels())))
 {
     auto dpi = mImpl->window->dpi();
-    mImpl->window->setOSFrame(int(x.toPixels(dpi)), int(y.toPixels(dpi)),
-                              int(width.toPixels(dpi)), int(height.toPixels(dpi)));
+    mImpl->window->setOSFrame(x.toPixels(dpi), y.toPixels(dpi),
+                              width.toPixels(dpi), height.toPixels(dpi));
 }
 
 Window::Window(const std::string& title, int x, int y, int width, int height,

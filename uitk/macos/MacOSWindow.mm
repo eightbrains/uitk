@@ -900,7 +900,7 @@ OSScreen MacOSWindow::osScreen() const
             uiDPI
         };
     } else {
-        return { OSRect{0, 0, 0, 0}, OSRect{0, 0, 0, 0}, 1.0f };
+        return { OSRect{0, 0, 0, 0}, OSRect{0, 0, 0, 0}, 96.0f };
     }
 }
 

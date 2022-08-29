@@ -421,7 +421,7 @@ Rect Win32Window::contentRect() const
 
 float Win32Window::dpi() const { return mImpl->dc->dpi(); }
 
-OSWindow::OSRect Win32Window::osContentRect() const
+OSRect Win32Window::osContentRect() const
 {
     RECT clientRect;
     GetClientRect(mImpl->hwnd, &clientRect);
@@ -452,7 +452,7 @@ void Win32Window::setContentSize(const Size& size)
     setOSFrame(float(r.left), float(r.top), float(r.right - r.left), float(r.bottom - r.top));
 }
 
-OSWindow::OSRect Win32Window::osFrame() const
+OSRect Win32Window::osFrame() const
 {
     RECT r;
     GetWindowRect(mImpl->hwnd, &r);
@@ -467,6 +467,29 @@ void Win32Window::setOSFrame(float x, float y, float width, float height)
     // we seem to get an infinite draw loop. My understanding was that InvalidateRect()
     // (in postRedraw()) coalesces draw requests, but maybe not?
     onResize();
+}
+
+OSScreen Win32Window::osScreen() const
+{
+    auto hMonitor = MonitorFromWindow(mImpl->hwnd, MONITOR_DEFAULTTONULL);
+    if (hMonitor) {
+        MONITORINFO monitor;
+        monitor.cbSize = sizeof(monitor);
+        GetMonitorInfo(hMonitor, &monitor);
+        return {
+            { float(monitor.rcWork.left),
+              float(monitor.rcWork.top),
+              float(monitor.rcWork.right - monitor.rcWork.left),
+              float(monitor.rcWork.bottom - monitor.rcWork.top) },
+            { float(monitor.rcMonitor.left),
+              float(monitor.rcMonitor.top),
+              float(monitor.rcMonitor.right - monitor.rcMonitor.left),
+              float(monitor.rcMonitor.bottom - monitor.rcMonitor.top) },
+            dpi()
+        };
+    } else {
+        return { { 0.0f, 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f, 0.0f }, 96.0f };
+    }
 }
 
 void Win32Window::postRedraw() const
