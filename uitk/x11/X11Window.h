@@ -63,6 +63,8 @@ public:
     OSRect osFrame() const override;
     void setOSFrame(float x, float y, float width, float height) override;
 
+    OSScreen osScreen() const;
+
     PicaPt borderWidth() const override;
 
     void postRedraw() const override;
