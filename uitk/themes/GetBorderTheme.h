@@ -32,7 +32,7 @@ class GetBorderTheme : public Theme
 public:
     ~GetBorderTheme() {}
 
-    DrawContext drawContext(DrawContext& realDC);
+    std::shared_ptr<DrawContext> drawContext(DrawContext& realDC);
 
     void setTheme(const Theme *theme)
     {

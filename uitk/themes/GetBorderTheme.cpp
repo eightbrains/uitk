@@ -149,9 +149,9 @@ public:
 
 } // namespace
 
-DrawContext GetBorderTheme::drawContext(DrawContext& realDC)
+std::shared_ptr<DrawContext> GetBorderTheme::drawContext(DrawContext& realDC)
 {
-    return RecordingDrawContext(realDC);
+    return std::make_shared<RecordingDrawContext>(realDC);
 }
 
 } // namespace uitk
