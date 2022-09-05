@@ -29,17 +29,13 @@ namespace {
 class RecordingDrawContext : public DrawContext
 {
 public:
-    enum class Type { kRect, kEllipse, kPath };
-    Type mType;
-    Rect mRect;
-    PicaPt mBorderRadius;
-    std::shared_ptr<BezierPath> mPath;
     DrawContext& mRealDC;
-    
+    GetBorderTheme::FramePath& mFramePath;
+
 public:
-    RecordingDrawContext(DrawContext& realDC)
+    RecordingDrawContext(DrawContext& realDC, GetBorderTheme::FramePath& framePath)
         : DrawContext(nullptr, 10000.0f, 10000.0f, 72.0f, 72.0f)
-        , mRealDC(realDC)
+        , mRealDC(realDC), mFramePath(framePath)
     {
     }
 
@@ -101,29 +97,43 @@ public:
     void drawLines(const std::vector<Point>& lines) override {}
     void drawRect(const Rect& rect, PaintMode mode) override
     {
-        mType = Type::kRect;
-        mRect = rect;
-        mBorderRadius = PicaPt::kZero;
+        if ((rect.width > mFramePath.rect.width && rect.height >= mFramePath.rect.height) ||
+            (rect.height > mFramePath.rect.height && rect.width >= mFramePath.rect.height)) {
+            mFramePath.type = GetBorderTheme::Type::kRect;
+            mFramePath.rect = rect;
+            mFramePath.rectRadius = PicaPt::kZero;
+            mFramePath.path.reset();
+        }
     }
 
     void drawRoundedRect(const Rect& rect, const PicaPt& radius, PaintMode mode) override
     {
-        mType = Type::kRect;
-        mRect = rect;
-        mBorderRadius = radius;
+        if ((rect.width > mFramePath.rect.width && rect.height >= mFramePath.rect.height) ||
+            (rect.height > mFramePath.rect.height && rect.width >= mFramePath.rect.height)) {
+            mFramePath.type = GetBorderTheme::Type::kRect;
+            mFramePath.rect = rect;
+            mFramePath.rectRadius = radius;
+            mFramePath.path.reset();
+        }
     }
 
     void drawEllipse(const Rect& rect, PaintMode mode) override
     {
-        mType = Type::kEllipse;
-        mRect = rect;
-        mBorderRadius = PicaPt::kZero;
+        if ((rect.width > mFramePath.rect.width && rect.height >= mFramePath.rect.height) ||
+            (rect.height > mFramePath.rect.height && rect.width >= mFramePath.rect.height)) {
+            mFramePath.type = GetBorderTheme::Type::kEllipse;
+            mFramePath.rect = rect;
+            mFramePath.rectRadius = PicaPt::kZero;
+            mFramePath.path.reset();
+        }
     }
 
     void drawPath(std::shared_ptr<BezierPath> path, PaintMode mode) override
     {
-        mType = Type::kPath;
-        mPath = path;
+        if (mFramePath.rect.isEmpty()) {
+            mFramePath.type = GetBorderTheme::Type::kPath;
+            mFramePath.path = path;
+        }
     }
 
     void drawText(const char *textUTF8, const Point& topLeft, const Font& font, PaintMode mode) override {}
@@ -151,7 +161,7 @@ public:
 
 std::shared_ptr<DrawContext> GetBorderTheme::drawContext(DrawContext& realDC)
 {
-    return std::make_shared<RecordingDrawContext>(realDC);
+    return std::make_shared<RecordingDrawContext>(realDC, mFrame);
 }
 
 } // namespace uitk

@@ -70,7 +70,8 @@ public:
                    const WidgetStyle& style) const override;
     void clipFrame(UIContext& ui, const Rect& frame,
                    const WidgetStyle& style) const override;
-    void drawFocusFrame(UIContext& ui, const Rect& frame, const WidgetStyle& style) const override;
+    void drawFocusFrame(UIContext& ui, const Rect& frame, const PicaPt& radius) const override;
+    //void drawFocusFrame(UIContext& ui, const std::shared_ptr<BezierPath> path) const override;
     WidgetStyle labelStyle(const WidgetStyle& style, WidgetState state) const override;
     void drawButton(UIContext& ui, const Rect& frame, ButtonDrawStyle buttonStyle,
                     const WidgetStyle& style, WidgetState state,
@@ -84,7 +85,7 @@ public:
                               const WidgetStyle& style, WidgetState state) const override;
     void drawSegment(UIContext& ui, const Rect& frame, SegmentDrawStyle drawStyle,
                      WidgetState state,
-                     bool isButton, bool isOn,
+                     bool isButton, bool isOn, bool showKeyFocus,
                      int segmentIndex, int nSegments) const override;
     void drawSegmentDivider(UIContext& ui, const Point& top, const Point& bottom,
                             SegmentDrawStyle drawStyle,

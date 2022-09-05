@@ -1231,17 +1231,29 @@ void Window::onDraw(DrawContext& dc)
             gGetBorderTheme.setTheme(&context.theme);
             dc.save();
             dc.clipToRect(Rect()); // do not draw anything
-            UIContext focusContext = { gGetBorderTheme, dc, Rect(), true };  // empty rect: won't draw children
+            std::shared_ptr<DrawContext> fakeDC = gGetBorderTheme.drawContext(dc);
+            UIContext focusContext = { gGetBorderTheme, *fakeDC, Rect(), true };  // empty rect: won't draw children
             w->draw(focusContext);
             dc.restore();
 
-            auto focusRect = gGetBorderTheme.borderRect();
-            if (focusRect.width <= PicaPt::kZero || focusRect.height <= PicaPt::kZero) {
+            auto &path = gGetBorderTheme.path();
+            auto focusRect = path.rect;
+            if (path.type == GetBorderTheme::Type::kPath
+                || focusRect.width <= PicaPt::kZero || focusRect.height <= PicaPt::kZero)
+            {
                 // Note that this is NOT necessary bounds()!
                 focusRect = Rect(PicaPt::kZero, PicaPt::kZero, w->frame().width, w->frame().height);
             }
             focusRect.translate(ul.x, ul.y);
-            context.theme.drawFocusFrame(context, focusRect, gGetBorderTheme.borderStyle());
+            switch (gGetBorderTheme.path().type) {
+                case GetBorderTheme::Type::kRect:
+                case GetBorderTheme::Type::kEllipse:
+                    context.theme.drawFocusFrame(context, focusRect, path.rectRadius);
+                    break;
+                case GetBorderTheme::Type::kPath:
+                    // do nothing; we do not support this yet
+                    break;
+            }
             gGetBorderTheme.setTheme(nullptr);
         } else {
             // This should only happen if the user switched panels in a StackedPanel

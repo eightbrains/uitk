@@ -27,9 +27,29 @@
 
 namespace uitk {
 
+/// This is an internal class used to determine the border path for a given
+/// item. It essentially forwards the calls to the real theme, but on the
+/// assumption that the context is the fake DrawContext provided by
+/// drawContext().
+// Design note: this feels a little like a hack, instead of, say, having the
+//     widget provide a focus shape. But since the widget is drawn by the
+//     theme, this is not really feasible without requiring widget authors
+//     to support keyboard navigation (and if they do not, people will blame
+//     the library). One possibility is that we could have a WidgetType enum
+//     which would allow for a calcBorderPath(WidgetType) function, but this
+//     is clunky, and would require widgets to choose their type. At least
+//     this way requires no code on the part of a Widget.
 class GetBorderTheme : public Theme
 {
 public:
+    enum class Type { kRect, kEllipse, kPath };
+    struct FramePath {
+        Type type = Type::kRect;
+        Rect rect;
+        PicaPt rectRadius = PicaPt(0.0f);
+        std::shared_ptr<BezierPath> path;
+    };
+
     ~GetBorderTheme() {}
 
     std::shared_ptr<DrawContext> drawContext(DrawContext& realDC);
@@ -37,13 +57,9 @@ public:
     void setTheme(const Theme *theme)
     {
         mTheme = theme;
-        mRect = Rect();
-        mBorderRadius = PicaPt::kZero;
-        mStyle = WidgetStyle();
+        mFrame = FramePath();
     }
-    const Rect& borderRect() const { return mRect; }
-    const PicaPt& borderRadius() const { return mBorderRadius; }
-    const WidgetStyle& borderStyle() const { return mStyle; }
+    const FramePath& path() const { return mFrame; }
 
     const Params& params() const override { return mTheme->params(); }
     void setParams(const Params& params) override {}
@@ -98,16 +114,10 @@ public:
     void drawWindowBackground(UIContext& ui, const Size& size) const override {}
     void drawFrame(UIContext& ui, const Rect& frame,
                    const WidgetStyle& style) const override
-    {
-        if (frame.width > mRect.width || frame.height > mRect.height) {
-            mRect = frame;
-            mBorderRadius = style.borderRadius;
-            mStyle = style;
-        }
-    }
+        { mTheme->drawFrame(ui, frame, style); }
     void clipFrame(UIContext& ui, const Rect& frame,
                    const WidgetStyle& style) const override {}
-    void drawFocusFrame(UIContext& ui, const Rect& frame, const WidgetStyle& style) const override {}
+    void drawFocusFrame(UIContext& ui, const Rect& frame, const PicaPt& radius) const override {}
     WidgetStyle labelStyle(const WidgetStyle& style, WidgetState state) const override
         { return mTheme->labelStyle(style, state); }
     void drawButton(UIContext& ui, const Rect& frame, ButtonDrawStyle buttonStyle,
@@ -126,9 +136,10 @@ public:
         { mTheme->drawSegmentedControl(ui, frame, drawStyle, style, state); }
     void drawSegment(UIContext& ui, const Rect& frame, SegmentDrawStyle drawStyle,
                      WidgetState state,
-                     bool isButton, bool isOn,
+                     bool isButton, bool isOn, bool showKeyFocus,
                      int segmentIndex, int nSegments) const override
-        { mTheme->drawSegment(ui, frame, drawStyle, state, isButton, isOn, segmentIndex, nSegments); }
+        { mTheme->drawSegment(ui, frame, drawStyle, state, isButton, isOn, showKeyFocus,
+                              segmentIndex, nSegments); }
     void drawSegmentDivider(UIContext& ui, const Point& top, const Point& bottom,
                             SegmentDrawStyle drawStyle,
                             const WidgetStyle& ctrlStyle, WidgetState ctrlState) const override
@@ -144,7 +155,10 @@ public:
         { mTheme->drawSliderTrack(ui, dir, frame, thumbMid, style, state); }
     void drawSliderThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
                          WidgetState state) const override
-        { mTheme->drawSliderThumb(ui, frame, style, state); }
+    {
+        mFrame = FramePath();
+        mTheme->drawSliderThumb(ui, frame, style, state);
+    }
     void drawScrollbarTrack(UIContext& ui, SliderDir dir, const Rect& frame, const Point& thumbMid,
                             const WidgetStyle& style, WidgetState state) const override
         { mTheme->drawScrollbarTrack(ui, dir, frame, thumbMid, style, state); }
@@ -199,11 +213,8 @@ public:
 
 protected:
     const Theme *mTheme = nullptr;
-    mutable Rect mRect;
-    mutable PicaPt mBorderRadius;
-    mutable WidgetStyle mStyle;
+    mutable FramePath mFrame;
 };
-
 }  // namespace uitk
 #endif // UITK_GET_BORDER_THEME_H
 

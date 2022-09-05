@@ -456,10 +456,8 @@ public:
     SliderTest()
     {
         mIntEdit = new NumberEdit();
-        addChild(mIntEdit);
         mIntLabel = new Label("");
         mIntLabel->setAlignment(Alignment::kLeft | Alignment::kVCenter);
-        addChild(mIntLabel);
 
         mInt = new Slider();
         mInt->setLimits(0, 100);
@@ -469,13 +467,13 @@ public:
             mIntEdit->setValue(s->intValue());
             mIntLabel->setText(std::to_string(s->intValue()));
         });
-        addChild(mInt);
+        addChild(mInt);     // order of adding is tab order
+        addChild(mIntEdit);
+        addChild(mIntLabel);
 
         mDoubleEdit = new NumberEdit();
-        addChild(mDoubleEdit);
         mDoubleLabel = new Label("");
         mDoubleLabel->setAlignment(Alignment::kLeft | Alignment::kVCenter);
-        addChild(mDoubleLabel);
 
         mDouble = new Slider();
         mDouble->setLimits(0.0, 1.0, 0.01);
@@ -487,6 +485,8 @@ public:
             mDoubleLabel->setText(std::to_string(s->doubleValue()));
         });
         addChild(mDouble);
+        addChild(mDoubleEdit);
+        addChild(mDoubleLabel);
 
         mIntEdit->setOnValueChanged([this](NumberEdit *n) {
             mInt->setValue(n->intValue());
