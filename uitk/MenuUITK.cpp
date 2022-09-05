@@ -312,11 +312,11 @@ public:
         }
     }
 
-    void key(const KeyEvent& e) override
+    Widget::EventResult key(const KeyEvent& e) override
     {
         // If we are blinking eat the event and ignore it
         if (mBlinkState != BlinkState::kNone) {
-            return;
+            return EventResult::kConsumed;
         }
 
         bool handled = false;
@@ -362,8 +362,9 @@ public:
             }
         }
         if (!handled) {
-            Super::key(e);
+            return Super::key(e);
         }
+        return EventResult::kConsumed;
     }
 
     void blinkSelection(int index, std::function<void()> onDone)
@@ -1031,6 +1032,9 @@ void MenuUITK::cancel()
 {
     if (mImpl->isShowing) {
         if (mImpl->menuWindow) {
+            if (mImpl->parent) {
+                mImpl->parent->setPopupMenu(nullptr);
+            }
             mImpl->menuWindow->close();
         } else {
             // An empty menu will get no window on show(), but we do want
@@ -1040,9 +1044,6 @@ void MenuUITK::cancel()
             }
             mImpl->isShowing = false;
         }
-    }
-    if (mImpl->parent) {
-        mImpl->parent->setPopupMenu(nullptr);
     }
 }
 

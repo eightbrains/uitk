@@ -175,6 +175,8 @@ bool TextEditorLogic::handleKeyEvent(const KeyEvent& e)
 
     if (imeConversion().isEmpty()) {  // OS will handle editing the IME text
         switch (e.key) {
+            case Key::kTab:     // do not eat key focus change
+                return false;
             case Key::kBackspace:
                 if (isWordMod) {
                     deleteBackToWordStart();

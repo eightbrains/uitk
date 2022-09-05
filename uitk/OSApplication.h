@@ -50,6 +50,7 @@ public:
 
     virtual bool isOriginInUpperLeft() const = 0;
     virtual bool shouldHideScrollbars() const = 0;
+    virtual bool canKeyFocusEverything() const = 0;
     virtual bool platformHasMenubar() const = 0;
 
     virtual Clipboard& clipboard() const = 0;

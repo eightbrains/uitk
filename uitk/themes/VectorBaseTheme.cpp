@@ -666,6 +666,31 @@ void VectorBaseTheme::clipFrame(UIContext& ui, const Rect& frame,
     }
 }
 
+void VectorBaseTheme::drawFocusFrame(UIContext& ui, const Rect& frame, const WidgetStyle& style) const
+{
+    auto strokeWidth = PicaPt::fromStandardPixels(3.0f);
+    ui.dc.save();
+    if (style.borderRadius > PicaPt::kZero) {
+        auto radius = style.borderRadius * (1.0f + strokeWidth / frame.width);
+        auto focusRect = frame.insetted(-0.5f * strokeWidth, -0.5 * strokeWidth);
+        ui.dc.setStrokeColor(mParams.keyFocusColor);
+        ui.dc.setStrokeWidth(strokeWidth);
+        ui.dc.drawRoundedRect(focusRect, radius,  kPaintStroke);
+    } else {
+        auto focusRect = frame.insetted(-strokeWidth, -strokeWidth);
+        auto path = ui.dc.createBezierPath();
+        path->addRoundedRect(focusRect, strokeWidth);
+        path->moveTo(frame.upperLeft());
+        path->lineTo(frame.lowerLeft());
+        path->lineTo(frame.lowerRight());
+        path->lineTo(frame.upperRight());
+        path->close();
+        ui.dc.setFillColor(mParams.keyFocusColor);
+        ui.dc.drawPath(path, kPaintFill);
+    }
+    ui.dc.restore();
+}
+
 Theme::WidgetStyle VectorBaseTheme::labelStyle(const WidgetStyle& style, WidgetState state) const
 {
     return mLabelStyles[int(state)].merge(style);

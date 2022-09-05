@@ -74,10 +74,13 @@ public:
     /// the on-clicked callback function.
     void performClick();
 
+    bool acceptsKeyFocus() const override;
+
     Size preferredSize(const LayoutContext& context) const override;
     void layout(const LayoutContext& context) override;
 
     Widget::EventResult mouse(const MouseEvent &e) override;
+    Widget::EventResult key(const KeyEvent& e) override;
 
     void draw(UIContext& context) override;
 

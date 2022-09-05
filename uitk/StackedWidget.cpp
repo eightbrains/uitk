@@ -74,6 +74,8 @@ void StackedWidget::setIndexShowing(int index)
             p->setVisible(false);
         }
     }
+
+    updateKeyFocusOnVisibilityOrEnabledChange();
 }
 
 void StackedWidget::layout(const LayoutContext& context)

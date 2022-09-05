@@ -88,6 +88,11 @@ bool MacOSApplication::isOriginInUpperLeft() const { return false; }
 
 bool MacOSApplication::shouldHideScrollbars() const { return true; }
 
+bool MacOSApplication::canKeyFocusEverything() const
+{
+    return ([NSApp isFullKeyboardAccessEnabled] == YES);
+}
+
 bool MacOSApplication::platformHasMenubar() const { return true; }
 
 Clipboard& MacOSApplication::clipboard() const { return *mImpl->clipboard; }
@@ -110,6 +115,7 @@ Theme::Params MacOSApplication::themeParams() const
     auto params = (isDarkMode ? EmpireTheme::darkModeParams(accentColor)
                               : EmpireTheme::lightModeParams(accentColor));
     params.accentColor = accentColor;
+    params.keyFocusColor = toUITKColor(NSColor.keyboardFocusIndicatorColor);
     params.windowBackgroundColor = Color(0.0f, 0.0f, 0.0f, 0.0f); // draw nothing
     params.editableBackgroundColor = toUITKColor(NSColor.controlColor);
     params.nonEditableBackgroundColor = toUITKColor(NSColor.controlColor);

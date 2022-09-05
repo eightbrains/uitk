@@ -275,7 +275,7 @@ void Dialog::cancel()
     }
 }
 
-void Dialog::key(const KeyEvent& e)
+Widget::EventResult Dialog::key(const KeyEvent& e)
 {
     if (e.key == Key::kReturn || e.key == Key::kEnter) {
         if (e.type == KeyEvent::Type::kKeyDown) {
@@ -283,12 +283,14 @@ void Dialog::key(const KeyEvent& e)
                 mImpl->defaultButton->performClick();
             }
         }
+        return EventResult::kIgnored;
     } else if (e.key == Key::kEscape) {
         if (e.type == KeyEvent::Type::kKeyDown) {
             cancel();
         }
+        return EventResult::kIgnored;
     } else {
-        Super::key(e);
+        return Super::key(e);
     }
 }
 

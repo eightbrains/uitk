@@ -26,6 +26,7 @@
 #include "Cursor.h"
 #include "Dialog.h"
 #include "Events.h"
+#include "ListView.h"
 #include "OSMenubar.h"
 #include "OSWindow.h"
 #include "Menu.h"
@@ -36,6 +37,7 @@
 #include "private/MenuIterator.h"
 #include "themes/Theme.h"
 #include "themes/EmpireTheme.h"
+#include "themes/GetBorderTheme.h"
 
 #if defined(__APPLE__)
 #include "macos/MacOSApplication.h"
@@ -294,6 +296,18 @@ void updateStandardItem(Window &w, MenuItem *item, MenuId activeWindowId)
         default:
             break;
     }
+}
+
+bool widgetCanAcceptKeyFocus(Widget *w, Application::KeyFocusCandidates candidates)
+{
+    if (candidates == Application::KeyFocusCandidates::kAll) {
+        return w->acceptsKeyFocus();
+    } else if (candidates == Application::KeyFocusCandidates::kTextAndLists) {
+        // TODO: need to have a better way of determining if something is a list
+        return w->acceptsKeyFocus() && (w->asTextEditorLogic() || dynamic_cast<ListView*>(w));
+    }
+    assert(false);
+    return false;
 }
 
 }  // namespace
@@ -691,6 +705,10 @@ Widget* Window::mouseGrabWidget() const { return mImpl->grabbedWidget; }
 
 void Window::setFocusWidget(Widget *w)
 {
+    if (w && (!w->acceptsKeyFocus() || !w->enabled() || !w->visible())) {
+        w = nullptr;
+    }
+
     auto *oldFocusedWidget = mImpl->focusedWidget;
     bool isDifferent = (w != oldFocusedWidget);
 
@@ -712,9 +730,131 @@ void Window::setFocusWidget(Widget *w)
     if (isDifferent && w && mImpl->focusedWidget) {
         mImpl->focusedWidget->keyFocusStarted();
     }
+
+    if (isDifferent) {
+        mImpl->needsDraw = true;
+    }
 }
 
 Widget* Window::focusWidget() const { return mImpl->focusedWidget; }
+
+void Window::moveKeyFocus(int dir)
+{
+    class KeyFocusIterator {
+        Widget *mRoot;
+        Widget *mWidget;
+        Widget *mParent;
+        int mWidgetIdx;
+        Widget *mLastWidget;
+    public:
+        explicit KeyFocusIterator(Widget *root, Widget *w = nullptr) {
+            assert(root);
+            if (w && w != root) {
+                mRoot = root;
+                mWidget = w;
+                mLastWidget = w;
+                mParent = w->parent();
+                assert(mParent || mWidget == mRoot);  // w must be in hierarchy!
+                mWidgetIdx = findWidgetIdx(mWidget);
+            } else {
+                mRoot = root;
+                mWidget = nullptr;
+                mParent = nullptr;
+                mWidgetIdx = -1;
+                mLastWidget = nullptr;
+            }
+        }
+
+        Widget* operator*() const { return mWidget; }
+
+        // This is roughly O(log^2 n), because we do a linear search every time we
+        // return to the parent.
+        KeyFocusIterator& operator++() {
+            auto candidates = Application::instance().keyFocusCandidates();
+            std::vector<Widget*> windowChildren = { mRoot };
+            do {
+                auto *siblings = (mParent ? &mParent->children() : &windowChildren);
+                ++mWidgetIdx;
+                if (mWidgetIdx < int(siblings->size())) {
+                    mWidget = (*siblings)[mWidgetIdx];
+                    if (mWidget->visible() && mWidget->enabled()) {
+                        if (widgetCanAcceptKeyFocus(mWidget, candidates)) {
+                            break;
+                        } else if (!mWidget->children().empty()) {
+                            mParent = mWidget;
+                            mWidget = nullptr;
+                            mWidgetIdx = -1;
+                        }
+                    }
+                } else {
+                    auto *last = mLastWidget;
+                    *this = KeyFocusIterator(mRoot, mParent);
+                    mLastWidget = last;
+                }
+            } while (mWidget != mLastWidget || (mWidgetIdx == -1 && mParent));
+
+            mLastWidget = mWidget;
+            return *this;
+        }
+
+        KeyFocusIterator& operator--() {
+            if (!mParent && mWidgetIdx < 0) {
+                mWidgetIdx = 1;
+            }
+            auto candidates = Application::instance().keyFocusCandidates();
+            std::vector<Widget*> windowChildren = { mRoot };
+            do {
+                auto *siblings = (mParent ? &mParent->children() : &windowChildren);
+                --mWidgetIdx;
+                if (mWidgetIdx >= 0) {
+                    mWidget = (*siblings)[mWidgetIdx];
+                    if (mWidget->visible() && mWidget->enabled()) {
+                        if (widgetCanAcceptKeyFocus(mWidget, candidates)) {
+                            break;
+                        } else if (!mWidget->children().empty()) {
+                            mParent = mWidget;
+                            mWidget = nullptr;
+                            mWidgetIdx = mParent->children().size();
+                        }
+                    }
+                } else {
+                    auto *last = mLastWidget;
+                    *this = KeyFocusIterator(mRoot, mParent);
+                    mLastWidget = last;
+                    if (!mParent) {
+                        mWidgetIdx = 1;
+                    }
+                }
+            } while (mWidget != mLastWidget || (mParent && mWidgetIdx >= int(mParent->children().size())));
+
+            mLastWidget = mWidget;
+            return *this;
+        }
+
+        int findWidgetIdx(Widget *w) {
+            mWidgetIdx = -1;
+            auto &siblings = mParent->children();
+            for (int i = 0;  i < int(siblings.size());  ++i) {
+                if (siblings[i] == mWidget) {
+                    return i;
+                }
+            }
+            assert(mWidgetIdx >= 0);  // w must be a child of parent!
+            return -1;
+        }
+    };
+
+    KeyFocusIterator it(mImpl->rootWidget.get(), mImpl->focusedWidget);
+    if (dir >= 0) {
+        ++it;
+    } else {
+        --it;
+    }
+    setFocusWidget(*it);
+
+    // Test: empty window (just root window)
+    // Test: window with only widgets that do not accept focus
+}
 
 PicaPt Window::borderWidth() const { return mImpl->window->borderWidth(); }
 
@@ -943,17 +1083,31 @@ void Window::onKey(const KeyEvent &e)
         mImpl->activePopup->window()->onKey(e);
     } else {
         mImpl->inKey = true;
+
         // Send the key to the focused widget if there is one
+        auto result = Widget::EventResult::kIgnored;
         if (mImpl->focusedWidget) {
-            mImpl->focusedWidget->key(e);
+            result = mImpl->focusedWidget->key(e);
         // If no focused widget AND we are a dialog, send the key to the dialog
         // widget so that Esc, Enter, etc. can be handled.
         } else if (mImpl->flags & Flags::kDialog) {
             auto roots = mImpl->rootWidget->children();
             if (!roots.empty()) {
-                roots[0]->key(e);
+                result = roots[0]->key(e);
             }
         }
+
+        // Handle key focus navigation
+        if (result == Widget::EventResult::kIgnored && e.key == Key::kTab
+            && e.type == KeyEvent::Type::kKeyDown)
+        {
+            if (e.keymods == KeyModifier::kNone) {
+                moveKeyFocus(1);
+            } else if (e.keymods == KeyModifier::kShift) {
+                moveKeyFocus(-1);
+            }
+        }
+
         mImpl->inKey = false;
         if (mImpl->needsDraw) {
             postRedraw();
@@ -1029,6 +1183,9 @@ void Window::onLayout(const DrawContext& dc)
 
 void Window::onDraw(DrawContext& dc)
 {
+    // Store global GetBorderTheme object so that we do not have to recreate it
+    static GetBorderTheme gGetBorderTheme;
+
     // It's not clear when to re-layout. We could send a user message for layout,
     // but it's still going to delay a draw (since it is all done by the same thread),
     // so it seems like it is simpler just to do it on a draw.
@@ -1043,22 +1200,72 @@ void Window::onDraw(DrawContext& dc)
                      PicaPt::fromPixels(float(dc.height()), dc.dpi()));
     auto rootUL = mImpl->rootWidget->frame().upperLeft();
     mImpl->inDraw = true;
+
+    // --- start draw ---
     dc.beginDraw();
+
+    // Draw the background
     if (mImpl->flags & Window::Flags::kPopup) {
         mImpl->theme->drawMenuBackground(context, size);
     } else {
         mImpl->theme->drawWindowBackground(context, size);
     }
+
+    // Draw the widgets
     dc.translate(rootUL.x, rootUL.y);
     mImpl->rootWidget->draw(context);
     dc.translate(-rootUL.x, -rootUL.y);
+
+    // Draw the focus (if necessary). This is a bit of a hack: since there is no way
+    // to get the border path of a Widget, since the theme functions draw the frame.
+    // So, we have a special Theme that just records the frame.
+    bool cancelFocus = false;
+    if (context.isWindowActive && mImpl->focusedWidget) {
+        if (mImpl->focusedWidget->visible() && mImpl->focusedWidget->enabled()) {
+            auto *w = mImpl->focusedWidget;
+            while (w && w->showFocusRingOnParent()) {
+                w = w->parent();
+            }
+            auto ul = w->convertToWindowFromLocal(Point::kZero);
+
+            gGetBorderTheme.setTheme(&context.theme);
+            dc.save();
+            dc.clipToRect(Rect()); // do not draw anything
+            UIContext focusContext = { gGetBorderTheme, dc, Rect(), true };  // empty rect: won't draw children
+            w->draw(focusContext);
+            dc.restore();
+
+            auto focusRect = gGetBorderTheme.borderRect();
+            if (focusRect.width <= PicaPt::kZero || focusRect.height <= PicaPt::kZero) {
+                // Note that this is NOT necessary bounds()!
+                focusRect = Rect(PicaPt::kZero, PicaPt::kZero, w->frame().width, w->frame().height);
+            }
+            focusRect.translate(ul.x, ul.y);
+            context.theme.drawFocusFrame(context, focusRect, gGetBorderTheme.borderStyle());
+            gGetBorderTheme.setTheme(nullptr);
+        } else {
+            // This should only happen if the user switched panels in a StackedPanel
+            // or the widget is disabled programmatically. We could probably get away
+            // with setting the focus here, except that we will need to redraw, except
+            // it is safer to defer.
+            cancelFocus = true;
+        }
+    }
+
+    // Draw the menubar (if necessary)
     if (mImpl->menubarWidget) {
         mImpl->menubarWidget->draw(context);
     }
+
     dc.endDraw();
     mImpl->inDraw = false;
+    // --- end draw ---
 
     mImpl->needsDraw = false;  // should be false anyway, just in case
+
+    if (cancelFocus) {  // this *will* require a redraw, so do last.
+        setFocusWidget(nullptr);
+    }
 }
 
 void Window::onActivated(const Point& currentMousePos)
@@ -1091,6 +1298,13 @@ void Window::onActivated(const Point& currentMousePos)
         me.pos = currentMousePos;
         me.type = MouseEvent::Type::kMove;
         onMouse(me);
+    } else {
+        // If an item has keyfocus, redraw to draw the keyfocus ring.
+        // If we are in the content frame the onMouse() above will
+        // post a redraw, otherwise we need to do it here.
+        if (mImpl->focusedWidget) {
+            postRedraw();
+        }
     }
 }
 

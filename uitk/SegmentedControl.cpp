@@ -303,6 +303,57 @@ void SegmentedControl::mouseExited()
     setNeedsDraw();  // might not actually need this, caller might call this?
 }
 
+bool SegmentedControl::acceptsKeyFocus() const { return mImpl->action == Action::kSelectOne; }
+
+Widget::EventResult SegmentedControl::key(const KeyEvent& e)
+{
+    auto result = Super::key(e);
+    if (result != EventResult::kIgnored) {
+        return result;
+    }
+
+    if (e.type == KeyEvent::Type::kKeyDown) {
+        if (mImpl->action == Action::kSelectOne) {
+            switch (e.key) {
+                case Key::kLeft:
+                case Key::kRight: {
+                    int onIdx = -1;
+                    for (size_t i = 0;  i < mImpl->items.size();  ++i) {
+                        if (mImpl->items[i].isOn) {
+                            onIdx = int(i);
+                            break;
+                        }
+                    }
+                    if (onIdx >= 0) {
+                        if (e.key == Key::kRight) {
+                            ++onIdx;
+                        } else {
+                            --onIdx;
+                        }
+                    }
+                    if (onIdx < 0 || onIdx >= int(mImpl->items.size())) {
+                        if (e.key == Key::kRight) {
+                            onIdx = 0;
+                        } else {
+                            onIdx = int(mImpl->items.size() - 1);
+                        }
+                    }
+                    setSegmentOn(onIdx, true);
+                    if (mImpl->onClicked) {
+                        mImpl->onClicked(onIdx);
+                    }
+                    return EventResult::kConsumed;
+                }
+                default:
+                    break;
+            }
+        } else {
+            // TODO: implement
+        }
+    }
+    return EventResult::kIgnored;
+}
+
 void SegmentedControl::draw(UIContext& context)
 {
     auto ctrlState = enabled() ? Theme::WidgetState::kNormal : Theme::WidgetState::kDisabled;

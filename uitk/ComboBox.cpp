@@ -177,6 +177,32 @@ ComboBox* ComboBox::setOnSelectionChanged(std::function<void(ComboBox*)> onChang
 // But it is not right to return kIgnored for the mouse click, either.
 bool ComboBox::shouldAutoGrab() const { return false; }
 
+void ComboBox::showMenu() const
+{
+    int id = OSMenu::kInvalidId;
+    if (mImpl->selectedIndex >= 0) {
+        id = mImpl->items[mImpl->selectedIndex].id;
+    }
+
+    // The menu has a checkmark next to the currently selected item, and since
+    // we offset the menu item when drawing the selected item in the combobox,
+    // we also need to offset the menu similarly. This is Mac behavior.
+    auto menuUL = Point::kZero;  // upper left in combobox's coord system
+    menuUL.x -= mImpl->itemDrawOffset;
+    menuUL.y -= mImpl->popupOffsetY;
+    mImpl->menu->show(window(), convertToWindowFromLocal(menuUL), id,
+                      frame().width + 1.0f * frame().height /* height ~= em */);
+#ifdef __APPLE__
+    // macOS draws the window border inside the window, instead of decorating
+    // the exterior of the window like Win32 and Xlib. show() outsets for this,
+    // but since we are aligned with the frame of the control, we need to undo that.
+    if (auto *menuWin = mImpl->menu->window()) {
+        auto border = menuWin->borderWidth();
+        menuWin->move(border, border);
+    }
+#endif // __APPLE__
+}
+
 Size ComboBox::preferredSize(const LayoutContext& context) const
 {
     auto menuPref = mImpl->menu->preferredSize(context);
@@ -202,35 +228,35 @@ Widget::EventResult ComboBox::mouse(const MouseEvent& e)
         case MouseEvent::Type::kButtonDown: {
             // Don't Super::mouse() here, because we do not want to be set as the grab widget,
             // since we are opening a popup menu.
-
-            int id = OSMenu::kInvalidId;
-            if (mImpl->selectedIndex >= 0) {
-                id = mImpl->items[mImpl->selectedIndex].id;
-            }
-
-            // The menu has a checkmark next to the currently selected item, and since
-            // we offset the menu item when drawing the selected item in the combobox,
-            // we also need to offset the menu similarly. This is Mac behavior.
-            auto menuUL = Point::kZero;  // upper left in combobox's coord system
-            menuUL.x -= mImpl->itemDrawOffset;
-            menuUL.y -= mImpl->popupOffsetY;
-            mImpl->menu->show(window(), convertToWindowFromLocal(menuUL), id,
-                              frame().width + 1.0f * frame().height /* height ~= em */);
-#ifdef __APPLE__
-            // macOS draws the window border inside the window, instead of decorating
-            // the exterior of the window like Win32 and Xlib. show() outsets for this,
-            // but since we are aligned with the frame of the control, we need to undo that.
-            if (auto *menuWin = mImpl->menu->window()) {
-                auto border = menuWin->borderWidth();
-                menuWin->move(border, border);
-            }
-#endif // __APPLE__
-
+            showMenu();
             return EventResult::kConsumed;
         }
         default:
             return Super::mouse(e);
     }
+}
+
+bool ComboBox::acceptsKeyFocus() const { return true; }
+
+Widget::EventResult ComboBox::key(const KeyEvent& e)
+{
+    auto result = Super::key(e);
+    if (result != EventResult::kIgnored) {
+        return result;
+    }
+
+    if (e.type == KeyEvent::Type::kKeyDown) {
+        switch (e.key) {
+            case Key::kSpace:
+            case Key::kEnter:
+            case Key::kReturn:
+                showMenu();
+                return EventResult::kConsumed;
+            default:
+                break;
+        }
+    }
+    return EventResult::kIgnored;
 }
 
 void ComboBox::draw(UIContext& context)

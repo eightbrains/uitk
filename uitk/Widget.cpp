@@ -47,6 +47,7 @@ struct Widget::Impl {
     bool drawsFrame = false;
     bool visible = true;
     bool enabled = true;
+    bool showFocusRingOnParent = false;
 
     void updateDrawsFrame(const Widget *w)
     {
@@ -135,6 +136,9 @@ bool Widget::visible() const { return mImpl->visible; }
 Widget* Widget::setVisible(bool vis)
 {
     mImpl->visible = vis;
+    if (!vis) {
+        updateKeyFocusOnVisibilityOrEnabledChange();
+    }
     return this;
 }
 
@@ -149,6 +153,11 @@ Widget* Widget::setEnabled(bool enabled)
     for (auto *child : mImpl->children) {
         child->setEnabled(enabled);
     }
+
+    if (!enabled) {
+        updateKeyFocusOnVisibilityOrEnabledChange();
+    }
+
     return this;
 }
 
@@ -345,6 +354,15 @@ void Widget::resignKeyFocus() const
     }
 }
 
+void Widget::setShowFocusRingOnParent(bool show)
+{
+    mImpl->showFocusRingOnParent = show;
+}
+
+bool Widget::showFocusRingOnParent() const { return mImpl->showFocusRingOnParent; }
+
+bool Widget::acceptsKeyFocus() const { return false; }
+
 CutPasteable* Widget::asCutPasteable() { return nullptr; }
 
 TextEditorLogic* Widget::asTextEditorLogic() { return nullptr; }
@@ -407,6 +425,22 @@ Theme::WidgetStyle& Widget::style(Theme::WidgetState state)
 }
 
 bool Widget::shouldAutoGrab() const { return true;  }
+
+void Widget::updateKeyFocusOnVisibilityOrEnabledChange()
+{
+    if (auto w = window()) {
+        if (auto focus = w->focusWidget()) {
+            auto *p = focus->parent();
+            while (p) {
+                if (!p->visible() || !p->enabled()) {
+                    focus->resignKeyFocus();
+                    break;
+                }
+                p = p->parent();
+            }
+        }
+    }
+}
 
 Size Widget::preferredSize(const LayoutContext& context) const
 {
@@ -509,8 +543,9 @@ void Widget::mouseExited()
     }
 }
 
-void Widget::key(const KeyEvent& e)
+Widget::EventResult Widget::key(const KeyEvent& e)
 {
+    return EventResult::kIgnored;
 }
 
 void Widget::keyFocusStarted()

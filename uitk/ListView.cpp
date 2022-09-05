@@ -413,13 +413,17 @@ int ListView::calcRowIndex(const Point& p) const
     return -1;
 }
 
-void ListView::key(const KeyEvent& e)
+bool ListView::acceptsKeyFocus() const { return true; }
+
+Widget::EventResult ListView::key(const KeyEvent& e)
 {
-    Super::key(e);
-    if (mImpl->selectionMode == SelectionMode::kNoItems || e.type == KeyEvent::Type::kKeyUp) {
-        return;
+    auto result = Super::key(e);
+    if (result != EventResult::kIgnored ||
+        mImpl->selectionMode == SelectionMode::kNoItems || e.type == KeyEvent::Type::kKeyUp) {
+        return result;
     }
 
+    result = EventResult::kConsumed;
     switch (e.key) {
         case Key::kDown: {
             int idx = std::max(-1, mImpl->mouseOverIndex) + 1;
@@ -482,8 +486,10 @@ void ListView::key(const KeyEvent& e)
             }
             break;
         default:
+            result = EventResult::kIgnored;
             break;
     }
+    return result;
 }
 
 void ListView::draw(UIContext& context)

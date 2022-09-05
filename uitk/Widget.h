@@ -113,6 +113,17 @@ public:
     bool focused() const;
     void resignKeyFocus() const;
 
+    /// When using widgets like editable text as a child, it may be
+    /// desireable to have the focus ring display around the parent.
+    /// Defaults to false.
+    void setShowFocusRingOnParent(bool show);
+    bool showFocusRingOnParent() const;
+
+    /// Returns true if the widget can accept key focus, false otherwise.
+    /// The default implementation returns false. Implementations
+    /// do not need to consider if the widget is disabled or hidden.
+    virtual bool acceptsKeyFocus() const;
+
     /// Objects that support cut and paste should override this and
     /// return this interface. This is used by the copy/cut/paste menu items.
     /// The base class action returns nullptr, which disables the items.
@@ -160,7 +171,7 @@ public:
     virtual void mouseEntered();
     virtual void mouseExited();
 
-    virtual void key(const KeyEvent& e);
+    virtual EventResult key(const KeyEvent& e);
     virtual void keyFocusStarted();
     virtual void keyFocusEnded();
 
@@ -204,6 +215,14 @@ protected:
     // Return true if parent's mouse() should grab the widget if mouse down is consumed.
     // Default implementation returns true.
     virtual bool shouldAutoGrab() const;
+
+    // Since the window does not know about visibility changes, if our widget changes
+    // visibility, we need to ensure that ourself or a child widget does not have
+    // key focus if we became invisible and/or disabled. This is called by setVisible()
+    // and setEnabled(), so you would only need to call it in the case you are
+    // something like StackedWidget, where switching panels could make an ancestor
+    // of a focused widget invisible.
+    void updateKeyFocusOnVisibilityOrEnabledChange();
 
     void setWindow(Window* window);  // for Window
 

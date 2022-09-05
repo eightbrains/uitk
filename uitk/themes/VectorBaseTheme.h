@@ -70,6 +70,7 @@ public:
                    const WidgetStyle& style) const override;
     void clipFrame(UIContext& ui, const Rect& frame,
                    const WidgetStyle& style) const override;
+    void drawFocusFrame(UIContext& ui, const Rect& frame, const WidgetStyle& style) const override;
     WidgetStyle labelStyle(const WidgetStyle& style, WidgetState state) const override;
     void drawButton(UIContext& ui, const Rect& frame, ButtonDrawStyle buttonStyle,
                     const WidgetStyle& style, WidgetState state,

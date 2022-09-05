@@ -55,6 +55,8 @@ public:
     UseClearButton useClearButton() const;
     StringEdit* setUseClearButton(UseClearButton use);
 
+    bool acceptsKeyFocus() const override;
+
     CutPasteable* asCutPasteable() override;
     TextEditorLogic* asTextEditorLogic() override;
 
@@ -64,7 +66,7 @@ public:
     EventResult mouse(const MouseEvent& e) override;
     void mouseEntered() override;
     void mouseExited() override;
-    void key(const KeyEvent& e) override;
+    EventResult key(const KeyEvent& e) override;
     void text(const TextEvent& e) override;
     void keyFocusEnded() override;
 

@@ -74,6 +74,8 @@ public:
     Size preferredSize(const LayoutContext& context) const override;
     void layout(const LayoutContext& context) override;
     EventResult mouse(const MouseEvent& e) override;
+    bool acceptsKeyFocus() const override;
+    EventResult key(const KeyEvent& e) override;
     void mouseExited() override;
     void draw(UIContext& context) override;
 

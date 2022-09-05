@@ -45,6 +45,7 @@ set(UITK_PUBLIC_HEADERS
                  Window.h
                  themes/Theme.h
                  themes/EmpireTheme.h
+                 themes/GetBorderTheme.h
                  themes/VectorBaseTheme.h
                  themes/IconPainter.h
                  themes/StandardIconPainter.h
@@ -93,6 +94,7 @@ set(UITK_SOURCES Application.cpp
                  private/Utils.cpp
                  themes/Theme.cpp
                  themes/EmpireTheme.cpp
+                 themes/GetBorderTheme.cpp
                  themes/VectorBaseTheme.cpp
                  themes/StandardIconPainter.cpp
                  io/Directory.cpp
