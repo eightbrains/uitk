@@ -34,7 +34,7 @@ public:
 
 public:
     RecordingDrawContext(DrawContext& realDC, GetBorderTheme::FramePath& framePath)
-        : DrawContext(nullptr, 10000.0f, 10000.0f, 72.0f, 72.0f)
+        : DrawContext(nullptr, 10000, 10000, 72.0f, 72.0f)
         , mRealDC(realDC), mFramePath(framePath)
     {
     }

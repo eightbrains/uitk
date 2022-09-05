@@ -391,6 +391,14 @@ Widget::EventResult SegmentedControl::key(const KeyEvent& e)
                 }
                 return EventResult::kConsumed;
             }
+            case Key::kEscape: {
+                const auto focusIdx = mImpl->keyFocusSegmentIdx;
+                if (focusIdx >= 0 && focusIdx < nSegs && mImpl->items[focusIdx].state == Theme::WidgetState::kMouseDown) {
+                    mImpl->items[focusIdx].state = Theme::WidgetState::kNormal;
+                }
+                setNeedsDraw();
+                return EventResult::kConsumed;
+            }
             default:
                 break;
         }

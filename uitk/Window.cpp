@@ -814,7 +814,7 @@ void Window::moveKeyFocus(int dir)
                         } else if (!mWidget->children().empty()) {
                             mParent = mWidget;
                             mWidget = nullptr;
-                            mWidgetIdx = mParent->children().size();
+                            mWidgetIdx = int(mParent->children().size());
                         }
                     }
                 } else {
