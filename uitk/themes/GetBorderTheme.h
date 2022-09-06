@@ -25,6 +25,8 @@
 
 #include "Theme.h"
 
+#include "../StringEditorLogic.h"
+
 namespace uitk {
 
 /// This is an internal class used to determine the border path for a given
@@ -175,7 +177,10 @@ public:
     void drawTextEdit(UIContext& ui, const Rect& frame, const PicaPt& scrollOffset,
                       const std::string& placeholder, TextEditorLogic& editor, int horizAlign,
                       const WidgetStyle& style, WidgetState state, bool hasFocus) const override
-        { mTheme->drawTextEdit(ui, frame, scrollOffset, placeholder, editor, horizAlign, style, state, hasFocus); }
+    {
+        StringEditorLogic fakeEdit;  // selection may draw a rectangle, don't want that
+        mTheme->drawTextEdit(ui, frame, scrollOffset, placeholder, fakeEdit, horizAlign, style, state, hasFocus);
+    }
     void drawSearchBar(UIContext& ui, const Rect& frame, const WidgetStyle& style,
                                WidgetState state) const override
         { mTheme->drawSearchBar(ui, frame, style, state); }
