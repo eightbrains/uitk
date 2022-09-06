@@ -268,8 +268,15 @@ void ListView::setSelectedIndex(int index)
 
 void ListView::setSelectedIndices(const std::unordered_set<int> indices)
 {
-    mImpl->selectedIndices = indices;
     auto &items = mImpl->content->children();
+    for (int idx : mImpl->selectedIndices) {
+        if (idx >= 0 && idx < int(items.size())) {
+            items[idx]->setThemeState(Theme::WidgetState::kNormal);
+        }
+    }
+
+    mImpl->selectedIndices = indices;
+
     for (int idx : mImpl->selectedIndices) {
         if (idx >= 0 && idx < int(items.size())) {
             items[idx]->setThemeState(Theme::WidgetState::kSelected);
