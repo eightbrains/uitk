@@ -248,7 +248,12 @@ class MenuListView : public ListView
 {
     using Super = ListView;
 public:
-    MenuListView(MenuUITK *m) : mMenuUitk(m) {}
+    MenuListView(MenuUITK *m)
+        : mMenuUitk(m)
+    {
+        setKeyNavigationWraps(true);
+    }
+
     ~MenuListView()
     {
     }
@@ -323,14 +328,28 @@ public:
         if (e.type == KeyEvent::Type::kKeyDown) {
             switch (e.key) {
                 case Key::kUp:
-                case Key::kDown:
+                case Key::kDown: {
                     // if opened submenu with right, then closed with left, then
                     // move up or down we don't want the selection created with
                     // right to persist (and show two highlighted items), so
                     // clear.
                     clearSelection();
-                    handled = false;  // want to call super!
+                    int idx = highlightedIndex();
+                    if (e.key == Key::kUp) {
+                        --idx;
+                        if (idx < 0) {
+                            idx = Super::size() - 1;
+                        }
+                    } else {
+                        ++idx;
+                        if (idx >= Super::size()) {
+                            idx = 0;
+                        }
+                    }
+                    setHighlightedIndex(idx);
+                    handled = true;
                     break;
+                }
                 case Key::kLeft:
                     if (auto *win = window()) {
                         mMenuUitk->cancel();
@@ -348,9 +367,9 @@ public:
                 case Key::kReturn:
                 case Key::kSpace:
                     clearSelection();  // in case already selected (right to open menu, left to close, right)
-                    // transform to Enter, in case this was kRight
-                    Super::key({ KeyEvent::Type::kKeyDown, Key::kEnter, 0, 0, false });
-                    handled = false;  // want to call super!
+                    setSelectedIndex(highlightedIndex());
+                    triggerOnSelectionChanged();
+                    handled = true;
                     break;
                 case Key::kEscape:
                     mMenuUitk->cancelHierarchy();
@@ -921,7 +940,7 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
         }
     }
 
-    mImpl->menuWindow->setFocusWidget(list);
+    mImpl->menuWindow->setFocusWidget(list, Window::ShowFocusRing::kNo);
 
     mImpl->menuWindow->setOnWindowLayout([this, list, id](Window& w, const LayoutContext& context) {
         auto contentSize = w.contentRect().size();

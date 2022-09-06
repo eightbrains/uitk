@@ -79,10 +79,21 @@ public:
     void setSelectedIndex(int index);
     void setSelectedIndices(const std::unordered_set<int> indices);
 
+    bool isRowVisible(int index) const;
+
     /// Scrolls so that the requested row is visible. Note that this will not
     /// work until layout() has been called, since it requires the correct
     /// frames of the cell.
     void scrollRowVisible(int index);
+    void scrollRowVisibleAtTop(int index);
+    void scrollRowVisibleAtBottom(int index);
+
+    /// Returns true if keyboard navigation will wrap from beginning to end and
+    /// vice-versa.
+    bool keyNavigationWraps() const;
+    /// Sets keyboard navigation to wrap (or not wrap) from beginning to end and
+    /// vice-versa. Default is false.
+    void setKeyNavigationWraps(bool wraps);
 
     Size contentPadding() const;
     /// Sets the padding between the edge of the ListView widget and the
@@ -91,17 +102,19 @@ public:
 
     Size preferredContentSize(const LayoutContext& context) const;
 
-    bool acceptsKeyFocus() const override;
     Size preferredSize(const LayoutContext& context) const override;
     void layout(const LayoutContext& context) override;
     EventResult mouse(const MouseEvent& e) override;
     void mouseExited() override;
+    bool acceptsKeyFocus() const override;
     EventResult key(const KeyEvent& e) override;
     void draw(UIContext& context) override;
 
 protected:
     int calcRowIndex(const Point& p) const;  // p is ListView widget coords
     int highlightedIndex() const;
+    void setHighlightedIndex(int idx);  // in case key movement needs it
+    void triggerOnSelectionChanged();
 
 private:
     struct Impl;

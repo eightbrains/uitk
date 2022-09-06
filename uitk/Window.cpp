@@ -339,6 +339,7 @@ struct Window::Impl
     std::function<void(Window&)> onDidDeactivate;
     std::function<bool(Window&)> onShouldClose;
     std::function<void(Window&)> onWillClose;
+    bool showFocusRing = false;
     bool isActive = false;
     bool inResize = false;
     bool inMouse = false;
@@ -703,7 +704,7 @@ void Window::setMouseGrab(Widget *w)
 
 Widget* Window::mouseGrabWidget() const { return mImpl->grabbedWidget; }
 
-void Window::setFocusWidget(Widget *w)
+void Window::setFocusWidget(Widget *w, ShowFocusRing show /*= ShowFocusRing::kYes*/)
 {
     if (w && (!w->acceptsKeyFocus() || !w->enabled() || !w->visible())) {
         w = nullptr;
@@ -713,6 +714,7 @@ void Window::setFocusWidget(Widget *w)
     bool isDifferent = (w != oldFocusedWidget);
 
     mImpl->focusedWidget = w;
+    mImpl->showFocusRing = (show == ShowFocusRing::kYes);
     if (w) {
         auto origin = w->convertToWindowFromLocal(w->bounds().upperLeft());
         mImpl->window->setTextEditing(w->asTextEditorLogic(),
@@ -1176,8 +1178,9 @@ void Window::onLayout(const DrawContext& dc)
 
     // Focus widget's frame may have changed; update so that IME position
     // will be correct.
-    if (focusWidget()) {
-        setFocusWidget(focusWidget());
+    if (mImpl->focusedWidget) {
+        setFocusWidget(mImpl->focusedWidget,
+                       mImpl->showFocusRing ? ShowFocusRing::kYes : ShowFocusRing::kNo);
     }
 }
 
@@ -1220,7 +1223,7 @@ void Window::onDraw(DrawContext& dc)
     // to get the border path of a Widget, since the theme functions draw the frame.
     // So, we have a special Theme that just records the frame.
     bool cancelFocus = false;
-    if (context.isWindowActive && mImpl->focusedWidget) {
+    if (context.isWindowActive && mImpl->focusedWidget && mImpl->showFocusRing) {
         if (mImpl->focusedWidget->visible() && mImpl->focusedWidget->enabled()) {
             auto *w = mImpl->focusedWidget;
             while (w && w->showFocusRingOnParent()) {

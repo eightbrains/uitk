@@ -233,8 +233,9 @@ public:
     void setMouseGrab(Widget *w);
     Widget* mouseGrabWidget() const;
 
+    enum class ShowFocusRing { kYes, kNo };
     /// Sets the widget that gets key events.
-    void setFocusWidget(Widget *w);
+    void setFocusWidget(Widget *w, ShowFocusRing show = ShowFocusRing::kYes);
     Widget* focusWidget() const;
 
     /// Moves key focus to the next focusable widget if dir is positive,
