@@ -488,7 +488,7 @@ Widget::EventResult ListView::key(const KeyEvent& e)
 
     // At this point, we know we have a key down event, and selection mode
     // is single or multi.
-    result = EventResult::kConsumed;
+    result = EventResult::kIgnored;
     int idx = mImpl->lastClickedRow;
     if (e.key == Key::kDown || e.key == Key::kUp) {
         int origIdx = idx;
@@ -537,6 +537,7 @@ Widget::EventResult ListView::key(const KeyEvent& e)
         if (mImpl->onChanged) {
             mImpl->onChanged(this);
         }
+        result = EventResult::kConsumed;
     }
 
     return result;
