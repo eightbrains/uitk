@@ -140,8 +140,7 @@ public:
                      WidgetState state,
                      bool isButton, bool isOn, bool showKeyFocus,
                      int segmentIndex, int nSegments) const override
-        { mTheme->drawSegment(ui, frame, drawStyle, state, isButton, isOn, showKeyFocus,
-                              segmentIndex, nSegments); }
+        {}
     void drawSegmentDivider(UIContext& ui, const Point& top, const Point& bottom,
                             SegmentDrawStyle drawStyle,
                             const WidgetStyle& ctrlStyle, WidgetState ctrlState) const override

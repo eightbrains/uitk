@@ -811,7 +811,7 @@ void VectorBaseTheme::drawSegment(UIContext& ui, const Rect& frame, SegmentDrawS
                                   bool isButton, bool isOn, bool showKeyFocus,
                                   int segmentIndex, int nSegments) const
 {
-    if (drawStyle == SegmentDrawStyle::kNoDecoration) {
+    if (drawStyle == SegmentDrawStyle::kNoDecoration && !showKeyFocus) {
         return;
     }
 
@@ -828,6 +828,9 @@ void VectorBaseTheme::drawSegment(UIContext& ui, const Rect& frame, SegmentDrawS
         } else {
             bg = mSegmentOffStyles[int(state)].bgColor;
         }
+    }
+    if (drawStyle == SegmentDrawStyle::kNoDecoration && showKeyFocus) {
+        bg = Color::kTransparent;
     }
     ui.dc.setFillColor(bg);
 

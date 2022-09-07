@@ -413,10 +413,6 @@ void SegmentedControl::keyFocusEnded()
 
 void SegmentedControl::draw(UIContext& context)
 {
-    if (focused()) {
-        auto i = 0;
-    }
-
     auto ctrlState = enabled() ? Theme::WidgetState::kNormal : Theme::WidgetState::kDisabled;
     auto ds = (mImpl->drawStyle == DrawStyle::kNoDecoration
                     ? Theme::SegmentDrawStyle::kNoDecoration
