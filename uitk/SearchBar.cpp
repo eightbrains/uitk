@@ -44,6 +44,7 @@ SearchBar::SearchBar()
     mImpl->edit = new StringEdit();
     mImpl->edit->setBorderWidth(PicaPt::kZero);
     mImpl->edit->setBorderColor(Color::kTransparent);
+    mImpl->edit->setShowFocusRingOnParent(true);
     // Some themes (macOS) have translucent background, which the editor draws
     // on top of our background, which looks really bad.
     mImpl->edit->setBackgroundColor(Color::kTransparent);

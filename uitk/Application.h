@@ -98,6 +98,9 @@ public:
     /// scrolling (e.g. macOS), false otherwise.
     bool shouldHideScrollbars() const;
 
+    enum class KeyFocusCandidates { kAll, kTextAndLists };
+    KeyFocusCandidates keyFocusCandidates() const;
+
     /// Returns true if the platform uses a menubar, false otherwise.
     /// For instance, desktop platforms (macOS, Windows, Linux) will return
     /// true, and mobile platorms (Android, iOS) will return false;

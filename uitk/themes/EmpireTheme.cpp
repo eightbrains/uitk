@@ -40,6 +40,7 @@ Theme::Params EmpireTheme::EmpireTheme::darkModeParams(const Color& accent)
     params.accentedBackgroundTextColor = params.textColor;
     params.disabledTextColor = Color(0.6f, 0.6f, 0.6f);
     params.accentColor = accent;
+    params.keyFocusColor = Color(accent, 0.5f);
     //params.selectionColor = Color(0.11f, 0.23f, 0.45f);
     params.selectionColor = accent.darker();
     params.nonNativeMenuSeparatorColor = params.disabledTextColor;
@@ -63,6 +64,7 @@ Theme::Params EmpireTheme::lightModeParams(const Color& accent)
     params.accentedBackgroundTextColor = Color(1.0f, 1.0f, 1.0f);
     params.disabledTextColor = Color(0.4f, 0.4f, 0.4f);
     params.accentColor = accent;
+    params.keyFocusColor = Color(accent, 0.5f);
     params.selectionColor = accent.lighter();
     params.nonNativeMenuSeparatorColor = Color(0.75f, 0.75f, 0.75f);
     params.nonNativeMenuBackgroundColor = Color(0.975f, 0.975f, 0.975f);

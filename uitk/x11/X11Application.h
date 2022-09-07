@@ -50,6 +50,7 @@ public:
 
     bool isOriginInUpperLeft() const override;
     bool shouldHideScrollbars() const override;
+    bool canKeyFocusEverything() const override;
     bool platformHasMenubar() const override;
 
     Clipboard& clipboard() const override;

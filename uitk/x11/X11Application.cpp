@@ -316,6 +316,8 @@ bool X11Application::isOriginInUpperLeft() const { return true; }
 
 bool X11Application::shouldHideScrollbars() const { return false; }
 
+bool X11Application::canKeyFocusEverything() const { return true; }
+
 bool X11Application::platformHasMenubar() const { return true; }
 
 Clipboard& X11Application::clipboard() const { return *mImpl->clipboard; }

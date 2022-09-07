@@ -44,6 +44,7 @@ static const float kPopopBorderWidth = 1;
 
 static const std::unordered_map<unichar, uitk::Key> kKeychar2key = {
     { 3, uitk::Key::kEnter },
+    { 25, uitk::Key::kTab }, // shift tab
     { 127, uitk::Key::kBackspace },
     { 63232, uitk::Key::kUp },
     { 63233, uitk::Key::kDown },

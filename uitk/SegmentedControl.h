@@ -75,6 +75,9 @@ public:
     void layout(const LayoutContext& context) override;
     EventResult mouse(const MouseEvent& e) override;
     void mouseExited() override;
+    bool acceptsKeyFocus() const override;
+    EventResult key(const KeyEvent& e) override;
+    void keyFocusEnded() override;
     void draw(UIContext& context) override;
 
 private:

@@ -40,6 +40,7 @@ public:
     RootWidget()
     {
         mPanelChooser = new ListView();
+        mPanelChooser->setKeyNavigationWraps(true);
         mPanelChooser->setOnSelectionChanged([this](ListView *lv) {
             mPanels->setIndexShowing(lv->selectedIndex());
         });

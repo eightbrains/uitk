@@ -992,11 +992,14 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
 
         case WM_KEYDOWN: {  // Alt+key and F-keys use WM_SYSKEYDOWN/UP
             int nRepeats = (lParam & 0xffff);
-            auto e = makeKeyEvent(KeyEvent::Type::kKeyDown, (nRepeats != 0), wParam);
             if (nRepeats == 0) {
                 nRepeats = 1;
             }
-            for (int i = 0;  i < nRepeats;  ++i) {
+            auto e = makeKeyEvent(KeyEvent::Type::kKeyDown, false, wParam);
+            w->onKey(e);
+
+            e.isRepeat = true;
+            for (int i = 1;  i < nRepeats;  ++i) {
                 w->onKey(e);
             }
             return 0;

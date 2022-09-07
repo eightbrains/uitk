@@ -256,6 +256,8 @@ void StringEdit::setOnValueChanged(std::function<void(StringEdit*)> onChanged)
     mImpl->onValueChanged = onChanged;
 }
 
+bool StringEdit::acceptsKeyFocus() const { return true; }
+
 CutPasteable * StringEdit::asCutPasteable()
 {
     return &mImpl->editor;
@@ -375,11 +377,13 @@ Widget::EventResult StringEdit::mouse(const MouseEvent& e)
     }
 }
 
-void StringEdit::key(const KeyEvent& e)
+Widget::EventResult StringEdit::key(const KeyEvent& e)
 {
     if (mImpl->editor.handleKeyEvent(e)) {
         setNeedsDraw();
+        return EventResult::kConsumed;
     }
+    return EventResult::kIgnored;
 }
 
 

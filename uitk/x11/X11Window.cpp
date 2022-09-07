@@ -386,6 +386,10 @@ X11Window::X11Window(IWindowCallbacks& callbacks,
 
 X11Window::~X11Window()
 {
+    if (gActiveWindow == this) {
+        gActiveWindow = nullptr;
+    }
+
     if (mImpl->xwindow) {
         // Cannot call close() here, because it will call onWindowShouldClose(),
         // and that is no longer an option.

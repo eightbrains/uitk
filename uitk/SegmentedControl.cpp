@@ -43,6 +43,7 @@ struct SegmentedControl::Impl
     std::function<void(int)> onClicked;
     DrawStyle drawStyle = DrawStyle::kNormal;
     Action action = Action::kButton;
+    int keyFocusSegmentIdx = -1;  // when has key focus, this is the segment that "has focus"
 };
 
 SegmentedControl::SegmentedControl()
@@ -303,6 +304,113 @@ void SegmentedControl::mouseExited()
     setNeedsDraw();  // might not actually need this, caller might call this?
 }
 
+bool SegmentedControl::acceptsKeyFocus() const { return true; }
+
+Widget::EventResult SegmentedControl::key(const KeyEvent& e)
+{
+    auto result = Super::key(e);
+    if (result != EventResult::kIgnored) {
+        return result;
+    }
+
+    if (mImpl->action == Action::kSelectOne) {
+        if (e.type == KeyEvent::Type::kKeyDown) {
+            switch (e.key) {
+                case Key::kLeft:
+                case Key::kRight: {
+                    int onIdx = -1;
+                    for (size_t i = 0;  i < mImpl->items.size();  ++i) {
+                        if (mImpl->items[i].isOn) {
+                            onIdx = int(i);
+                            break;
+                        }
+                    }
+                    if (onIdx >= 0) {
+                        if (e.key == Key::kRight) {
+                            ++onIdx;
+                        } else {
+                            --onIdx;
+                        }
+                    }
+                    if (onIdx < 0 || onIdx >= int(mImpl->items.size())) {
+                        if (e.key == Key::kRight) {
+                            onIdx = 0;
+                        } else {
+                            onIdx = int(mImpl->items.size() - 1);
+                        }
+                    }
+                    setSegmentOn(onIdx, true);
+                    if (mImpl->onClicked) {
+                        mImpl->onClicked(onIdx);
+                    }
+                    return EventResult::kConsumed;
+                }
+                default:
+                    break;
+            }
+        }
+    } else {
+        const int nSegs = int(mImpl->items.size());
+        switch (e.key) {
+            case Key::kLeft:
+            case Key::kRight: {
+                if (e.type == KeyEvent::Type::kKeyDown) {
+                    if (mImpl->keyFocusSegmentIdx >= 0) {
+                        if (e.key == Key::kRight) {
+                            ++mImpl->keyFocusSegmentIdx;
+                        } else {
+                            --mImpl->keyFocusSegmentIdx;
+                        }
+                    }
+                    if (mImpl->keyFocusSegmentIdx < 0 || mImpl->keyFocusSegmentIdx >= nSegs) {
+                        if (e.key == Key::kRight) {
+                            mImpl->keyFocusSegmentIdx = 0;
+                        } else {
+                            mImpl->keyFocusSegmentIdx = nSegs - 1;
+                        }
+                    }
+                    setNeedsDraw();
+                }
+                return EventResult::kConsumed;
+            }
+            case Key::kSpace:
+            case Key::kReturn:
+            case Key::kEnter: {
+                const auto focusIdx = mImpl->keyFocusSegmentIdx;
+                if (focusIdx >= 0 && focusIdx < nSegs) {
+                    if (e.type == KeyEvent::Type::kKeyDown) {
+                        mImpl->items[focusIdx].state = Theme::WidgetState::kMouseDown;
+                    } else if (mImpl->items[focusIdx].state == Theme::WidgetState::kMouseDown) {
+                        setSegmentOn(focusIdx, !isSegmentOn(focusIdx));
+                        if (mImpl->onClicked) {
+                            mImpl->onClicked(focusIdx);
+                        }
+                        mImpl->items[focusIdx].state = Theme::WidgetState::kNormal;
+                    }
+                    setNeedsDraw();
+                }
+                return EventResult::kConsumed;
+            }
+            case Key::kEscape: {
+                const auto focusIdx = mImpl->keyFocusSegmentIdx;
+                if (focusIdx >= 0 && focusIdx < nSegs && mImpl->items[focusIdx].state == Theme::WidgetState::kMouseDown) {
+                    mImpl->items[focusIdx].state = Theme::WidgetState::kNormal;
+                }
+                setNeedsDraw();
+                return EventResult::kConsumed;
+            }
+            default:
+                break;
+        }
+    }
+    return EventResult::kIgnored;
+}
+
+void SegmentedControl::keyFocusEnded()
+{
+    mImpl->keyFocusSegmentIdx = -1;
+}
+
 void SegmentedControl::draw(UIContext& context)
 {
     auto ctrlState = enabled() ? Theme::WidgetState::kNormal : Theme::WidgetState::kDisabled;
@@ -310,21 +418,21 @@ void SegmentedControl::draw(UIContext& context)
                     ? Theme::SegmentDrawStyle::kNoDecoration
                     : Theme::SegmentDrawStyle::kNormal);
     context.theme.drawSegmentedControl(context, bounds(), ds, style(ctrlState), ctrlState);
+    for (auto &item : mImpl->items) { // do first, so that segments are under focus rect
+        context.theme.drawSegmentDivider(context, item.frame.upperLeft(), item.frame.lowerLeft(),
+                                         ds, style(ctrlState), ctrlState);
+    }
     int nItems = int(mImpl->items.size());
     for (int i = 0;  i < nItems;  ++i) {
         auto &item = mImpl->items[i];
-        if (item.isOn || item.state != Theme::WidgetState::kNormal) {
+        bool showKeyFocus = (i == mImpl->keyFocusSegmentIdx);
+        if (item.isOn || item.state != Theme::WidgetState::kNormal || showKeyFocus) {
             context.theme.drawSegment(context, item.frame, ds, item.state,
                                       mImpl->action == Action::kButton,
-                                      item.isOn, i, nItems);
+                                      item.isOn, showKeyFocus, i, nItems);
         }
         auto ws = context.theme.segmentTextStyle(item.state, ds, item.isOn);
         static_cast<LabelCell*>(children()[i])->setColorNoRedraw(ws.fgColor);
-    }
-
-    for (auto &item : mImpl->items) {
-        context.theme.drawSegmentDivider(context, item.frame.upperLeft(), item.frame.lowerLeft(),
-                                         ds, style(ctrlState), ctrlState);
     }
 
     Super::draw(context);

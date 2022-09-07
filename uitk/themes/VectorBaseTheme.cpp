@@ -666,6 +666,55 @@ void VectorBaseTheme::clipFrame(UIContext& ui, const Rect& frame,
     }
 }
 
+void VectorBaseTheme::drawFocusFrame(UIContext& ui, const Rect& frame, const PicaPt& radius) const
+{
+    auto strokeWidth = PicaPt::fromStandardPixels(3.0f);
+    ui.dc.save();
+    if (radius > PicaPt::kZero) {
+        auto expandedRadius = radius * (1.0f + (frame.width + 0.5f * strokeWidth) / frame.width);
+        auto focusRect = frame.insetted(-strokeWidth, -strokeWidth);
+        if (expandedRadius > 0.5f * focusRect.width) {
+            expandedRadius = 0.5f * focusRect.width;
+        }
+        if (expandedRadius > 0.5f * focusRect.height) {
+            expandedRadius = 0.5f * focusRect.height;
+        }
+        auto path = ui.dc.createBezierPath();
+        path->addRoundedRect(focusRect, expandedRadius);
+        path->moveTo(frame.upperLeft() + Point(radius, PicaPt::kZero));
+        path->quarterEllipseTo(frame.upperLeft(), frame.upperLeft() + Point(PicaPt::kZero, radius));
+        path->lineTo(frame.lowerLeft() - Point(PicaPt::kZero, radius));
+        path->quarterEllipseTo(frame.lowerLeft(),
+                               frame.lowerLeft() + Point(radius, PicaPt::kZero));
+        path->lineTo(frame.lowerRight() - Point(radius, PicaPt::kZero));
+        path->quarterEllipseTo(frame.lowerRight(),
+                               frame.lowerRight() - Point(PicaPt::kZero, radius));
+        path->lineTo(frame.upperRight() + Point(PicaPt::kZero, radius));
+        path->quarterEllipseTo(frame.upperRight(),
+                               frame.upperRight() - Point(radius, PicaPt::kZero));
+        path->close();
+        ui.dc.setFillColor(mParams.keyFocusColor);
+        ui.dc.drawPath(path, kPaintFill);
+    } else {
+        auto focusRect = frame.insetted(-strokeWidth, -strokeWidth);
+        auto path = ui.dc.createBezierPath();
+        path->addRoundedRect(focusRect, strokeWidth);
+        path->moveTo(frame.upperLeft());
+        path->lineTo(frame.lowerLeft());
+        path->lineTo(frame.lowerRight());
+        path->lineTo(frame.upperRight());
+        path->close();
+        ui.dc.setFillColor(mParams.keyFocusColor);
+        ui.dc.drawPath(path, kPaintFill);
+    }
+    ui.dc.restore();
+}
+
+//void VectorBaseTheme::drawFocusFrame(UIContext& ui, const std::shared_ptr<BezierPath> path) const
+//{
+//   TODO: need to implement path expansion
+//}
+
 Theme::WidgetStyle VectorBaseTheme::labelStyle(const WidgetStyle& style, WidgetState state) const
 {
     return mLabelStyles[int(state)].merge(style);
@@ -759,9 +808,10 @@ void VectorBaseTheme::drawSegmentedControl(UIContext& ui,
 
 void VectorBaseTheme::drawSegment(UIContext& ui, const Rect& frame, SegmentDrawStyle drawStyle,
                                   WidgetState state,
-                                  bool isButton, bool isOn, int segmentIndex, int nSegments) const
+                                  bool isButton, bool isOn, bool showKeyFocus,
+                                  int segmentIndex, int nSegments) const
 {
-    if (drawStyle == SegmentDrawStyle::kNoDecoration) {
+    if (drawStyle == SegmentDrawStyle::kNoDecoration && !showKeyFocus) {
         return;
     }
 
@@ -779,14 +829,19 @@ void VectorBaseTheme::drawSegment(UIContext& ui, const Rect& frame, SegmentDrawS
             bg = mSegmentOffStyles[int(state)].bgColor;
         }
     }
+    if (drawStyle == SegmentDrawStyle::kNoDecoration && showKeyFocus) {
+        bg = Color::kTransparent;
+    }
     ui.dc.setFillColor(bg);
+
+    auto borderWidth  = (showKeyFocus ? PicaPt::fromStandardPixels(1.0f) : widgetStyle.borderWidth);
 
     if (widgetStyle.borderRadius > PicaPt::kZero && (segmentIndex == 0 || segmentIndex == nSegments - 1)) {
         PicaPt radius = widgetStyle.borderRadius * 1.4142135f;  // br * sqrt(2)
         if (segmentIndex == 0) {
-            r.x += widgetStyle.borderWidth;
+            r.x += borderWidth;
         }
-        r.width -= widgetStyle.borderWidth;
+        r.width -= borderWidth;
 
         auto path = ui.dc.createBezierPath();
 
@@ -832,9 +887,30 @@ void VectorBaseTheme::drawSegment(UIContext& ui, const Rect& frame, SegmentDrawS
             path->lineTo(r.lowerLeft());
         }
 
-        ui.dc.drawPath(path, kPaintFill);
+        if (showKeyFocus) {
+            ui.dc.setStrokeWidth(borderWidth);
+            if (isOn) {
+                ui.dc.setStrokeColor(mParams.accentedBackgroundTextColor);
+            } else {
+                ui.dc.setStrokeColor(mParams.accentColor);
+            }
+            ui.dc.drawPath(path, kPaintStrokeAndFill);
+        } else {
+            ui.dc.drawPath(path, kPaintFill);
+        }
     } else {
-        ui.dc.drawRect(r, kPaintFill);
+        if (showKeyFocus) {
+            ui.dc.setStrokeWidth(borderWidth);
+            if (isOn) {
+                ui.dc.setStrokeColor(mParams.accentedBackgroundTextColor);
+            } else {
+                ui.dc.setStrokeColor(mParams.accentColor);
+            }
+            ui.dc.setStrokeJoinStyle(kJoinMiter);
+            ui.dc.drawRect(r, kPaintStrokeAndFill);
+        } else {
+            ui.dc.drawRect(r, kPaintFill);
+        }
     }
 }
 
@@ -858,6 +934,7 @@ void VectorBaseTheme::drawSegmentDivider(UIContext& ui, const Point& top, const 
         p1.x += 0.5f * onePx;
         p2.x += 0.5f * onePx;
     }
+    ui.dc.setStrokeColor(style.borderColor);
     ui.dc.drawLines({p1, p2});
 }
 

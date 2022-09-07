@@ -91,7 +91,7 @@ public:
     /// which is assumed to exist in the child hierarchy.
     void setAsDefaultButton(Button *button);
 
-    void key(const KeyEvent& e) override;
+    EventResult key(const KeyEvent& e) override;
 
 private:
     struct Impl;

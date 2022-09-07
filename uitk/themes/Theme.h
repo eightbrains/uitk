@@ -51,7 +51,7 @@ public:
                      kFGColorSet = (1 << 1),
                      kBorderColorSet = (1 << 2),
                      kBorderWidthSet = (1 << 3),
-                     kBorderRadiusSet = (1 << 4)
+                     kBorderRadiusSet = (1 << 4),
         };
 
         int flags = kNoneSet;
@@ -75,6 +75,7 @@ public:
         Color accentedBackgroundTextColor;  // for when accentColor is bg of text
         Color accentColor;
         Color selectionColor;
+        Color keyFocusColor;
         Color nonNativeMenuSeparatorColor;
         Color nonNativeMenuBackgroundColor;
         Color nonNativeMenubarBackgroundColor;
@@ -263,6 +264,8 @@ public:
                            const WidgetStyle& style) const = 0;
     virtual void clipFrame(UIContext& ui, const Rect& frame,
                            const WidgetStyle& style) const = 0;
+    virtual void drawFocusFrame(UIContext& ui, const Rect& frame, const PicaPt& radius) const = 0;
+    //virtual void drawFocusFrame(UIContext& ui, const std::shared_ptr<BezierPath> path) const = 0;
     virtual void drawIcon(UIContext& ui, const Rect& r, const Icon& icon, const Color& color) const;
     virtual void drawIcon(UIContext& ui, const Rect& r, StandardIcon icon, const Color& color) const;
     virtual WidgetStyle labelStyle(const WidgetStyle& style, WidgetState state) const = 0;
@@ -289,7 +292,7 @@ public:
                                       const WidgetStyle& style,
                                       WidgetState state) const = 0;
     virtual void drawSegment(UIContext& ui, const Rect& frame, SegmentDrawStyle drawStyle,
-                             WidgetState state, bool isButton, bool isOn,
+                             WidgetState state, bool isButton, bool isOn, bool showKeyFocus,
                              int segmentIndex, int nSegments) const = 0;
     virtual void drawSegmentDivider(UIContext& ui, const Point& top, const Point& bottom,
                                     SegmentDrawStyle drawStyle,

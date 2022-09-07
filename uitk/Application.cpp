@@ -173,6 +173,13 @@ bool Application::shouldHideScrollbars() const
     return mImpl->osApp->shouldHideScrollbars();
 }
 
+Application::KeyFocusCandidates Application::keyFocusCandidates() const
+{
+    return (mImpl->osApp->canKeyFocusEverything()
+            ? KeyFocusCandidates::kAll
+            : KeyFocusCandidates::kTextAndLists);
+}
+
 bool Application::platformHasMenubar() const
 {
     return mImpl->osApp->platformHasMenubar();

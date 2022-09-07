@@ -173,6 +173,8 @@ SliderLogic* SliderLogic::setOnValueChanged(std::function<void(SliderLogic*)> on
     return this;
 }
 
+bool SliderLogic::acceptsKeyFocus() const { return true; }
+
 Size SliderLogic::preferredSize(const LayoutContext& context) const
 {
     auto thumbSize = preferredThumbSize(context);
@@ -241,6 +243,32 @@ Widget::EventResult SliderLogic::mouse(const MouseEvent &e)
     }
 
     return Widget::EventResult::kConsumed;
+}
+
+Widget::EventResult SliderLogic::key(const KeyEvent &e)
+{
+    auto result = Super::key(e);
+    if (result != EventResult::kIgnored) {
+        return result;
+    }
+
+    if (e.type == KeyEvent::Type::kKeyDown) {
+        switch (e.key) {
+            case Key::kLeft:
+            case Key::kRight: {
+                auto lastValue = mImpl->model.doubleValue();
+                auto dir = (e.key == Key::kLeft ? -1.0 : 1.0);
+                setValue(lastValue + dir * mImpl->model.doubleIncrement());
+                if (lastValue != mImpl->model.doubleValue() && mImpl->onValueChanged) {
+                    mImpl->onValueChanged(this);
+                }
+                return EventResult::kConsumed;
+            }
+            default:
+                break;
+        }
+    }
+    return EventResult::kIgnored;
 }
 
 void SliderLogic::draw(UIContext& context)

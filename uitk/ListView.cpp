@@ -25,6 +25,7 @@
 #include "Events.h"
 #include "Label.h"
 #include "UIContext.h"
+#include "Window.h"
 #include "themes/Theme.h"
 
 #include <nativedraw.h>
@@ -93,6 +94,7 @@ struct ListView::Impl
     Widget *content = nullptr;  // super owns this
     Size contentPadding = Size(kUnsetPadding, kUnsetPadding);
     SelectionMode selectionMode = SelectionMode::kSingleItem;
+    bool keyNavigationWraps = false;
     std::unordered_set<int> selectedIndices;
     std::function<void(ListView*)> onChanged;
     std::function<void(ListView*, int)> onDblClicked;
@@ -259,12 +261,22 @@ void ListView::setSelectedIndex(int index)
 {
     clearSelection();
     setSelectedIndices({index});
+    if (!isRowVisible(index)) {
+        scrollRowVisible(index);
+    }
 }
 
 void ListView::setSelectedIndices(const std::unordered_set<int> indices)
 {
-    mImpl->selectedIndices = indices;
     auto &items = mImpl->content->children();
+    for (int idx : mImpl->selectedIndices) {
+        if (idx >= 0 && idx < int(items.size())) {
+            items[idx]->setThemeState(Theme::WidgetState::kNormal);
+        }
+    }
+
+    mImpl->selectedIndices = indices;
+
     for (int idx : mImpl->selectedIndices) {
         if (idx >= 0 && idx < int(items.size())) {
             items[idx]->setThemeState(Theme::WidgetState::kSelected);
@@ -274,6 +286,34 @@ void ListView::setSelectedIndices(const std::unordered_set<int> indices)
 }
 
 int ListView::highlightedIndex() const { return mImpl->mouseOverIndex; }
+
+void ListView::setHighlightedIndex(int idx)
+{
+    mImpl->setMouseOverIndex(idx);
+}
+
+bool ListView::keyNavigationWraps() const { return mImpl->keyNavigationWraps; }
+
+void ListView::setKeyNavigationWraps(bool wraps) { mImpl->keyNavigationWraps = wraps; }
+
+void ListView::triggerOnSelectionChanged()
+{
+    if (mImpl->onChanged) {
+        mImpl->onChanged(this);
+    }
+}
+
+bool ListView::isRowVisible(int index) const
+{
+    auto &items = mImpl->content->children();
+    if (index < 0 || index >= int(items.size())) {
+        return false;
+    }
+    auto r = Rect(PicaPt::kZero, PicaPt::kZero, frame().width, frame().height);
+    auto scrollOffset = bounds().upperLeft();
+    auto rowRect = items[index]->frame().translated(scrollOffset.x, scrollOffset.y);
+    return (rowRect.y >= r.y && rowRect.maxY() <= r.maxY());
+}
 
 void ListView::scrollRowVisible(int index)
 {
@@ -291,6 +331,30 @@ void ListView::scrollRowVisible(int index)
         newYOffset = std::min(bounds().height - frame().height, newYOffset);
         setContentOffset(Point(scrollOffset.x, -newYOffset));
     }
+}
+
+void ListView::scrollRowVisibleAtTop(int index)
+{
+    auto &items = mImpl->content->children();
+    if (index < 0 || index >= int(items.size())) {
+        return;
+    }
+    auto newYOffset = items[index]->frame().minY();
+    newYOffset = std::max(PicaPt::kZero, newYOffset);
+    newYOffset = std::min(bounds().height - frame().height, newYOffset);
+    setContentOffset(Point(bounds().x, -newYOffset));
+}
+
+void ListView::scrollRowVisibleAtBottom(int index)
+{
+    auto &items = mImpl->content->children();
+    if (index < 0 || index >= int(items.size())) {
+        return;
+    }
+    auto newYOffset = items[index]->frame().maxY() - frame().height;
+    newYOffset = std::max(PicaPt::kZero, newYOffset);
+    newYOffset = std::min(bounds().height - frame().height, newYOffset);
+    setContentOffset(Point(bounds().x, -newYOffset));
 }
 
 Size ListView::contentPadding() const
@@ -374,11 +438,17 @@ Widget::EventResult ListView::mouse(const MouseEvent& e)
                     setSelectedIndices(mImpl->selectedIndices);
                     selectionChanged = true;
                 }
-                mImpl->lastClickedRow = idx;
             }
+            mImpl->lastClickedRow = idx;
             if (selectionChanged && mImpl->onChanged) {
                 mImpl->onChanged(this);
             }
+        }
+        // Normally clicking does not give focus, but we want key navigation
+        // to work. But we do not want the visible focus ring, on the click
+        // (this is macOS behavior).
+        if (auto win = window()) {
+            win->setFocusWidget(this, Window::ShowFocusRing::kNo);
         }
     } else if (e.type == MouseEvent::Type::kButtonDown && e.button.button == MouseButton::kLeft && e.button.nClicks == 2) {
         // If we are double-clicking, we are on the same item (if the mouse
@@ -413,77 +483,71 @@ int ListView::calcRowIndex(const Point& p) const
     return -1;
 }
 
-void ListView::key(const KeyEvent& e)
+bool ListView::acceptsKeyFocus() const { return true; }
+
+Widget::EventResult ListView::key(const KeyEvent& e)
 {
-    Super::key(e);
-    if (mImpl->selectionMode == SelectionMode::kNoItems || e.type == KeyEvent::Type::kKeyUp) {
-        return;
+    auto result = Super::key(e);
+    if (result != EventResult::kIgnored ||
+        mImpl->selectionMode == SelectionMode::kNoItems || e.type == KeyEvent::Type::kKeyUp) {
+        return result;
     }
 
-    switch (e.key) {
-        case Key::kDown: {
-            int idx = std::max(-1, mImpl->mouseOverIndex) + 1;
-            auto items = mImpl->content->children();
-            int nItems = int(items.size());
-            while (idx < nItems && !items[idx]->enabled()) {
-                idx++;
-            }
-            if (idx < nItems) {
-                mImpl->setMouseOverIndex(idx);
-                //setNeedsDraw();
-            }
-            break;
-        }
-        case Key::kUp: {
-            auto items = mImpl->content->children();
-            int nItems = int(items.size());
-            int idx = mImpl->mouseOverIndex - 1;
-            if (idx < 0) {
-                idx = nItems - 1;
-            }
-            while (idx >= 0 && !items[idx]->enabled()) {
-                idx--;
-            }
-            if (idx >= 0) {
-                mImpl->setMouseOverIndex(idx);
-                //setNeedsDraw();
-            }
-            break;
-        }
-        case Key::kEnter:
-        case Key::kReturn:
-        case Key::kSpace:
-            if (mImpl->mouseOverIndex >= 0) {
-                bool changed = false;
-                bool thisIndexIsInSelection = (mImpl->selectedIndices.find(mImpl->mouseOverIndex) != mImpl->selectedIndices.end());
-                if (thisIndexIsInSelection) {
-                    if (mImpl->selectionMode == SelectionMode::kSingleItem) {
-                        // do nothing
-                    } else {
-                        auto selected = selectedIndices();
-                        auto newSet = std::unordered_set<int>(selected.begin(), selected.end());
-                        newSet.erase(mImpl->mouseOverIndex);
-                        setSelectedIndices(newSet);
-                        changed = true;
-                    }
+    // At this point, we know we have a key down event, and selection mode
+    // is single or multi.
+    result = EventResult::kIgnored;
+    int idx = mImpl->lastClickedRow;
+    if (e.key == Key::kDown || e.key == Key::kUp) {
+        int origIdx = idx;
+        if (e.key == Key::kDown) {
+            ++idx;
+            if (idx >= int(size())) {
+                if (keyNavigationWraps()) {
+                    idx = 0;
                 } else {
-                    if (mImpl->selectionMode == SelectionMode::kSingleItem) {
-                        setSelectedIndex(mImpl->mouseOverIndex);
-                    } else {
-                        auto newSet = selectedIndices();
-                        newSet.push_back(mImpl->mouseOverIndex);
-                        setSelectedIndices(std::unordered_set<int>(newSet.begin(), newSet.end()));
-                    }
-                    changed = true;
-                }
-                if (changed && mImpl->onChanged) {
-                    mImpl->onChanged(this);
+                    idx = int(size() - 1);
                 }
             }
-            break;
-        default:
-            break;
+            if (!isRowVisible(idx)) {
+                scrollRowVisibleAtBottom(idx);
+            }
+        } else {
+            --idx;
+            if (idx < 0) {
+                if (keyNavigationWraps()) {
+                    idx = int(size() - 1);
+                } else {
+                    idx = 0;
+                }
+            }
+            if (!isRowVisible(idx)) {
+                scrollRowVisibleAtTop(idx);
+            }
+        }
+        mImpl->lastClickedRow = idx;
+        if (e.keymods == 0) {
+            setSelectedIndex(idx);
+        } else if (mImpl->selectionMode == SelectionMode::kMultipleItems && e.keymods & KeyModifier::kShift) {
+            std::unordered_set<int> newSelection;
+            auto selection = selectedIndices();
+            for (int sel : selection) {
+                newSelection.insert(sel);
+            }
+            auto it = newSelection.find(idx);
+            if (it == newSelection.end()) {
+                newSelection.insert(idx);  // expanding selection: add this index
+            } else {
+                newSelection.erase(origIdx);  // shrinking selection: remove orig index
+            }
+            setSelectedIndices(newSelection);
+        }
+        if (mImpl->onChanged) {
+            mImpl->onChanged(this);
+        }
+        result = EventResult::kConsumed;
     }
+
+    return result;
 }
 
 void ListView::draw(UIContext& context)

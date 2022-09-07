@@ -149,6 +149,8 @@ void Button::performClick()
     }
 }
 
+bool Button::acceptsKeyFocus() const { return true; }
+
 Size Button::preferredSize(const LayoutContext& context) const
 {
     auto font = label()->font();
@@ -192,6 +194,33 @@ Widget::EventResult Button::mouse(const MouseEvent &e)
     }
 
     return result;
+}
+
+Widget::EventResult Button::key(const KeyEvent& e)
+{
+    auto result = Super::key(e);
+    if (result != Widget::EventResult::kIgnored) {
+        return result;
+    }
+    switch (e.key) {
+        case Key::kSpace:
+        case Key::kEnter:
+        case Key::kReturn:
+            if (e.type == KeyEvent::Type::kKeyDown && !e.isRepeat) {
+                setState(MouseState::kMouseDown);
+            } else if (e.type == KeyEvent::Type::kKeyUp) {  // need to check if up, could be repeated down
+                if (state() == MouseState::kMouseDown) {
+                    performClick();
+                }
+                setState(MouseState::kNormal);
+            }
+            return Widget::EventResult::kConsumed;
+        case Key::kEscape:
+            setState(MouseState::kNormal);
+            return Widget::EventResult::kConsumed;
+        default:
+            return Widget::EventResult::kIgnored;
+    }
 }
 
 void Button::draw(UIContext& context)

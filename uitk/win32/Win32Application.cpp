@@ -175,6 +175,8 @@ bool Win32Application::isOriginInUpperLeft() const { return true; }
 
 bool Win32Application::shouldHideScrollbars() const { return false; }
 
+bool Win32Application::canKeyFocusEverything() const { return true; }
+
 bool Win32Application::platformHasMenubar() const { return true; }
 
 Theme::Params Win32Application::themeParams() const

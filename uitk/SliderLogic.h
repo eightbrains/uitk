@@ -63,10 +63,13 @@ public:
     /// as a result of setValue() or setLimits().
     SliderLogic* setOnValueChanged(std::function<void(SliderLogic*)> onChanged);
 
+    bool acceptsKeyFocus() const override;
+
     Size preferredSize(const LayoutContext& context) const override;
     void layout(const LayoutContext& context) override;
 
     Widget::EventResult mouse(const MouseEvent &e) override;
+    Widget::EventResult key(const KeyEvent &e) override;
 
     void draw(UIContext& context) override;
 
