@@ -156,6 +156,9 @@ void Theme::drawIcon(UIContext& ui, const Rect& r, StandardIcon icon, const Colo
         case StandardIcon::kUnlocked:
             painter->drawUnlocked(ui.dc, r.size(), color);
             break;
+        case StandardIcon::kEye:
+            painter->drawEye(ui.dc, r.size(), color);
+            break;
         case StandardIcon::kSettings:
             painter->drawSettings(ui.dc, r.size(), color);
             break;

@@ -29,6 +29,7 @@
 #include "StringEditorLogic.h"
 #include "UIContext.h"
 #include "Window.h"
+#include "private/Utils.h"
 
 namespace uitk {
 
@@ -130,9 +131,21 @@ Point calcAlignmentOffset(const StringEditorLogic& editor, const Rect& textEditR
     }
 }
 
+// Design note:
+// Password mode is more logically done, from a code standpoint, as a PasswordEdit
+// subclass since it requires keeping a display editor and an actual string editor.
+// However, from the standpoint of a library user, all it does it draw the characters
+// as bullets instead of the actual characters. Toolkits diverge on which approach
+// they take. Qt uses a mode (QLineEdit::setEchoMode()); Cocoa uses a class (NSSecureTextField).
+// The advantage of having it be a mode is that supporting show/hide password is obviously
+// just toggling the mode, whereas with a PasswordEdit class there would have to be
+// a mode to undo the effect of the class. Hence, we go with a mode for the interface,
+// and accept the complication of the code (which would come in the PasswordEdit
+// otherwise).
 struct StringEdit::Impl
 {
     StringEditorLogic editor;
+    std::unique_ptr<StringEditorLogic> passwordDisplay;
     std::string placeholder;
     int alignment = Alignment::kLeft | Alignment::kVCenter;
     Rect editorTextRect;
@@ -228,6 +241,19 @@ StringEdit* StringEdit::setPlaceholderText(const std::string& text)
     return this;
 }
 
+bool StringEdit::isPassword() const { return (mImpl->passwordDisplay != nullptr); }
+
+StringEdit* StringEdit::setIsPassword(bool is)
+{
+    if (mImpl->passwordDisplay && !is) {
+        mImpl->passwordDisplay.reset();
+    } else if (!mImpl->passwordDisplay && is) {
+        mImpl->passwordDisplay.reset(new StringEditorLogic());
+    }
+    setNeedsDraw();
+    return this;
+}
+
 int StringEdit::alignment() const { return mImpl->alignment; }
 
 StringEdit* StringEdit::setAlignment(int alignment)
@@ -258,8 +284,11 @@ void StringEdit::setOnValueChanged(std::function<void(StringEdit*)> onChanged)
 
 bool StringEdit::acceptsKeyFocus() const { return true; }
 
-CutPasteable * StringEdit::asCutPasteable()
+CutPasteable* StringEdit::asCutPasteable()
 {
+    if (mImpl->passwordDisplay) {
+        return nullptr;
+    }
     return &mImpl->editor;
 }
 
@@ -312,11 +341,19 @@ Widget::EventResult StringEdit::mouse(const MouseEvent& e)
     }
 
     bool consumed = false;
+    bool copySelection = true;
     bool isInFrame = bounds().contains(e.pos);  // can be outside of frame on a drag and widget is grabbing
     auto me = e;
     me.pos = e.pos - mImpl->editorTextRect.upperLeft() -
              calcAlignmentOffset(mImpl->editor, mImpl->editorTextRect, mImpl->alignment) -
              Point(mImpl->scrollOffset, PicaPt::kZero);
+    auto *editor = &mImpl->editor;
+    if (mImpl->passwordDisplay) {
+        me.pos = e.pos - mImpl->editorTextRect.upperLeft() -
+                 calcAlignmentOffset(*mImpl->passwordDisplay, mImpl->editorTextRect, mImpl->alignment) -
+                 Point(mImpl->scrollOffset, PicaPt::kZero);
+        editor = mImpl->passwordDisplay.get();
+    }
 
     if (e.type == MouseEvent::Type::kButtonDown && e.button.button == MouseButton::kLeft) {
         if (e.button.nClicks == 1) {
@@ -326,9 +363,9 @@ Widget::EventResult StringEdit::mouse(const MouseEvent& e)
                 }
             }
         }
-        consumed = mImpl->editor.handleMouseEvent(me, isInFrame);
+        consumed = editor->handleMouseEvent(me, isInFrame);
     } else if (e.type == MouseEvent::Type::kDrag) {
-        consumed = mImpl->editor.handleMouseEvent(me, isInFrame);
+        consumed = editor->handleMouseEvent(me, isInFrame);
     } else if (e.type == MouseEvent::Type::kButtonDown && e.button.button == MouseButton::kRight
                && e.button.nClicks == 1) {
         auto *w = window();
@@ -339,14 +376,14 @@ Widget::EventResult StringEdit::mouse(const MouseEvent& e)
                 if (w->focusWidget() != this) {
                     w->setFocusWidget(this);
                 }
-                mImpl->editor.setSelection(TextEditorLogic::Selection(
-                                    mImpl->editor.startOfText(),
-                                    mImpl->editor.endOfText(),
-                                    TextEditorLogic::Selection::CursorLocation::kUndetermined));
+                editor->setSelection(TextEditorLogic::Selection(
+                                     editor->startOfText(),
+                                     editor->endOfText(),
+                                     TextEditorLogic::Selection::CursorLocation::kUndetermined));
             }
 
             // Show the popup
-            auto sel = mImpl->editor.selection();
+            auto sel = editor->selection();
             if (mImpl->popup) {
                 mImpl->popup->cancel();
                 delete mImpl->popup;
@@ -357,7 +394,7 @@ Widget::EventResult StringEdit::mouse(const MouseEvent& e)
             mImpl->popup->addItem("Copy", 2, [this]() { mImpl->editor.copyToClipboard(); });
             mImpl->popup->addItem("Paste", 3,
                                   [this]() { mImpl->editor.pasteFromClipboard(); setNeedsDraw(); });
-            bool canCopy = (sel.start < sel.end);
+            bool canCopy = (sel.start < sel.end && !isPassword());
             mImpl->popup->setItemEnabled(1, canCopy);
             mImpl->popup->setItemEnabled(2, canCopy);
             mImpl->popup->show(w, convertToWindowFromLocal(e.pos));
@@ -366,7 +403,21 @@ Widget::EventResult StringEdit::mouse(const MouseEvent& e)
         }
     } else if (e.type == MouseEvent::Type::kButtonDown && e.button.button == MouseButton::kMiddle && e.button.nClicks == 1) {
         // For middle-click paste on X11
-        consumed = mImpl->editor.handleMouseEvent(me, isInFrame);
+        consumed = mImpl->editor.handleMouseEvent(me, isInFrame);  // paste: use real editor
+        copySelection = false;
+    }
+
+    // If we are in password mode, update the selection from password -> editor
+    if (mImpl->passwordDisplay && e.type != MouseEvent::Type::kMove && copySelection) {
+        auto pwd2cp = codePointIndicesForUTF8Indices(mImpl->passwordDisplay->string().c_str());
+        auto cp2idx = utf8IndicesForCodePointIndices(mImpl->editor.string().c_str());
+        const int nCodePts = (pwd2cp.empty() ? 0 : int(pwd2cp.back()) + 1);  // since this is a vector index, size() > nCodePts
+        pwd2cp.push_back(nCodePts);  // selection can go to nCodePt
+        cp2idx.push_back(int(mImpl->editor.string().size()));
+        auto sel = mImpl->passwordDisplay->selection();
+        sel.start = cp2idx[pwd2cp[std::max(0, sel.start)]];
+        sel.end = cp2idx[pwd2cp[std::max(0, sel.end)]];
+        mImpl->editor.setSelection(sel);
     }
 
     if (consumed) {
@@ -424,20 +475,51 @@ void StringEdit::draw(UIContext& context)
         mImpl->editor.layoutText(context.dc, context.theme.params().labelFont, s.fgColor,
                                  context.theme.params().accentedBackgroundTextColor, PicaPt(1e6));
     }
+
+    // If we are in password mode, update the display StringEditorLogic to display
+    // bullets instead of the actual characters.
+    if (mImpl->passwordDisplay && (mImpl->passwordDisplay->needsLayout() ||
+                                   mImpl->passwordDisplay->layoutDPI() != context.dc.dpi())) {
+        // We need to replace each glyph with a bullet, not each byte; this is UTF-8!
+        auto idx2cp = codePointIndicesForUTF8Indices(mImpl->editor.string().c_str());
+        const int nCodePts = (idx2cp.empty() ? 0 : int(idx2cp.back()) + 1);  // since this is a vector index, size() > nCodePts
+        std::string passwordStr;
+        for (size_t i = 0;  i < nCodePts;  ++i) {
+            passwordStr += 0xe2;
+            passwordStr += 0x80;
+            passwordStr += 0xa2;
+        }
+        idx2cp.push_back(nCodePts);  // selection can go to nCodePt
+        auto sel = mImpl->editor.selection();
+        sel.start = 3 * idx2cp[std::max(0, sel.start)];
+        sel.end = 3 * idx2cp[std::max(0, sel.end)];
+        mImpl->passwordDisplay->setString(passwordStr);
+        mImpl->passwordDisplay->setSelection(sel);
+
+        auto s = context.theme.textEditStyle(style(themeState()), themeState());
+        mImpl->passwordDisplay->layoutText(context.dc, context.theme.params().labelFont, s.fgColor,
+                                           context.theme.params().accentedBackgroundTextColor, PicaPt(1e6));
+    }
+    auto *editor = &mImpl->editor;
+    if (mImpl->passwordDisplay) {
+        editor = mImpl->passwordDisplay.get();
+    }
+
     // mouse() and key() will change the selection (since the caret is a selection)
     // if anything changes, but if the layout changed we cannot do the calculation
     // until afterwards. If we have focus, assume that any draw is because of a
     // change from user input.
     if (focused()) {
-        mImpl->scrollOffset = calcScrollOffset(mImpl->editor, mImpl->editorTextRect.size(),
+        mImpl->scrollOffset = calcScrollOffset(*editor, mImpl->editorTextRect.size(),
                                                (mImpl->alignment & Alignment::kHorizMask),
                                                mImpl->scrollOffset);
     }
 
-    auto alignOffset = calcAlignmentOffset(mImpl->editor, mImpl->editorTextRect, mImpl->alignment).x;
+    auto alignOffset = calcAlignmentOffset(*editor, mImpl->editorTextRect, mImpl->alignment).x;
     context.theme.drawTextEdit(context, bounds(), alignOffset + mImpl->scrollOffset,
-                               mImpl->placeholder, mImpl->editor, mImpl->alignment,
+                               mImpl->placeholder, *editor, mImpl->alignment,
                                style(themeState()), themeState(), focused());
+
     Super::draw(context);
 }
 

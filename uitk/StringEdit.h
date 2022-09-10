@@ -42,6 +42,9 @@ public:
     const std::string& placeholderText() const;
     StringEdit* setPlaceholderText(const std::string& text);
 
+    bool isPassword() const;
+    StringEdit* setIsPassword(bool is);
+
     int alignment() const;
     /// Sets the text alignment. Vertical alignment may be ignored for
     /// single line widgets.

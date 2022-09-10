@@ -589,6 +589,19 @@ public:
         mSearch = new SearchBar();
         mSearch->setPlaceholderText("Search");
         addChild(mSearch);
+
+        mPassword = new StringEdit();
+        mPassword->setPlaceholderText("Password");
+        mPassword->setIsPassword(true);
+        addChild(mPassword);
+
+        mShowPassword = new Button(Theme::StandardIcon::kEye);
+        mShowPassword->setDrawStyle(Button::DrawStyle::kNoDecoration);
+        mShowPassword->setToggleable(true);
+        addChild(mShowPassword);
+        mShowPassword->setOnClicked([this](Button *b) {
+            mPassword->setIsPassword(!b->isOn());
+        });
     }
 
     Size preferredSize(const LayoutContext& context) const override
@@ -601,12 +614,20 @@ public:
     {
         auto spacing = context.dc.roundToNearestPixel(0.25f * context.theme.params().labelFont.pointSize());
         auto pref = mString->preferredSize(context);
+        auto buttonWidth = pref.height;
         auto y = PicaPt::kZero;
-        mString->setFrame(Rect(PicaPt::kZero, y, bounds().width, pref.height));
+        auto w = bounds().width - buttonWidth - spacing;
+        mString->setFrame(Rect(PicaPt::kZero, y, w, pref.height));
 
         y = mString->frame().maxY() + spacing;
         pref = mSearch->preferredSize(context);
-        mSearch->setFrame(Rect(PicaPt::kZero, y, bounds().width, pref.height));
+        mSearch->setFrame(Rect(PicaPt::kZero, y, w, pref.height));
+
+        y = mSearch->frame().maxY() + spacing;
+        pref = mPassword->preferredSize(context);
+        mPassword->setFrame(Rect(PicaPt::kZero, y, w, pref.height));
+
+        mShowPassword->setFrame(Rect(mPassword->frame().maxX() + spacing, y, pref.height, pref.height));
 
         Super::layout(context);
     }
@@ -614,6 +635,8 @@ public:
 private:
     StringEdit *mString;
     SearchBar *mSearch;
+    StringEdit *mPassword;
+    Button *mShowPassword;
 };
 
 class ScrollTest : public Widget

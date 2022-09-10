@@ -122,6 +122,7 @@ public:
         kMoreVert,
         kLocked,
         kUnlocked,
+        kEye,
         kSettings,
         kChevronLeft,
         kChevronRight,

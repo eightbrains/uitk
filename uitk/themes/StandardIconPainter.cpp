@@ -350,6 +350,39 @@ void StandardIconPainter::drawUnlocked(DrawContext& dc, const Size& size, const 
     drawLock(dc, r, sw, kUnlocked);
 }
 
+void StandardIconPainter::drawEye(DrawContext& dc, const Size& size, const Color& fg) const
+{
+    auto sw = setStroke(dc, size, fg);
+    auto r = calcContentRect(size);
+    r.inset(0.5f * sw, PicaPt::kZero);  // the edges extend farther than normal because the angle is so sharp
+
+    auto halfEyeHeight = 0.3f * r.width;
+    auto cpVert = 0.5f * halfEyeHeight;
+    auto cpHoriz = 0.5f * halfEyeHeight;
+
+    auto path = dc.createBezierPath();
+    path->moveTo(Point(r.x, r.midY()));
+    path->cubicTo(Point(r.x, r.midY() - cpVert),
+                  Point(r.midX() - cpHoriz, r.midY() - halfEyeHeight),
+                  Point(r.midX(), r.midY() - halfEyeHeight));
+    path->cubicTo(Point(r.midX() + cpHoriz, r.midY() - halfEyeHeight),
+                  Point(r.maxX(), r.midY() - cpVert),
+                  Point(r.maxX(), r.midY()));
+    path->cubicTo(Point(r.maxX(), r.midY() + cpVert),
+                  Point(r.midX() + cpHoriz, r.midY() + halfEyeHeight),
+                  Point(r.midX(), r.midY() + halfEyeHeight));
+    path->cubicTo(Point(r.midX() - cpHoriz, r.midY() + halfEyeHeight),
+                  Point(r.x, r.midY() + cpVert),
+                  Point(r.x, r.midY()));
+    path->close();
+
+    // It's easy for the pupil to be too large, but it does need to contact
+    // the top and bottom. 0.75 * sw makes it smaller, but still keeps contact.
+    path->addCircle(r.center(), halfEyeHeight - 0.75f * sw);
+
+    dc.drawPath(path, kPaintStroke);
+}
+
 void StandardIconPainter::drawSettings(DrawContext& dc, const Size& size, const Color& fg) const
 {
     auto sw = setStroke(dc, size, fg);

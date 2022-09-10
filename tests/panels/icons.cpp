@@ -57,6 +57,7 @@ public:
             Theme::StandardIcon::kMoreVert,
             Theme::StandardIcon::kLocked,
             Theme::StandardIcon::kUnlocked,
+            Theme::StandardIcon::kEye,
             Theme::StandardIcon::kSettings,
             Theme::StandardIcon::kChevronLeft,
             Theme::StandardIcon::kChevronRight,

@@ -59,6 +59,7 @@ public:
     void drawMoreHoriz(DrawContext& dc, const Size& size, const Color& fg) const override;
     void drawMoreVert(DrawContext& dc, const Size& size, const Color& fg) const override;
     void drawLocked(DrawContext& dc, const Size& size, const Color& fg) const override;
+    void drawEye(DrawContext& dc, const Size& size, const Color& fg) const override;
     void drawUnlocked(DrawContext& dc, const Size& size, const Color& fg) const override;
     void drawSettings(DrawContext& dc, const Size& size, const Color& fg) const override;
     void drawChevronLeft(DrawContext& dc, const Size& size, const Color& fg) const override;

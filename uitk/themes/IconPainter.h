@@ -59,6 +59,7 @@ public:
     virtual void drawMoreVert(DrawContext& dc, const Size& size, const Color& fg) const = 0;
     virtual void drawLocked(DrawContext& dc, const Size& size, const Color& fg) const = 0;
     virtual void drawUnlocked(DrawContext& dc, const Size& size, const Color& fg) const = 0;
+    virtual void drawEye(DrawContext& dc, const Size& size, const Color& fg) const = 0;
     virtual void drawSettings(DrawContext& dc, const Size& size, const Color& fg) const = 0;
     virtual void drawChevronLeft(DrawContext& dc, const Size& size, const Color& fg) const = 0;
     virtual void drawChevronRight(DrawContext& dc, const Size& size, const Color& fg) const = 0;
