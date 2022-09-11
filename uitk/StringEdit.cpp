@@ -485,9 +485,9 @@ void StringEdit::draw(UIContext& context)
         const int nCodePts = (idx2cp.empty() ? 0 : int(idx2cp.back()) + 1);  // since this is a vector index, size() > nCodePts
         std::string passwordStr;
         for (size_t i = 0;  i < nCodePts;  ++i) {
-            passwordStr += 0xe2;
-            passwordStr += 0x80;
-            passwordStr += 0xa2;
+            passwordStr += char(0xe2);
+            passwordStr += char(0x80);
+            passwordStr += char(0xa2);
         }
         idx2cp.push_back(nCodePts);  // selection can go to nCodePt
         auto sel = mImpl->editor.selection();
