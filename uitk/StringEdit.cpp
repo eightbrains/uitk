@@ -206,6 +206,11 @@ StringEdit::StringEdit()
         if (mImpl->onTextChanged) {  // this was a user action, so do callback
             mImpl->onTextChanged(mImpl->editor.string());
         }
+        if (auto *w = window()) {
+            if (w->focusWidget() != this) {
+                w->setFocusWidget(this);
+            }
+        }
     });
     addChild(mImpl->clearButton);  // we no longer own
     mImpl->updateClearButton();
