@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -20,44 +20,47 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
-
-#define ND_NAMESPACE uitk
-
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
+#include "PopupWindow.h"
 
 #include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "Clipboard.h"
-#include "ColorEdit.h"
-#include "ComboBox.h"
-#include "Cursor.h"
-#include "Dialog.h"
-#include "Events.h"
-#include "FileDialog.h"
-#include "Icon.h"
-#include "Label.h"
-#include "LabelCell.h"
-#include "ListView.h"
-#include "NumberEdit.h"
-#include "Menu.h"
-#include "OSMenubar.h"
-#include "ProgressBar.h"
-#include "ScrollView.h"
-#include "SearchBar.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
-#include "StackedWidget.h"
-#include "StringEdit.h"
-#include "UIContext.h"
-#include "Window.h"
 
-#include "io/Directory.h"
-#include "io/File.h"
+namespace uitk {
 
-#include <nativedraw.h>
+struct PopupWindow::Impl
+{
+    Window *parent = nullptr;  // we do not own this
+    std::function<void()> onDone;
+};
 
-#endif // UITK_H
+PopupWindow::PopupWindow(const PicaPt& w, const PicaPt& h, const std::string& title /*= ""*/)
+    : Window(title, w, h, Window::Flags::Value(Window::Flags::kPopup))
+    , mImpl(new Impl())
+{
+    this->setOnWindowWillClose([this](Window &) {
+        this->deleteLater();
+    });
+}
+
+void PopupWindow::cancel()
+{
+    if (mImpl->parent) {
+        mImpl->parent->setPopupWindow(nullptr);
+    }
+    this->close();
+}
+
+Window* PopupWindow::window() { return this; }
+
+void PopupWindow::showPopup(Window *parent, int osX, int osY)
+{
+    mImpl->parent = parent;
+    auto osRect = this->osFrame();
+    if (!Application::instance().isOriginInUpperLeft()) {
+        osY -= osRect.height;
+    }
+    this->setOSFrame(osX, osY, osRect.width, osRect.height);
+    mImpl->parent->setPopupWindow(this);
+    this->show(true);
+}
+
+} // namespace uitk

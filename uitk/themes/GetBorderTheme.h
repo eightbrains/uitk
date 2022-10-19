@@ -148,6 +148,9 @@ public:
     const WidgetStyle& segmentTextStyle(WidgetState state, SegmentDrawStyle drawStyle,
                                         bool isOn) const override
         { return mTheme->segmentTextStyle(state, drawStyle, isOn); }
+    void drawColorEdit(UIContext& ui, const Rect& frame, const Color& color,
+                       const WidgetStyle& style, WidgetState state) const override
+        { mTheme->drawColorEdit(ui, frame, color, style, state); }
     void drawComboBoxAndClip(UIContext& ui, const Rect& frame,
                              const WidgetStyle& style, WidgetState state) const override
         { mTheme->drawComboBoxAndClip(ui, frame, style, state); }

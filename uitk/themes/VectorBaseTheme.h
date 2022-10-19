@@ -94,6 +94,8 @@ public:
                                         bool isOn) const override;
     void drawComboBoxAndClip(UIContext& ui, const Rect& frame,
                              const WidgetStyle& style, WidgetState state) const override;
+    void drawColorEdit(UIContext& ui, const Rect& frame, const Color& color,
+                       const WidgetStyle& style, WidgetState state) const override;
     void drawSliderTrack(UIContext& ui, SliderDir dir, const Rect& frame, const Point& thumbMid,
                          const WidgetStyle& style, WidgetState state) const override;
     void drawSliderThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
@@ -159,6 +161,7 @@ protected:
     WidgetStyle mSegmentUndecoratedOnStyles[5];  // style for individual segment (on)
     WidgetStyle mComboBoxStyles[5];
     WidgetStyle mComboBoxIconAreaStyles[5];
+    WidgetStyle mColorEditTrackStyles[5];
     WidgetStyle mSliderTrackStyles[5];
     WidgetStyle mSliderThumbStyles[5];
     WidgetStyle mScrollbarTrackStyles[5];

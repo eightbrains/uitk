@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -23,6 +23,7 @@
 #ifndef UITK_POPUP_MENU_H
 #define UITK_POPUP_MENU_H
 
+#include "IPopupWindow.h"
 #include "OSMenu.h"
 #include "Widget.h"
 
@@ -34,6 +35,7 @@ namespace uitk {
 class Menu;
 
 class MenuUITK : public OSMenu
+               , public IPopupWindow
 {
 public:
     MenuUITK();
@@ -108,17 +110,19 @@ public:
     bool isShowing() const;
     void show(Window *w, const Point& upperLeftWindowCoord, MenuId id = OSMenu::kInvalidId,
               const PicaPt& minWidth = PicaPt::kZero, int extraWindowFlags = 0);
-    void cancel();
     void cancelHierarchy(); /// Cancels the menu and any parent menus
+
+    // ---- IPopupWindow ---
+    void cancel() override;
+    /// Returns the popup's window. Note that the window may not exist unless
+    /// the window is showing.
+    Window* window() override;
+    // ----
 
     /// Sets callback function for when the menu closes, which will be called
     /// whether a menu item is selected or the menu is cancelled.
     void setOnClose(std::function<void()> onClose);
 
-    /// Returns the popup's window. Note that the window may not exist unless
-    /// the window is showing.
-    Window* window();
-    
     /// Draws the item with ID with the upper left at (0, 0).
     /// This is mostly internal, used by ComboBox.
     void drawItem(UIContext& context, const Rect& frame, MenuId id, Theme::WidgetState itemState);

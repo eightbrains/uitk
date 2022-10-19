@@ -326,7 +326,7 @@ struct Window::Impl
     std::unique_ptr<Widget> rootWidget;
     Widget *grabbedWidget = nullptr;
     Widget *focusedWidget = nullptr;
-    MenuUITK *activePopup = nullptr;
+    IPopupWindow *activePopup = nullptr;
     PopupState popupState = PopupState::kNone;
     struct {
         Dialog* dialog = nullptr;
@@ -380,7 +380,8 @@ Window::Window(const std::string& title,
                const PicaPt& width, const PicaPt& height,
                Flags::Value flags /*= Flags::kNone*/)
     : Window(title, int(std::round(x.toStandardPixels())), int(std::round(y.toStandardPixels())),
-             int(std::round(width.toStandardPixels())), int(std::round(height.toStandardPixels())))
+             int(std::round(width.toStandardPixels())), int(std::round(height.toStandardPixels())),
+             flags)
 {
     auto dpi = mImpl->window->dpi();
     mImpl->window->setOSFrame(x.toPixels(dpi), y.toPixels(dpi),
@@ -860,15 +861,15 @@ void Window::moveKeyFocus(int dir)
 
 PicaPt Window::borderWidth() const { return mImpl->window->borderWidth(); }
 
-MenuUITK* Window::popupMenu() const { return mImpl->activePopup; }
+IPopupWindow* Window::popupWindow() const { return mImpl->activePopup; }
 
-void Window::setPopupMenu(MenuUITK *menu)
+void Window::setPopupWindow(IPopupWindow *popup)
 {
     // We clicked on the widget, so it will grab the mouse, but the unclick will
     // go to the menu, so it maintains the grab, which is obviously unwanted.
     setMouseGrab(nullptr);
 
-    if (mImpl->activePopup != nullptr && menu == mImpl->activePopup
+    if (mImpl->activePopup != nullptr && popup == mImpl->activePopup
         && mImpl->popupState == PopupState::kShowing) {
         // Removing popup: need to call activate, in case mouse is over a widget
         // Q: How do we know this window is actually active?
@@ -876,11 +877,11 @@ void Window::setPopupMenu(MenuUITK *menu)
         onActivated(mImpl->window->currentMouseLocation());
     }
 
-    mImpl->activePopup = menu;
+    mImpl->activePopup = popup;
 
-    if (menu) {
+    if (popup) {
         mImpl->popupState = PopupState::kShowing;
-        if (auto *w = menu->window()) {
+        if (auto *w = popup->window()) {
             w->onActivated(w->mImpl->window->currentMouseLocation());
         }
     } else {

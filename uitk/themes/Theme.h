@@ -302,6 +302,8 @@ public:
                                                 bool isOn) const = 0;
     virtual void drawComboBoxAndClip(UIContext& ui, const Rect& frame,
                                      const WidgetStyle& style, WidgetState state) const = 0;
+    virtual void drawColorEdit(UIContext& ui, const Rect& frame, const Color& color,
+                               const WidgetStyle& style, WidgetState state) const = 0;
     virtual void drawSliderTrack(UIContext& ui, SliderDir dir, const Rect& frame, const Point& thumbMid,
                                  const WidgetStyle& style, WidgetState state) const = 0;
     virtual void drawSliderThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,

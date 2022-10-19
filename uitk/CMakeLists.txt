@@ -5,6 +5,7 @@ set(UITK_PUBLIC_HEADERS
                  Button.h
                  Checkbox.h
                  Clipboard.h
+                 ColorEdit.h
                  ComboBox.h
                  Cursor.h
                  CutPasteable.h
@@ -14,6 +15,7 @@ set(UITK_PUBLIC_HEADERS
                  Global.h
                  Icon.h
                  IncDecWidget.h
+                 IPopupWindow.h
                  Label.h
                  LabelCell.h
                  ListView.h
@@ -27,6 +29,7 @@ set(UITK_PUBLIC_HEADERS
                  OSMenu.h
                  OSMenubar.h
                  OSWindow.h
+                 PopupWindow.h
                  ProgressBar.h
                  Screen.h
                  ScrollBar.h
@@ -60,6 +63,7 @@ set(UITK_HEADERS ${UITK_PUBLIC_HEADERS}
 set(UITK_SOURCES Application.cpp
                  Button.cpp
                  Checkbox.cpp
+                 ColorEdit.cpp
                  ComboBox.cpp
                  Cursor.cpp
                  Dialog.cpp
@@ -75,6 +79,7 @@ set(UITK_SOURCES Application.cpp
                  NumberEdit.cpp
                  NumericModel.cpp
                  OSMenubar.cpp
+                 PopupWindow.cpp
                  ProgressBar.cpp
                  Screen.cpp
                  ScrollBar.cpp

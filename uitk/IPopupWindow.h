@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -20,44 +20,23 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
+#ifndef UITK_I_POPUP_WINDOW_H
+#define UITK_I_POPUP_WINDOW_H
 
-#define ND_NAMESPACE uitk
+namespace uitk {
 
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
+class Window;
 
-#include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "Clipboard.h"
-#include "ColorEdit.h"
-#include "ComboBox.h"
-#include "Cursor.h"
-#include "Dialog.h"
-#include "Events.h"
-#include "FileDialog.h"
-#include "Icon.h"
-#include "Label.h"
-#include "LabelCell.h"
-#include "ListView.h"
-#include "NumberEdit.h"
-#include "Menu.h"
-#include "OSMenubar.h"
-#include "ProgressBar.h"
-#include "ScrollView.h"
-#include "SearchBar.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
-#include "StackedWidget.h"
-#include "StringEdit.h"
-#include "UIContext.h"
-#include "Window.h"
+class IPopupWindow
+{
+public:
+    virtual ~IPopupWindow() {}
 
-#include "io/Directory.h"
-#include "io/File.h"
+    /// Must cancel the popup (including calling Window::setPopupWindow(nullptr);
+    virtual void cancel() = 0;
+    /// Must return the window
+    virtual Window* window() = 0;
+};
 
-#include <nativedraw.h>
-
-#endif // UITK_H
+} // namespace uitk
+#endif // UITK_I_POPUP_WINDOW_H

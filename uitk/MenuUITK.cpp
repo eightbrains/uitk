@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -121,7 +121,7 @@ public:
     {
         Super::mouseEntered();
         if (auto *w = window()) {
-            if (auto *popup = w->popupMenu()) {
+            if (auto *popup = w->popupWindow()) {
                 popup->cancel();
             }
         }
@@ -206,7 +206,7 @@ public:
     void openSubmenu() const
     {
         if (auto *w = window()) {
-            auto *popup = w->popupMenu();
+            auto *popup = w->popupWindow();
             auto *menu = (submenu() ? submenu()->menuUitk() : nullptr);
             if (popup != menu) {
                 if (popup) {
@@ -272,7 +272,7 @@ public:
         // submenu, then mouses over a disabled item (or separator), especially
         // if they first mouse over the submenu, then return to the parent menu.
         auto *w = window();
-        if (w && w->popupMenu()) {
+        if (w && w->popupWindow()) {
             auto row = calcRowIndex(e.pos);
             auto *cell = cellAtIndex(row);
             // Note that calcRowIndex() uses mathematical rects, but the mouse
@@ -283,7 +283,7 @@ public:
             // item to a submenu item in Linux/X11.)
             auto f = cell->frame();
             if (cell && !cell->enabled() && e.pos.y > f.y && e.pos.y < f.maxY()) {
-                w->popupMenu()->cancel();
+                w->popupWindow()->cancel();
             }
         }
 
@@ -310,7 +310,7 @@ public:
         // otherwise the appearance of the submenu item will become unselected,
         // which looks pretty odd.
         auto *w = window();
-        if (w && w->popupMenu()) {
+        if (w && w->popupWindow()) {
             ;  // don't super
         } else {
             Super::mouseExited();
@@ -528,16 +528,16 @@ struct MenuUITK::Impl
     void onMouseEnteredNormalItem()
     {
         if (this->menuWindow) {
-            this->menuWindow->setPopupMenu(nullptr);
+            this->menuWindow->setPopupWindow(nullptr);
         }
     }
 
     void onMouseEnteredSubmenuItem(Menu *menu)
     {
         if (this->menuWindow) {
-            this->menuWindow->setPopupMenu(nullptr);
+            this->menuWindow->setPopupWindow(nullptr);
             if (menu) {
-                this->menuWindow->setPopupMenu(menu->menuUitk());
+                this->menuWindow->setPopupWindow(menu->menuUitk());
             }
         }
     }
@@ -551,7 +551,7 @@ MenuUITK::MenuUITK()
 MenuUITK::~MenuUITK()
 {
     if (mImpl->menuWindow) {
-        mImpl->menuWindow->setPopupMenu(nullptr);
+        mImpl->menuWindow->setPopupWindow(nullptr);
     }
 
     for (auto *item : mImpl->items) {
@@ -961,7 +961,7 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
                 // setNeedsRedraw that the callback is sure to call. If the draw
                 // happens immediately, then the window will not be closed,
                 // which may cause problems (e.g. ComboBox on X11).
-                parent->setPopupMenu(nullptr);
+                parent->setPopupWindow(nullptr);
                 mImpl->menuWindow->close();
                 mImpl->isShowing = false;
                 // do not clear listView here, it exists until onCloseCallback.
@@ -1044,7 +1044,7 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
 
     mImpl->parent = w;
     mImpl->menuWindow->show(true);
-    w->setPopupMenu(this);
+    w->setPopupWindow(this);
 }
 
 void MenuUITK::cancel()
@@ -1052,7 +1052,7 @@ void MenuUITK::cancel()
     if (mImpl->isShowing) {
         if (mImpl->menuWindow) {
             if (mImpl->parent) {
-                mImpl->parent->setPopupMenu(nullptr);
+                mImpl->parent->setPopupWindow(nullptr);
             }
             mImpl->menuWindow->close();
         } else {

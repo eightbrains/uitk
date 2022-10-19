@@ -152,8 +152,8 @@ public:
                         }
                     } else if (mModel.justClosedIndex != i || isMoveWithOpenMenu) {
                         auto* win = window();
-                        if (win->popupMenu()) {
-                            win->popupMenu()->cancel();
+                        if (win->popupWindow()) {
+                            win->popupWindow()->cancel();
                         }
                         mModel.activeIndex = int(i);
                         if (menuUitk) {

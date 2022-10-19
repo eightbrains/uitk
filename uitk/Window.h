@@ -27,6 +27,7 @@
 #include <string>
 
 #include "Global.h"
+#include "IPopupWindow.h"
 #include "OSWindow.h"
 #include "Screen.h"
 
@@ -243,10 +244,10 @@ public:
     void moveKeyFocus(int dir);
 
     // On macOS windows without a titlebar do not get activated/deactivated
-    // messages, so we need to register the popup menu
-    void setPopupMenu(MenuUITK *menu);
-    /// Returns the active popup menu, or nullptr
-    MenuUITK* popupMenu() const;
+    // messages, so we need to register the popup window
+    void setPopupWindow(IPopupWindow *popup);
+    /// Returns the active popup window, or nullptr
+    IPopupWindow* popupWindow() const;
 
     // Takes ownership of the dialog and displays modal to this window,
     // returning true. If a dialog is already displaying, returns false and does

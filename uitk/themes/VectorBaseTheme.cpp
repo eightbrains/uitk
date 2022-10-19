@@ -275,6 +275,9 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mComboBoxIconAreaStyles[OVER].bgColor = mCheckboxOnStyles[OVER].bgColor;
     mComboBoxIconAreaStyles[DOWN] = mComboBoxIconAreaStyles[OVER];
 
+    // ColorEdit
+    copyStyles(mComboBoxStyles, mColorEditTrackStyles);
+
     // Slider
     copyStyles(mButtonStyles, mSliderTrackStyles);
     mSliderTrackStyles[NORMAL].fgColor = params.accentColor;
@@ -1018,6 +1021,17 @@ void VectorBaseTheme::drawComboBoxAndClip(UIContext& ui, const Rect& frame,
                           frame.y + s.borderWidth,
                           iconRect.x - x,
                           frame.height - 2.0f * s.borderWidth));
+}
+
+void VectorBaseTheme::drawColorEdit(UIContext& ui, const Rect& frame, const Color& color,
+                                    const WidgetStyle& style, WidgetState state) const
+{
+    auto frameStyle = mColorEditTrackStyles[int(state)].merge(style);  // copy
+    drawFrame(ui, frame, frameStyle);
+
+    auto marginVert = ui.dc.roundToNearestPixel(0.25f * mParams.labelFont.pointSize());
+    ui.dc.setFillColor(color);
+    ui.dc.drawRect(frame.insetted(2.0f * marginVert, marginVert), kPaintFill);
 }
 
 void VectorBaseTheme::drawSliderTrack(UIContext& ui, SliderDir dir, const Rect& frame, const Point& thumbMid,

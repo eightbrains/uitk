@@ -429,24 +429,45 @@ public:
         mCombo->addItem("Deep magic");
         mCombo->addItem("Deep magic from before the dawn of time");
         addChild(mCombo);
+
+        mColor = new ColorEdit();
+        addChild(mColor);
+
+        mContinuousColorEdit = new Checkbox("Continuous");
+        mContinuousColorEdit->setOnClicked([this](Button *b) {
+            mColor->setMode(b->isOn() ? ColorEdit::Mode::kContinuous : ColorEdit::Mode::kDiscrete );
+        });
+        addChild(mContinuousColorEdit);
     }
 
     Size preferredSize(const LayoutContext& context) const override
     {
         auto pref = mCombo->preferredSize(context);
-        return Size(pref.width, 1.5f * pref.height);
+        return Size(pref.width, 3.0f * pref.height);
     }
 
     void layout(const LayoutContext& context) override
     {
-        auto pref = mCombo->preferredSize(context);
-        mCombo->setFrame(Rect(PicaPt::kZero, PicaPt::kZero, bounds().width, pref.height));
+        auto spacing = context.dc.roundToNearestPixel(0.5f * context.theme.params().labelFont.pointSize());
+        auto y = PicaPt::kZero;
 
+        auto pref = mCombo->preferredSize(context);
+        mCombo->setFrame(Rect(PicaPt::kZero, y, bounds().width, pref.height));
+        y = mCombo->frame().maxY() + spacing;
+
+        pref = mColor->preferredSize(context);
+        mColor->setFrame(Rect(PicaPt::kZero, y, pref.width, pref.height));
+
+        pref = mContinuousColorEdit->preferredSize(context);
+        mContinuousColorEdit->setFrame(Rect(mColor->frame().maxX() + spacing, y,
+                                            pref.width, mColor->frame().height));
         Super::layout(context);
     }
 
 private:
     ComboBox *mCombo;
+    ColorEdit *mColor;
+    Checkbox *mContinuousColorEdit;
 };
 
 class SliderTest : public Widget
