@@ -458,12 +458,20 @@ Widget::EventResult ListView::mouse(const MouseEvent& e)
         if (idx >= 0 && mImpl->onDblClicked) {
             mImpl->onDblClicked(this, idx);
         }
-    } else if (e.type == MouseEvent::Type::kMove || e.type == MouseEvent::Type::kDrag ||
-               e.type == MouseEvent::Type::kScroll) {
+    } else if (e.type == MouseEvent::Type::kMove || e.type == MouseEvent::Type::kDrag) {
         mImpl->setMouseOverIndex(calcRowIndex(e.pos));
     }
 
-    return Super::mouse(e);
+    auto retval = Super::mouse(e);
+
+    // Since super scrolls we cannot set the mouse over index until after we super,
+    // otherwise we get a frame behind. This is a problem when scrolling quickly
+    // through a long menu (e.g. fonts).
+    if (e.type == MouseEvent::Type::kScroll) {
+        mImpl->setMouseOverIndex(calcRowIndex(e.pos));
+    }
+
+    return retval;
 }
 
 void ListView::mouseExited()
