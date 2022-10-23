@@ -12,6 +12,7 @@ set(UITK_PUBLIC_HEADERS
                  Dialog.h
                  Events.h
                  FileDialog.h
+                 FontListComboBox.h
                  Global.h
                  Icon.h
                  IncDecWidget.h
@@ -68,6 +69,7 @@ set(UITK_SOURCES Application.cpp
                  Cursor.cpp
                  Dialog.cpp
                  FileDialog.cpp
+                 FontListComboBox.cpp
                  Icon.cpp
                  IncDecWidget.cpp
                  Label.cpp

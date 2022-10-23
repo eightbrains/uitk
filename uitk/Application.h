@@ -26,6 +26,7 @@
 #include <functional>
 #include <memory>
 #include <set>
+#include <vector>
 
 namespace uitk {
 
@@ -83,6 +84,9 @@ public:
 
     /// Returns a temp directory for writing in.
     std::string tempDir() const;
+
+    /// Returns the available fonts registered with the operating system.
+    std::vector<std::string> availableFonts() const;
 
     /// Plays a beep, usually when a keypress is rejected. (This is used
     /// to produce the beep when a pressing a keyboard shortcut for a menu

@@ -458,7 +458,8 @@ Widget::EventResult ListView::mouse(const MouseEvent& e)
         if (idx >= 0 && mImpl->onDblClicked) {
             mImpl->onDblClicked(this, idx);
         }
-    } else if (e.type == MouseEvent::Type::kMove || e.type == MouseEvent::Type::kDrag) {
+    } else if (e.type == MouseEvent::Type::kMove || e.type == MouseEvent::Type::kDrag ||
+               e.type == MouseEvent::Type::kScroll) {
         mImpl->setMouseOverIndex(calcRowIndex(e.pos));
     }
 

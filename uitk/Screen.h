@@ -25,6 +25,8 @@
 
 #include <nativedraw.h>
 
+#include "OSWindow.h"
+
 namespace uitk {
 
 struct OSScreen;
@@ -50,9 +52,12 @@ public:
     /// MacBook Pros).
     const Rect& monitorRect() const;
 
+    const OSScreen& osScreen() const;
+
 private:
     Rect mDesktop;
     Rect mMonitor;
+    OSScreen mOSScreen;
 };
 
 }  // namespace uitk

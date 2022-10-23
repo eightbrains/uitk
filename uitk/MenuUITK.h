@@ -108,8 +108,10 @@ public:
     Size preferredSize(const LayoutContext& context) const;
 
     bool isShowing() const;
-    void show(Window *w, const Point& upperLeftWindowCoord, MenuId id = OSMenu::kInvalidId,
-              const PicaPt& minWidth = PicaPt::kZero, int extraWindowFlags = 0);
+    void show(Window *w, const Point& upperLeftWindowCoord,
+              MenuId id = OSMenu::kInvalidId,
+              const PicaPt& minWidth = PicaPt::kZero,
+              int extraWindowFlags = 0);
     void cancelHierarchy(); /// Cancels the menu and any parent menus
 
     // ---- IPopupWindow ---

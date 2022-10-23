@@ -158,6 +158,11 @@ std::string Application::currentPath() const
     return path;
 }
 
+std::vector<std::string> Application::availableFonts() const
+{
+    return mImpl->osApp->availableFonts();
+}
+
 void Application::beep()
 {
     mImpl->osApp->beep();

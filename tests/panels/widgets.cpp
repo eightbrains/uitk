@@ -438,6 +438,9 @@ public:
             mColor->setMode(b->isOn() ? ColorEdit::Mode::kContinuous : ColorEdit::Mode::kDiscrete );
         });
         addChild(mContinuousColorEdit);
+
+        mFonts = new FontListComboBox();
+        addChild(mFonts);
     }
 
     Size preferredSize(const LayoutContext& context) const override
@@ -461,6 +464,13 @@ public:
         pref = mContinuousColorEdit->preferredSize(context);
         mContinuousColorEdit->setFrame(Rect(mColor->frame().maxX() + spacing, y,
                                             pref.width, mColor->frame().height));
+
+        pref = mFonts->preferredSize(context);
+        auto x = mContinuousColorEdit->frame().maxX() + spacing;
+        mFonts->setFrame(Rect(x, y,
+                              std::min(pref.width, bounds().maxX() - x),
+                              mColor->frame().height));
+
         Super::layout(context);
     }
 
@@ -468,6 +478,7 @@ private:
     ComboBox *mCombo;
     ColorEdit *mColor;
     Checkbox *mContinuousColorEdit;
+    FontListComboBox *mFonts;
 };
 
 class SliderTest : public Widget

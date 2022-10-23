@@ -39,11 +39,14 @@ Screen::Screen(const OSScreen& osscreen)
                PicaPt::fromPixels(osscreen.fullscreenFrame.y, osscreen.dpi),
                PicaPt::fromPixels(osscreen.fullscreenFrame.width, osscreen.dpi),
                PicaPt::fromPixels(osscreen.fullscreenFrame.height, osscreen.dpi))
+    , mOSScreen(osscreen)
 {
 }
 
 const Rect& Screen::desktopRect() const { return mDesktop; }
 
 const Rect& Screen::monitorRect() const { return mMonitor; }
+
+const OSScreen& Screen::osScreen() const { return mOSScreen; }
 
 }  // namespace uitk

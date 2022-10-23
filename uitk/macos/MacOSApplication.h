@@ -43,6 +43,7 @@ public:
 
     std::string applicationName() const override;
     std::string tempDir() const override;
+    std::vector<std::string> availableFonts() const override;
 
     void beep() override;
 

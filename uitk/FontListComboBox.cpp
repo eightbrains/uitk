@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -20,46 +20,17 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_OS_APPLICATION_H
-#define UITK_OS_APPLICATION_H
+#include "FontListComboBox.h"
 
-#include "themes/Theme.h"
-
-#include <functional>
-#include <string>
-#include <vector>
+#include "Application.h"
 
 namespace uitk {
 
-class Clipboard;
-class Window;
-
-class OSApplication
+FontListComboBox::FontListComboBox()
 {
-public:
-    virtual ~OSApplication() {};
+    for (auto &fontName : Application::instance().availableFonts()) {
+        addItem(fontName);
+    }
+}
 
-    virtual void setExitWhenLastWindowCloses(bool exits) = 0;
-    virtual int run() = 0;
-    virtual void exitRun() = 0;
-
-    virtual void scheduleLater(Window* w, std::function<void()> f) = 0;
-
-    virtual std::string applicationName() const = 0;
-    virtual std::string tempDir() const = 0;
-    virtual std::vector<std::string> availableFonts() const = 0;
-
-    virtual void beep() = 0;
-
-    virtual bool isOriginInUpperLeft() const = 0;
-    virtual bool shouldHideScrollbars() const = 0;
-    virtual bool canKeyFocusEverything() const = 0;
-    virtual bool platformHasMenubar() const = 0;
-
-    virtual Clipboard& clipboard() const = 0;
-
-    virtual Theme::Params themeParams() const = 0;
-};
-
-} // namespace uitk
-#endif // UITK_OS_APPLICATION_H
+}  // namespace uitk

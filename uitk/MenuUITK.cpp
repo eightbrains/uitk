@@ -884,8 +884,10 @@ bool MenuUITK::isShowing() const
     return mImpl->isShowing;
 }
 
-void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= OSMenu::kInvalidId*/,
-                    const PicaPt& minWidth /*= PicaPt::kZero*/, int extraWindowFlags /*= 0*/)
+void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord,
+                    MenuId id /*= OSMenu::kInvalidId*/,
+                    const PicaPt& minWidth /*= PicaPt::kZero*/,
+                    int extraWindowFlags /*= 0*/)
 {
     if (mImpl->menuWindow) {  // shouldn't happen, but handle it if it does
         cancel();
@@ -900,13 +902,17 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
     // since we are only going to use it in this function. This will be O(n), but
     // presumably menus are going to be reasonably sized.
 
+    float yDir = (Application::instance().isOriginInUpperLeft() ? 1.0f : -1.0f);
     auto osUL = w->convertWindowToOSPoint(upperLeftWindowCoord);
+    osUL.x = int(std::round(osUL.x));
+    osUL.y = int(std::round(osUL.y));
     mImpl->menuWindow = new Window("", int(osUL.x), int(osUL.y), 0, 0,
                                    (Window::Flags::Value)(Window::Flags::kPopup | extraWindowFlags));
 #if __APPLE__
     // The window border is inside the window area on macOS
     auto border = mImpl->menuWindow->borderWidth();
-    mImpl->menuWindow->move(-border, -border);
+    mImpl->menuWindow->move(-border, yDir * border);
+    osUL = OSPoint{ mImpl->menuWindow->osFrame().x, mImpl->menuWindow->osFrame().y };
 #endif // __APPLE__
     mImpl->menuWindow->setOnWindowDidDeactivate([this](Window &w) {
         cancel();
@@ -924,21 +930,78 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
     mImpl->listView = list;
     mImpl->menuWindow->addChild(list);
 
-    mImpl->menuWindow->resizeToFit([list, minWidth](const LayoutContext& context){
+    // Resize the menu window to its preferred size
+    mImpl->menuWindow->resizeToFit([this, list, minWidth](const LayoutContext& context){
         auto contentSize = list->preferredContentSize(context);
         auto vertMargin = context.theme.calcPreferredMenuVerticalMargin();
         return Size(std::max(minWidth, contentSize.width), contentSize.height + 2.0f * vertMargin);
     });
+
+    // Adjust the y-value if this is a combobox menu that needs to have the
+    // selected item at the upper left position given in the call to this function.
+    // It would be convenient to simply call mImpl->menuWindow->move(PicaPt::kZero, -p.y)
+    // and then get the OS frame afterwards, but there is no guarantee that window managers
+    // don't do something like center a menu that is too large and not really honor our move,
+    // So we have to keep track of the offset ourselves and apply it.
+    auto dy = PicaPt::kZero;
     if (id != kInvalidId) {
-        auto osf = w->osFrame();
         for (auto& kv : mImpl->id2item) {
             if (kv.first == id) {
                 auto p = kv.second.item->frame().upperLeft();
-                mImpl->menuWindow->move(PicaPt::kZero, -p.y);
+                dy -= p.y;
                 break;
             }
         }
     }
+
+    // Now clamp to the desktop rect.
+    // It turns out that as long as we are clamping both the top and bottom, it
+    // doesn't matter whether the OS' coordinate system origin is upper left
+    // or lower right.
+    auto osDY = mImpl->menuWindow->convertWindowToOSPoint(Point(PicaPt::kZero, dy)).y - mImpl->menuWindow->convertWindowToOSPoint(Point::kZero).y;
+    auto screen = mImpl->menuWindow->screen();
+    auto osScreen = screen.osScreen();
+    auto osf = mImpl->menuWindow->osFrame();
+    auto osInitialY = osf.y;
+    auto osInitialHeight = osf.height;
+    if (id == kInvalidId) {
+        osf.y = std::max(osScreen.desktopFrame.y, osf.y);
+        osf.height = std::min(osf.y + osf.height,
+                              osScreen.desktopFrame.y + osScreen.desktopFrame.height) - osf.y;
+    } else {
+        // Do height first, because if this is a combobox menu, the positioning of the
+        // selected element is important, so we'd rather make the menu shorter than ideal
+        // rather than misposition from the top.
+        if (yDir > 0.0f) {
+            osf.height = std::min(osf.y + osf.height,
+                                  osScreen.desktopFrame.y + osScreen.desktopFrame.height) - osf.y;
+            osf.y = std::max(osScreen.desktopFrame.y, osf.y);
+        } else {
+            auto ul = osUL.y + osDY;
+            osf.y = std::max(osScreen.desktopFrame.y, ul - osf.height);  // y is bottom of window
+            osf.height = std::min(osScreen.desktopFrame.height, ul - osf.y);
+#if __APPLE__
+            if (osf.y < osScreen.desktopFrame.y) {
+                osf.y = 2;
+                osf.height -= 2;
+            }
+#endif // __APPLE__
+        }
+    }
+    mImpl->menuWindow->setOSFrame(osf.x, osf.y, osf.width, osf.height);
+
+    // The window's frame is correctly set, but if we moved the top of the menu
+    // we moved the upper left back down, so we need to scroll up that amount so
+    // that the correct item is at the y specified when this function was called.
+    if (osInitialHeight > osf.height) {
+        auto osCoordMultiplier = screen.desktopRect().height.asFloat() / osScreen.desktopFrame.height;
+        auto osAdjustedY = (yDir > 0.0f ? osf.y - (osUL.y + osDY)
+                                        : osf.y + osf.height - (osUL.y + osDY) );
+        auto adjustedY = PicaPt(osAdjustedY * osCoordMultiplier);
+        list->setBounds(list->bounds().translated(PicaPt::kZero, -yDir * adjustedY));
+    }
+
+    // The menu geometry is now correct, so we can continue setting up other things
 
     mImpl->menuWindow->setFocusWidget(list, Window::ShowFocusRing::kNo);
 

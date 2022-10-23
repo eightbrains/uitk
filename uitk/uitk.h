@@ -38,6 +38,7 @@
 #include "Dialog.h"
 #include "Events.h"
 #include "FileDialog.h"
+#include "FontListComboBox.h"
 #include "Icon.h"
 #include "Label.h"
 #include "LabelCell.h"
