@@ -23,15 +23,15 @@
 #ifndef UITK_ICON_H
 #define UITK_ICON_H
 
-#include "Widget.h"
+#include "CellWidget.h"
 
 #include <functional>
 
 namespace uitk {
 
-class Icon : public Widget
+class Icon : public CellWidget
 {
-    using Super = Widget;
+    using Super = CellWidget;
 public:
     explicit Icon(Theme::StandardIcon icon);
     explicit Icon(Theme::Icon drawFunc);
@@ -45,10 +45,13 @@ public:
 
     const Color& color() const;
     Icon* setColor(const Color& fg);
+
+    // ---- CellWidget ----
     /// Sets the color, but does not request a redraw. This is useful when
     /// using the icon as a child of another object, so that the icon can
     /// draw using the parent's style.
-    void setColorNoRedraw(const Color& fg);
+    void setForegroundColorNoRedraw(const Color& fg) override;
+    // ----
 
     Size preferredSize(const LayoutContext& context) const override;
     void draw(UIContext& context) override;

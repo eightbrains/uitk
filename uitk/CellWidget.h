@@ -20,43 +20,24 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_FONT_LIST_COMBO_BOX_H
-#define UITK_FONT_LIST_COMBO_BOX_H
+#ifndef UITK_CELL_WIDGET_H
+#define UITK_CELL_WIDGET_H
 
-#include "ComboBox.h"
+#include "Widget.h"
+
+#include <string>
 
 namespace uitk {
 
-class FontListComboBox : public ComboBox
-{
-    using Super = ComboBox;
+class CellWidget : public Widget {
+    using Super = Widget;
 public:
-    FontListComboBox();
-    FontListComboBox(const std::vector<std::string>& fontNames);
-
-    bool drawWithFont() const;
-    /// If true the menu items are drawn in the font they represent, otherwise
-    /// they will be drawn in the normal ComboBox font. The ComboBox itself
-    /// is always drawn in the ComboBox font, since variations in font size
-    /// and contents (e.g. symbol fonts) may make the font difficult to read.
-    /// The default value is false, draw normally.
-    FontListComboBox* setDrawWithFont(bool with);
-
-    /// Adds a font to the list. Note that this is different than using the
-    /// base class addItem() functions, which will not work when drawing with
-    /// the font is true.
-    void addFont(const std::string& fontName);
-
-    void willChangeSelection() override;
-    void didChangeSelection() override;
-    void willShowMenu() override;
-    void didHideMenu() override;
-
-private:
-    struct Impl;
-    std::unique_ptr<Impl> mImpl;
+    /// Widgets with text in them that are used as a child (most notably,
+    /// Label) need to be able to set their text color in a draw, as the main
+    /// text color may need to be overridden by the parent widget.
+    virtual void setForegroundColorNoRedraw(const Color& c) = 0;
 };
 
 }  // namespace uitk
-#endif // UITK_FONT_LIST_COMBO_BOX_H
+#endif // UITK_CELL_WIDGET_H
 

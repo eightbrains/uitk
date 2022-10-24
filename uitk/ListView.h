@@ -23,6 +23,7 @@
 #ifndef UITK_LIST_VIEW_H
 #define UITK_LIST_VIEW_H
 
+#include "CellWidget.h"
 #include "ScrollView.h"
 
 #include <functional>
@@ -30,6 +31,18 @@
 #include <unordered_set>
 
 namespace uitk {
+
+/// This is the base class for ListView cells. This class should do two things:
+/// 1) calling preferredSize() should be quick:  in particular, do not create
+///    a Text object or call a text measurement function unless it is
+///    absolutely necessary. Doing so will cause ListView::layout() to be slow
+///    for large data sets. Use the font metrics instead, as those are cached
+///    and are quick to access.
+/// 2) implement setForegroundColorNoRedraw(), which is used to set the text
+///    color when the item is highlighted. In themes with light backgrounds and
+///    dark text (e.g. macOS light mode), highlighted items need to draw their
+///    text in a different color.
+using ListViewCell = CellWidget;
 
 class ListView : public ScrollView
 {
@@ -53,17 +66,17 @@ public:
     /// Adds cell and takes owernship of the pointer. Note that the background
     /// color of the cell should be transparent or the selection will not be
     /// visible.
-    ListView* addCell(Widget *cell);
+    ListView* addCell(ListViewCell *cell);
     /// Convenience function for addCell(new Label(text)).
     ListView* addStringCell(const std::string& text);
 
     /// Returns the cell or nullptr if there is no cell at the index.
     /// ListView retains ownership to the pointer.
-    Widget* cellAtIndex(int index) const;
+    ListViewCell* cellAtIndex(int index) const;
 
     /// Removes the cell and transfers ownership to the caller.
     /// If index is out of range, returns nullptr;
-    Widget* removeCellAtIndex(int index);
+    ListViewCell* removeCellAtIndex(int index);
 
     /// Returns the selected index or -1 if there is none.
     /// Should only be used in single item mode. Use selectedIndices() for

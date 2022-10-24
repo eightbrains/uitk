@@ -24,7 +24,7 @@
 
 #include "Icon.h"
 #include "Label.h"
-#include "LabelCell.h"
+#include "IconAndText.h"
 #include "Events.h"
 #include "UIContext.h"
 #include "themes/Theme.h"
@@ -32,7 +32,7 @@
 namespace uitk {
 
 struct Button::Impl {
-    LabelCell *cell = nullptr;  // we do not own this
+    IconAndText *cell = nullptr;  // we do not own this
     DrawStyle drawStyle = DrawStyle::kNormal;
     std::function<void(Button*)> onClicked = nullptr;
     bool isOn = false;
@@ -42,7 +42,7 @@ struct Button::Impl {
 Button::Button(const std::string& text)
     : mImpl(new Impl())
 {
-    mImpl->cell = new LabelCell();
+    mImpl->cell = new IconAndText();
     mImpl->cell->label()->setText(text);
     addChild(mImpl->cell);  // takes ownership
 }
@@ -50,7 +50,7 @@ Button::Button(const std::string& text)
 Button::Button(Theme::StandardIcon stdIcon)
     : mImpl(new Impl())
 {
-    mImpl->cell = new LabelCell();
+    mImpl->cell = new IconAndText();
     mImpl->cell->icon()->setIcon(stdIcon);
     addChild(mImpl->cell);  // takes ownership
 }
@@ -58,7 +58,7 @@ Button::Button(Theme::StandardIcon stdIcon)
 Button::Button(const Theme::Icon& icon)
     : mImpl(new Impl())
 {
-    mImpl->cell = new LabelCell();
+    mImpl->cell = new IconAndText();
     mImpl->cell->icon()->setIcon(icon);
     addChild(mImpl->cell);  // takes ownership
 }
@@ -67,7 +67,7 @@ Button::Button(const Theme::Icon& icon)
 Button::Button(Theme::StandardIcon stdIcon, const std::string& text)
     : mImpl(new Impl())
 {
-    mImpl->cell = new LabelCell();
+    mImpl->cell = new IconAndText();
     mImpl->cell->icon()->setIcon(stdIcon);
     mImpl->cell->label()->setText(text);
     addChild(mImpl->cell);  // takes ownership
@@ -76,7 +76,7 @@ Button::Button(Theme::StandardIcon stdIcon, const std::string& text)
 Button::Button(const Theme::Icon& icon, const std::string& text)
     : mImpl(new Impl())
 {
-    mImpl->cell = new LabelCell();
+    mImpl->cell = new IconAndText();
     mImpl->cell->icon()->setIcon(icon);
     mImpl->cell->label()->setText(text);
     addChild(mImpl->cell);  // takes ownership
@@ -114,7 +114,7 @@ Label* Button::label() const { return mImpl->cell->label(); }
 
 Icon* Button::icon() const { return mImpl->cell->icon(); }
 
-LabelCell* Button::cell() const { return mImpl->cell; }
+IconAndText* Button::cell() const { return mImpl->cell; }
 
 Button::DrawStyle Button::drawStyle() const { return mImpl->drawStyle; }
 
@@ -244,7 +244,7 @@ void Button::draw(UIContext& context)
     context.theme.drawButton(context, bounds(), bdStyle, style(themeState), themeState, isOn());
     mImpl->cell->setThemeState(themeState);
     auto ws = context.theme.buttonTextStyle(themeState, bdStyle, mImpl->isOn);
-    mImpl->cell->setColorNoRedraw(ws.fgColor);
+    mImpl->cell->setForegroundColorNoRedraw(ws.fgColor);
 
     Super::draw(context);
 }

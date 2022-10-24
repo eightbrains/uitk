@@ -78,9 +78,9 @@
 namespace uitk {
 
 namespace {
-class MenuItemWidget : public Widget
+class MenuItemWidget : public CellWidget
 {
-    using Super = Widget;
+    using Super = CellWidget;
 public:
     enum Separator { kSeparator };
     MenuItemWidget(const std::string& text, const std::string& shortcut) : mText(text), mShortcut(shortcut) {}
@@ -113,6 +113,8 @@ public:
 
     Menu* removeSubmenu() { return mSubmenu.release(); }  // transfers ownership to caller
 
+    virtual CellWidget* cell() const { return nullptr; }
+
     virtual PicaPt preferredShortcutWidth(const LayoutContext& context) const = 0;
 
     void setShortcutWidth(const PicaPt& w) { mShortcutWidth = w; }
@@ -126,6 +128,10 @@ public:
             }
         }
     }
+
+    // ---- CellWidget ---
+    void setForegroundColorNoRedraw(const Color& fg) override { }  // no-op, draw already does this
+    // ----
 
 protected:
     std::string mText;
@@ -164,10 +170,75 @@ public:
                                : Theme::MenuItemAttribute::kNormal);
         auto s = themeState();
         context.theme.drawMenuItem(context, bounds(), mShortcutWidth, text(), shortcut(), attr, style(s), s);
+
+        Super::draw(context);
     }
 
 private:
     mutable PicaPt mPreferredShortcutWidth;
+};
+
+class CustomMenuItem : public StringMenuItem
+{
+    using Super = StringMenuItem;
+public:
+    CustomMenuItem(CellWidget *cell, const ShortcutKey& shortcut)
+        : StringMenuItem("", shortcut)
+        , mCell(*cell)
+    {
+        addChild(cell);
+    }
+
+    CellWidget* cell() const override { return &mCell; }
+
+    Size preferredSize(const LayoutContext& context) const override
+    {
+        auto h = context.theme.calcPreferredMenuItemSize(context.dc, "Ag", "",
+                                                         Theme::MenuItemAttribute::kNormal, nullptr).height;
+        return Size(mCell.preferredSize(context).width, h);
+    }
+
+    void layout(const LayoutContext& context) override
+    {
+        Rect textRect;
+        context.theme.calcMenuItemFrames(context.dc, frame(), mShortcutWidth,
+                                         nullptr, &textRect, nullptr);
+        mCell.setFrame(Rect(textRect.x, PicaPt::kZero, textRect.width, bounds().height));
+        mNeedsLayout = false;
+        Super::layout(context);
+    }
+
+    void draw(UIContext& context) override
+    {
+        // This is a little hacky: a ComboBox draws the menu item directly (so that the
+        // positioning of the popup menu is easier to get correct), but that means the
+        // layout has not been done and the cell child widget is not in the correct place.
+        // As long as we ensure that the layout is not done again (which we do with
+        // mNeedsLayout), we will not get an infinite redraw loop.
+        if (mNeedsLayout) {
+            layout({context.theme, context.dc});
+        }
+
+        auto s = themeState();
+        if (s != mLastState) {
+            if (s == Theme::WidgetState::kSelected ||
+                s == Theme::WidgetState::kMouseOver ||
+                s == Theme::WidgetState::kMouseDown)
+            {
+                mCell.setForegroundColorNoRedraw(context.theme.params().accentedBackgroundTextColor);
+            } else {
+                mCell.setForegroundColorNoRedraw(context.theme.params().textColor);
+            }
+            mLastState = s;
+        }
+
+        Super::draw(context);
+    }
+
+private:
+    CellWidget &mCell;
+    mutable bool mNeedsLayout = true;
+    mutable Theme::WidgetState mLastState = (Theme::WidgetState)-1;
 };
 
 class SeparatorMenuItem : public MenuItemWidget
@@ -512,7 +583,7 @@ struct MenuUITK::Impl
         return nullptr;
     }
 
-    void insertItem(int index, MenuItemWidget*item, MenuId id, std::function<void()> onItem)
+    void insertItem(int index, MenuItemWidget *item, MenuId id, std::function<void()> onItem)
     {
         index = std::min(index, int(this->items.size()));
         item->setText(removeMenuItemMnemonics(item->text()));
@@ -520,7 +591,7 @@ struct MenuUITK::Impl
         this->items.insert(this->items.begin() + index, item);
     }
 
-    void addItem(MenuItemWidget*item, MenuId id, std::function<void()> onItem)
+    void addItem(MenuItemWidget *item, MenuId id, std::function<void()> onItem)
     {
         insertItem(int(this->items.size()), item, id, onItem);
     }
@@ -583,6 +654,18 @@ void MenuUITK::addItem(const std::string& text, MenuId id,
 void MenuUITK::addItem(const std::string& text, MenuId id, std::function<void()> onSelected)
 {
     mImpl->addItem(new StringMenuItem(text, ShortcutKey::kNone), id, onSelected);
+}
+
+void MenuUITK::addItem(CellWidget *item, MenuId id, const ShortcutKey& shortcut)
+{
+    mImpl->addItem(new CustomMenuItem(item, shortcut), id, nullptr);
+    Application::instance().keyboardShortcuts().add(id, shortcut);
+}
+
+void MenuUITK::addItem(CellWidget *item, MenuId id, std::function<void()> onSelected)
+{
+    mImpl->addItem(new CustomMenuItem(item, ShortcutKey::kNone), id, onSelected);
+
 }
 
 void MenuUITK::addMenu(const std::string& text, Menu *menu)
@@ -717,6 +800,14 @@ bool MenuUITK::isSeparatorAt(int index) const
         return mImpl->items[index]->isSeparator();
     }
     return false;
+}
+
+CellWidget* MenuUITK::itemAt(int index) const
+{
+    if (index >= 0 && index < int(mImpl->items.size())) {
+        return mImpl->items[index]->cell();
+    }
+    return nullptr;
 }
 
 Menu* MenuUITK::itemMenuAt(int index) const

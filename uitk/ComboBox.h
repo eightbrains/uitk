@@ -30,14 +30,19 @@
 
 namespace uitk {
 
+class CellWidget;
+
 class ComboBox : public Widget {
     using Super = Widget;
 public:
     ComboBox();
     ~ComboBox();
 
+    int size() const;
     void clear();
     ComboBox* addItem(const std::string& text, int value = 0);
+    /// Takes ownership of item.
+    ComboBox* addItem(CellWidget *item, int value = 0);
     ComboBox* addSeparator();
 
     /// Returns the text of the item at the requested index, or "" if the
@@ -47,6 +52,10 @@ public:
     /// Returns the value of the item at the requested index, or 0 if the
     /// index is invalid.
     int valueAtIndex(int index) const;
+
+    /// Returns the item at the index, or nullptr if index is out of range.
+    /// ComboBox retains ownership of the pointer.
+    CellWidget* itemAtIndex(int index) const;
 
     /// Returns the selected index or -1 if there is none.
     int selectedIndex() const;
@@ -71,7 +80,16 @@ public:
 
 protected:
     bool shouldAutoGrab() const override;
-    void showMenu() const;
+    void showMenu();
+
+    virtual void willChangeSelection();    /// no need to super, default is no-op
+    /// Called whenever selection changes. This should NOT call the
+    /// onSelectionChanged callback, which is only called in response to user
+    /// action. This exists to allow derived classes to perform internal
+    /// actions to the new selection. No need to super, default is no-op.
+    virtual void didChangeSelection();
+    virtual void willShowMenu();  /// no need to super, default is no-op
+    virtual void didHideMenu();  /// no need to super, default is no-op
 
 private:
     struct Impl;

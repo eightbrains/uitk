@@ -23,13 +23,144 @@
 #include "FontListComboBox.h"
 
 #include "Application.h"
+#include "Label.h"
+#include "UIContext.h"
+#include "themes/Theme.h"
+
+#include <nativedraw.h>
 
 namespace uitk {
 
-FontListComboBox::FontListComboBox()
+namespace {
+
+class FontNameLabel : public Label
 {
-    for (auto &fontName : Application::instance().availableFonts()) {
-        addItem(fontName);
+    using Super = Label;
+public:
+    FontNameLabel(const std::string& fontName)
+        : Label(fontName)
+    {
+        setAlignment(Alignment::kLeft | Alignment::kVCenter);
+    }
+
+    void setUseThemeFont(bool use)
+    {
+        if (use != mUseThemeFont) {
+            mUseThemeFont = use;
+            mNeedsLayout = true;
+        }
+    }
+
+    void draw(UIContext& context) override
+    {
+        if (mNeedsLayout) {
+            auto fontName = text();
+            if (mUseThemeFont) {
+                setText(fontName);
+            } else {
+                auto labelFontSize = context.theme.params().labelFont.pointSize();
+                auto labelFontMetrics = context.theme.params().labelFont.metrics(context.dc);
+                Text t(fontName, Font(), textColor());
+                Font f(fontName, labelFontSize);
+                auto thisMetrics = f.metrics(context.dc);
+                // Taking the ratio of line heights rather than (ascent + descent) works better,
+                // even though we only have one line so leading is not used. In particular,
+                // a barcode font named "MICR E" looks really awful without it.
+                auto adjust = labelFontMetrics.lineHeight / thisMetrics.lineHeight;
+                f = Font(fontName, labelFontSize * adjust);
+                t.setFont(f);
+                setRichText(t);
+            }
+
+            mNeedsLayout = false;
+        }
+
+        Super::draw(context);
+    }
+
+private:
+    bool mUseThemeFont = true;
+    bool mNeedsLayout = true;
+};
+
+} // namespace
+
+//-----------------------------------------------------------------------------
+struct FontListComboBox::Impl
+{
+    bool useThemeFont = false;
+};
+
+FontListComboBox::FontListComboBox()
+    : FontListComboBox(Application::instance().availableFonts())
+{
+}
+
+FontListComboBox::FontListComboBox(const std::vector<std::string>& fontNames)
+    : mImpl(new Impl())
+{
+    for (auto &fontName : fontNames) {
+        addFont(fontName);
+    }
+    didHideMenu();  // make sure selected item is normal font
+}
+
+void FontListComboBox::addFont(const std::string& fontName)
+{
+    auto *item = new FontNameLabel(fontName);
+    item->setUseThemeFont(mImpl->useThemeFont);
+    addItem(item);
+}
+
+bool FontListComboBox::drawWithFont() const
+{
+    return mImpl->useThemeFont;
+}
+
+FontListComboBox* FontListComboBox::setDrawWithFont(bool with)
+{
+    mImpl->useThemeFont = !with;
+
+    int n = size();
+    for (int i = 0;  i < n;  ++i) {
+        auto *item = static_cast<FontNameLabel*>(itemAtIndex(i));
+        item->setUseThemeFont(!with);
+    }
+    didChangeSelection();
+    setNeedsDraw();
+
+    return this;
+}
+
+void FontListComboBox::willChangeSelection()
+{
+    auto *item = static_cast<FontNameLabel*>(itemAtIndex(selectedIndex()));
+    if (item) {
+        item->setUseThemeFont(mImpl->useThemeFont);
+    }
+}
+
+void FontListComboBox::didChangeSelection()
+{
+    auto *item = static_cast<FontNameLabel*>(itemAtIndex(selectedIndex()));
+    if (item) {
+        item->setUseThemeFont(true);
+    }
+}
+
+void FontListComboBox::willShowMenu()
+{
+    auto *item = static_cast<FontNameLabel*>(itemAtIndex(selectedIndex()));
+    if (item) {
+        item->setUseThemeFont(mImpl->useThemeFont);
+    }
+}
+
+void FontListComboBox::didHideMenu()
+{
+    auto *item = static_cast<FontNameLabel*>(itemAtIndex(selectedIndex()));
+    if (item) {
+        item->setUseThemeFont(true);
     }
 }
 

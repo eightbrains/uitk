@@ -31,7 +31,7 @@ namespace uitk {
 
 class Icon;
 class Label;
-class LabelCell;
+class IconAndText;
 
 class Button : public Widget {
     using Super = Widget;
@@ -85,7 +85,7 @@ public:
     void draw(UIContext& context) override;
 
 protected:
-    LabelCell* cell() const;
+    IconAndText* cell() const;
 
 private:
     struct Impl;

@@ -53,6 +53,9 @@ ComboBox::ComboBox()
     : mImpl(new Impl())
 {
     mImpl->menu = new MenuUITK();
+    mImpl->menu->setOnClose([this]() {
+        didHideMenu();
+    });
 }
 
 ComboBox::~ComboBox()
@@ -60,6 +63,8 @@ ComboBox::~ComboBox()
     mImpl->menu->cancel();  // in case menu is open
     delete mImpl->menu;
 }
+
+int ComboBox::size() const { return mImpl->menu->size(); }
 
 void ComboBox::clear()
 {
@@ -78,11 +83,30 @@ ComboBox* ComboBox::addItem(const std::string& text, int value /*= 0*/)
         if (mImpl->onSelectionChanged) {
             mImpl->onSelectionChanged(this);
         }
+        didHideMenu();
     });
     if (idx == 0) {
         setSelectedIndex(0);
     }
     return this;
+}
+
+ComboBox* ComboBox::addItem(CellWidget *item, int value /*= 0*/)
+{
+    auto id = mImpl->nextId++;
+    int idx = int(mImpl->items.size());
+    mImpl->items.push_back({id, value});
+    mImpl->menu->addItem(item, id, [this, idx]() {
+        setSelectedIndex(idx);
+        if (mImpl->onSelectionChanged) {
+            mImpl->onSelectionChanged(this);
+        }
+    });
+    if (idx == 0) {
+        setSelectedIndex(0);
+    }
+    return this;
+
 }
 
 ComboBox* ComboBox::addSeparator()
@@ -107,6 +131,15 @@ ComboBox* ComboBox::setTextAtIndex(int index, const std::string& text)
         mImpl->menu->setItemText(mImpl->items[index].value, text);
     }
     return this;
+}
+
+CellWidget* ComboBox::itemAtIndex(int index) const
+{
+    if (index >= 0 || index < int(mImpl->items.size())) {
+        return mImpl->menu->itemAt(index);
+    } else {
+        return nullptr;
+    }
 }
 
 int ComboBox::valueAtIndex(int index) const
@@ -137,8 +170,12 @@ ComboBox* ComboBox::setSelectedIndex(int index)
         mImpl->menu->setItemChecked(mImpl->items[oldIdx].id, false);
     }
 
-    mImpl->selectedIndex = index;  // could be -1
-    setNeedsDraw();
+    if (oldIdx != index) {
+        willChangeSelection();
+        mImpl->selectedIndex = index;  // could be -1
+        setNeedsDraw();
+        didChangeSelection();
+    }
 
     if (index >= 0 && index < int(mImpl->items.size())) {
         mImpl->menu->setItemChecked(mImpl->items[index].id, true);
@@ -177,8 +214,10 @@ ComboBox* ComboBox::setOnSelectionChanged(std::function<void(ComboBox*)> onChang
 // But it is not right to return kIgnored for the mouse click, either.
 bool ComboBox::shouldAutoGrab() const { return false; }
 
-void ComboBox::showMenu() const
+void ComboBox::showMenu()
 {
+    willShowMenu();
+    
     int id = OSMenu::kInvalidId;
     if (mImpl->selectedIndex >= 0) {
         id = mImpl->items[mImpl->selectedIndex].id;
@@ -202,6 +241,11 @@ void ComboBox::showMenu() const
     }
 #endif // __APPLE__
 }
+
+void ComboBox::willChangeSelection() {}
+void ComboBox::didChangeSelection() {}
+void ComboBox::willShowMenu() {}
+void ComboBox::didHideMenu() {}
 
 Size ComboBox::preferredSize(const LayoutContext& context) const
 {

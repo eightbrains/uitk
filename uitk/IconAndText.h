@@ -20,10 +20,10 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_LABEL_CELL_H
-#define UITK_LABEL_CELL_H
+#ifndef UITK_ICON_AND_TEXT_H
+#define UITK_ICON_AND_TEXT_H
 
-#include "Widget.h"
+#include "CellWidget.h"
 
 #include <string>
 
@@ -39,11 +39,11 @@ class Label;
 /// the owner of LabelCell to export the label() and icon() calls itself,
 /// since the existence of this class is an implementation detail that has
 /// no value for the user to know about.)
-class LabelCell : public Widget {
-    using Super = Widget;
+class IconAndText : public CellWidget {
+    using Super = CellWidget;
 public:
-    LabelCell();
-    ~LabelCell();
+    IconAndText();
+    ~IconAndText();
 
     // Q: since the pointer always exists, why not make this a reference?
     // A: because C++ makes us play @#$! compiler with . and ->, and
@@ -52,10 +52,12 @@ public:
     Label* label() const;  // pointer always exists
     Icon* icon() const;  // pointer always exists
 
+    // ---- CellWidget ----
     /// Sets the color, but does not request a redraw. This is useful when
     /// using the icon as a child of another object, so that the icon can
     /// draw using the parent's style.
-    void setColorNoRedraw(const Color& c);
+    void setForegroundColorNoRedraw(const Color& c) override;
+    // ----
 
     Size preferredSize(const LayoutContext& context) const override;
     void layout(const LayoutContext& context) override;
@@ -67,5 +69,5 @@ private:
 };
 
 }  // namespace uitk
-#endif // UITK_LABEL_CELL_H
+#endif // UITK_ICON_AND_TEXT_H
 
