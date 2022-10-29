@@ -462,7 +462,7 @@ void ColorEdit::showPopup()
         popup->cancel();
     });
 
-    popup->showPopup(parentWindow, osLL.x, osLL.y);
+    popup->showPopup(parentWindow, int(std::round(osLL.x)), int(std::round(osLL.y)));
 }
 
 Size ColorEdit::preferredSize(const LayoutContext& context) const
