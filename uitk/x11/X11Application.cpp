@@ -305,6 +305,11 @@ std::string X11Application::tempDir() const
     return "/tmp";
 }
 
+std::vector<std::string> X11Application::availableFontFamilies() const
+{
+    return Font::availableFontFamilies();
+}
+
 void X11Application::beep()
 {
     if (mImpl->display) {

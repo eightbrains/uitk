@@ -166,18 +166,7 @@ std::string MacOSApplication::tempDir() const
 
 std::vector<std::string> MacOSApplication::availableFontFamilies() const
 {
-    NSArray<NSString*> *available = NSFontManager.sharedFontManager.availableFontFamilies;
-
-    std::vector<std::string> fonts;
-    fonts.reserve(size_t(available.count));
-    for (NSString *f in available) {
-        fonts.push_back(f.UTF8String);
-    }
-    // Turns out that these are mostly in order: alphabetized except for some Apple fonts
-    // slapped on at the end. The worst-case for quick-sort, hopefully the std
-    // implementors have an intelligent version.
-    std::sort(fonts.begin(), fonts.end());
-    return fonts;
+    return Font::availableFontFamilies();
 }
 
 void MacOSApplication::beep()
