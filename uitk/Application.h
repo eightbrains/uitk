@@ -86,7 +86,7 @@ public:
     std::string tempDir() const;
 
     /// Returns the available fonts registered with the operating system.
-    std::vector<std::string> availableFonts() const;
+    std::vector<std::string> availableFontFamilies() const;
 
     /// Plays a beep, usually when a keypress is rejected. (This is used
     /// to produce the beep when a pressing a keyboard shortcut for a menu

@@ -164,7 +164,7 @@ std::string MacOSApplication::tempDir() const
     return "/tmp";
 }
 
-std::vector<std::string> MacOSApplication::availableFonts() const
+std::vector<std::string> MacOSApplication::availableFontFamilies() const
 {
     NSArray<NSString*> *available = NSFontManager.sharedFontManager.availableFontFamilies;
 

@@ -58,18 +58,25 @@ public:
             if (mUseThemeFont) {
                 setText(fontName);
             } else {
+                if (fontName == "Arial Black") {
+                    mNeedsLayout = mNeedsLayout;
+                }
                 auto labelFontSize = context.theme.params().labelFont.pointSize();
                 auto labelFontMetrics = context.theme.params().labelFont.metrics(context.dc);
                 Text t(fontName, Font(), textColor());
                 Font f(fontName, labelFontSize);
                 auto thisMetrics = f.metrics(context.dc);
-                // Taking the ratio of line heights rather than (ascent + descent) works better,
-                // even though we only have one line so leading is not used. In particular,
-                // a barcode font named "MICR E" looks really awful without it.
-                auto adjust = labelFontMetrics.lineHeight / thisMetrics.lineHeight;
-                f = Font(fontName, labelFontSize * adjust);
-                t.setFont(f);
-                setRichText(t);
+                if (thisMetrics.lineHeight > PicaPt::kZero) {
+                    // Taking the ratio of line heights rather than (ascent + descent) works better,
+                    // even though we only have one line so leading is not used. In particular,
+                    // a barcode font named "MICR E" looks really awful without it.
+                    auto adjust = labelFontMetrics.lineHeight / thisMetrics.lineHeight;
+                    f = Font(fontName, labelFontSize * adjust);
+                    t.setFont(f);
+                    setRichText(t);
+                } else {
+                    setText(fontName + " [error]");
+                }
             }
 
             mNeedsLayout = false;
@@ -88,11 +95,11 @@ private:
 //-----------------------------------------------------------------------------
 struct FontListComboBox::Impl
 {
-    bool useThemeFont = false;
+    bool useThemeFont = true;
 };
 
 FontListComboBox::FontListComboBox()
-    : FontListComboBox(Application::instance().availableFonts())
+    : FontListComboBox(Application::instance().availableFontFamilies())
 {
 }
 

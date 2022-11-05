@@ -462,6 +462,14 @@ OSRect Win32Window::osFrame() const
 
 void Win32Window::setOSFrame(float x, float y, float width, float height)
 {
+    // Direct2D seems to have a limit of 16386 x 16386 before it fails to create a swap chain.
+    // (This is a little curious, since 2^14 is 16384). This might be dependent on the video
+    // card, but given this was determined on an Intel NUC (Intel IGP graphics), this seems safe.
+    // Large windows are not normally a problem, but the font menu can sometimes produce them,
+    // particularly during development of Win32Application::availableFontFamilies()!
+    width = min(16383.0f, width);  // note @#$! windows.h #defines min/max; this isn't std::min()
+    height = min(16383.0f, height);
+
     MoveWindow(mImpl->hwnd, int(x), int(y), int(width), int(height), FALSE /* don't repaint */);
     // MoveWindow() does not send WM_SIZING, it sends WM_SIZE. If we put onResize() there,
     // we seem to get an infinite draw loop. My understanding was that InvalidateRect()

@@ -1021,6 +1021,13 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord,
     mImpl->listView = list;
     mImpl->menuWindow->addChild(list);
 
+    // Override layout(). Need to do this *before* we resize!
+    mImpl->menuWindow->setOnWindowLayout([this, list, id](Window& w, const LayoutContext& context) {
+        auto contentSize = w.contentRect().size();
+        auto vertMargin = context.theme.calcPreferredMenuVerticalMargin();
+        list->setFrame(Rect(PicaPt::kZero, vertMargin, contentSize.width, contentSize.height));
+        });
+
     // Resize the menu window to its preferred size
     mImpl->menuWindow->resizeToFit([this, list, minWidth](const LayoutContext& context){
         auto contentSize = list->preferredContentSize(context);
@@ -1060,13 +1067,12 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord,
         osf.height = std::min(osf.y + osf.height,
                               osScreen.desktopFrame.y + osScreen.desktopFrame.height) - osf.y;
     } else {
-        // Do height first, because if this is a combobox menu, the positioning of the
-        // selected element is important, so we'd rather make the menu shorter than ideal
-        // rather than misposition from the top.
+        // If this is a combobox menu, the positioning of the selected element is important,
+        // so we'd rather make the menu shorter than ideal rather than misposition from the top.
         if (yDir > 0.0f) {
+            osf.y = std::max(osScreen.desktopFrame.y, osf.y + osDY);
             osf.height = std::min(osf.y + osf.height,
                                   osScreen.desktopFrame.y + osScreen.desktopFrame.height) - osf.y;
-            osf.y = std::max(osScreen.desktopFrame.y, osf.y);
         } else {
             auto ul = osUL.y + osDY;
             osf.y = std::max(osScreen.desktopFrame.y, ul - osf.height);  // y is bottom of window
@@ -1095,12 +1101,6 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord,
     // The menu geometry is now correct, so we can continue setting up other things
 
     mImpl->menuWindow->setFocusWidget(list, Window::ShowFocusRing::kNo);
-
-    mImpl->menuWindow->setOnWindowLayout([this, list, id](Window& w, const LayoutContext& context) {
-        auto contentSize = w.contentRect().size();
-        auto vertMargin = context.theme.calcPreferredMenuVerticalMargin();
-        list->setFrame(Rect(PicaPt::kZero, vertMargin, contentSize.width, contentSize.height));
-    });
 
     list->setOnSelectionChanged([this](ListView *lv) {
         auto *mlv = (MenuListView*)lv;

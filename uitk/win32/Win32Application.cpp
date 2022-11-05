@@ -27,8 +27,10 @@
 #include "../Window.h"
 #include "../themes/EmpireTheme.h"
 
+#include <algorithm>
 #include <list>
 #include <mutex>
+#include <set>
 #include <unordered_map>
 
 #define WIN32_LEAN_AND_MEAN
@@ -164,6 +166,61 @@ std::string Win32Application::tempDir() const
         spath.pop_back();
     }
     return spath;
+}
+
+namespace {
+int CALLBACK fontFamilyCallback(const LOGFONTW *logFont,
+                                const TEXTMETRICW *tm,
+                                DWORD  fontType,
+                                LPARAM lparam)
+{
+    auto *fonts = (std::set<std::string>*)lparam;
+    auto *info = (ENUMLOGFONTEXW*)logFont;
+//    auto name = utf8FromWin32Unicode(info->elfLogFont.lfFaceName);
+    auto name = utf8FromWin32Unicode(info->elfFullName);
+    bool isScalable = (info->elfLogFont.lfOutPrecision == OUT_TT_PRECIS ||
+                       info->elfLogFont.lfOutPrecision == OUT_STROKE_PRECIS);
+    bool isVertical = (!name.empty() && name[0] == '@');
+    bool isDOSFont = (info->elfLogFont.lfCharSet == OEM_CHARSET);
+    // Windows 10 has some icon fonts that only use the private Unicode characters;
+    // these fonts cannot even display their own names, so do not include in a font
+    // enumeration. However, creating the font directly by name will still work.
+    bool isWindowsPrivateIcons = (name.find(" MDL2 Assets") != std::string::npos);
+    if (isScalable && !isVertical && !isDOSFont && !isWindowsPrivateIcons) {
+        fonts->insert(name);
+    }
+    return 1;  // non-zero continues enumeration
+}
+} // namespace
+
+std::vector<std::string> Win32Application::availableFontFamilies() const
+{
+    // Using DEFAULT_CHARSET, the callback will be called for all the charsets a font supports.
+    // We cannot just pick a charset (how do we know the user wants that one), but we do not
+    // want duplicate names.
+    std::set<std::string> fonts;
+    LOGFONTW specs;
+    specs.lfHeight = 0;
+    specs.lfWidth = 0;
+    specs.lfEscapement = 0;  // tenths of a degree
+    specs.lfOrientation = 0;  // docs say should be same value as lfEscapement
+    specs.lfWeight = FW_DONTCARE; // aka 0
+    specs.lfItalic = FALSE;
+    specs.lfUnderline = FALSE;
+    specs.lfStrikeOut = FALSE;
+    specs.lfCharSet = DEFAULT_CHARSET;
+    specs.lfOutPrecision = OUT_DEFAULT_PRECIS;  // how closely the fonts must match the spec
+    specs.lfClipPrecision = CLIP_DEFAULT_PRECIS;
+    specs.lfQuality = DEFAULT_QUALITY;
+    specs.lfPitchAndFamily = DEFAULT_PITCH | FF_DONTCARE;
+    specs.lfFaceName[0] = NULL;
+    EnumFontFamiliesExW(GetDC(NULL), &specs, fontFamilyCallback, (LPARAM)&fonts, 0 /*must be zero*/);
+
+    std::vector<std::string> sortedFonts;
+    sortedFonts.reserve(fonts.size());
+    sortedFonts.insert(sortedFonts.begin(), fonts.begin(), fonts.end());
+    std::sort(sortedFonts.begin(), sortedFonts.end());
+    return sortedFonts;
 }
 
 void Win32Application::beep()

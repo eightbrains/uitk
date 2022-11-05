@@ -47,7 +47,7 @@ public:
 
     virtual std::string applicationName() const = 0;
     virtual std::string tempDir() const = 0;
-    virtual std::vector<std::string> availableFonts() const = 0;
+    virtual std::vector<std::string> availableFontFamilies() const = 0;
 
     virtual void beep() = 0;
 
