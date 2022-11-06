@@ -86,6 +86,8 @@ MacOSApplication::~MacOSApplication()
 
 bool MacOSApplication::isOriginInUpperLeft() const { return false; }
 
+bool MacOSApplication::isWindowBorderInsideWindowFrame() const { return true; }
+
 bool MacOSApplication::shouldHideScrollbars() const { return true; }
 
 bool MacOSApplication::canKeyFocusEverything() const

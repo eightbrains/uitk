@@ -173,6 +173,11 @@ bool Application::isOriginInUpperLeft() const
     return mImpl->osApp->isOriginInUpperLeft();
 }
 
+bool Application::isWindowBorderInsideWindowFrame() const
+{
+    return mImpl->osApp->isWindowBorderInsideWindowFrame();
+}
+
 bool Application::shouldHideScrollbars() const
 {
     return mImpl->osApp->shouldHideScrollbars();

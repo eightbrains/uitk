@@ -180,6 +180,8 @@ void Win32Application::beep()
 
 bool Win32Application::isOriginInUpperLeft() const { return true; }
 
+bool Win32Application::isWindowBorderInsideWindowFrame() const { return false; }
+
 bool Win32Application::shouldHideScrollbars() const { return false; }
 
 bool Win32Application::canKeyFocusEverything() const { return true; }

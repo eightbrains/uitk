@@ -1117,16 +1117,21 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord,
 #endif
     mImpl->menuWindow = new Window("", int(osUL.x), int(osUL.y), 0, 0,
                                    (Window::Flags::Value)(Window::Flags::kPopup | extraWindowFlags));
-#if defined(_WIN32) || defined(_WIN64)
+    // The window border is inside the window area on macOS and X11
+    // (But, if X11 draws the border on the outside and the window manager
+    // treats a request to move to (x, y) as pertaining to the corner of the
+    // border not the corner of the window, it will be the same thing is the
+    // border being on the inside. Window managers probably do this differently,
+    // which will be a disaster for us.)
+    if (Application::instance().isWindowBorderInsideWindowFrame()) {
+        auto border = mImpl->menuWindow->borderWidth();
+        mImpl->menuWindow->move(-border, yDir * border);
+        osUL = OSPoint{ mImpl->menuWindow->osFrame().x, mImpl->menuWindow->osFrame().y };
+    }
+
     mImpl->menuWindow->setOnWindowDidDeactivate([this](Window &w) {
         cancel();
     });
-#else
-    // The window border is inside the window area on macOS and X11
-    auto border = mImpl->menuWindow->borderWidth();
-    mImpl->menuWindow->move(-border, yDir * border);
-    osUL = OSPoint{ mImpl->menuWindow->osFrame().x, mImpl->menuWindow->osFrame().y };
-#endif // windows
 
     // Add the widgets
     auto *list = new MenuListView(this);  // will be owned by menuWindow

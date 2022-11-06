@@ -48,6 +48,7 @@ public:
     void beep() override;
 
     bool isOriginInUpperLeft() const override;
+    bool isWindowBorderInsideWindowFrame() const override;
     bool shouldHideScrollbars() const override;
     bool canKeyFocusEverything() const override;
     bool platformHasMenubar() const override;

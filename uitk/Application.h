@@ -98,6 +98,14 @@ public:
     /// which has the origin in the lower left).
     bool isOriginInUpperLeft() const;
 
+    /// Returns true if the window's border is outside the frame of the window,
+    /// that is, if a window position of (x, y) returns the upper left corner
+    /// of the actual drawable area, or whether it is the upper left corner
+    /// of the border. MacOS, for instance, draws the border inside the window
+    /// frame (which has the side effect that you can draw over top of the
+    /// border). This is useful for positioning popup windows.
+    bool isWindowBorderInsideWindowFrame() const;
+
     /// Returns true if the operating system hides scrollbars when not
     /// scrolling (e.g. macOS), false otherwise.
     bool shouldHideScrollbars() const;
