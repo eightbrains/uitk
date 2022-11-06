@@ -438,12 +438,21 @@ public:
             mColor->setMode(b->isOn() ? ColorEdit::Mode::kContinuous : ColorEdit::Mode::kDiscrete );
         });
         addChild(mContinuousColorEdit);
+
+        mFonts = new FontListComboBox();
+        addChild(mFonts);
+
+        mFontsUseFont = new Checkbox("Use font in menu");
+        mFontsUseFont->setOnClicked([this](Button *b) {
+            mFonts->setDrawWithFont(b->isOn());
+        });
+        addChild(mFontsUseFont);
     }
 
     Size preferredSize(const LayoutContext& context) const override
     {
         auto pref = mCombo->preferredSize(context);
-        return Size(pref.width, 3.0f * pref.height);
+        return Size(pref.width, 5.0f * pref.height);
     }
 
     void layout(const LayoutContext& context) override
@@ -461,6 +470,15 @@ public:
         pref = mContinuousColorEdit->preferredSize(context);
         mContinuousColorEdit->setFrame(Rect(mColor->frame().maxX() + spacing, y,
                                             pref.width, mColor->frame().height));
+        y = mColor->frame().maxY() + spacing;
+
+        pref = mFonts->preferredSize(context);
+        mFonts->setFrame(Rect(PicaPt::kZero, y, pref.width, mColor->frame().height));
+
+        pref = mFontsUseFont->preferredSize(context);
+        mFontsUseFont->setFrame(Rect(mFonts->frame().maxX() + spacing, y,
+                                     pref.width, mFonts->frame().height));
+
         Super::layout(context);
     }
 
@@ -468,6 +486,8 @@ private:
     ComboBox *mCombo;
     ColorEdit *mColor;
     Checkbox *mContinuousColorEdit;
+    FontListComboBox *mFonts;
+    Checkbox *mFontsUseFont;
 };
 
 class SliderTest : public Widget

@@ -20,45 +20,24 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_SCREEN_H
-#define UITK_SCREEN_H
+#ifndef UITK_CELL_WIDGET_H
+#define UITK_CELL_WIDGET_H
 
-#include <nativedraw.h>
+#include "Widget.h"
 
-#include "OSWindow.h"
+#include <string>
 
 namespace uitk {
 
-struct OSScreen;
-
-class Screen
-{
+class CellWidget : public Widget {
+    using Super = Widget;
 public:
-    Screen();
-    Screen(const OSScreen& osscreen);
-
-    /// Returns the area usable by windows. This does not include the
-    /// menubar and dock area on macOS, and the taskbar on Windows.
-    /// You should use this rectangle for positioning windows.
-    /// Note that this may NOT be the actual size of the monitor, especially
-    /// on macOS if scaling is enabled (which it is by default on recent
-    /// MacBook Pros). Also note that on macOS, a hidden dock does reserve
-    /// a little bit of room.
-    const Rect& desktopRect() const;
-
-    /// Returns the monitor size, including non-desktop area.
-    /// Note that this may NOT be the actual size of the monitor, especially
-    /// on macOS if scaling is enabled (which it is by default on recent
-    /// MacBook Pros).
-    const Rect& monitorRect() const;
-
-    const OSScreen& osScreen() const;
-
-private:
-    Rect mDesktop;
-    Rect mMonitor;
-    OSScreen mOSScreen;
+    /// Widgets with text in them that are used as a child (most notably,
+    /// Label) need to be able to set their text color in a draw, as the main
+    /// text color may need to be overridden by the parent widget.
+    virtual void setForegroundColorNoRedraw(const Color& c) = 0;
 };
 
 }  // namespace uitk
-#endif // UITK_SCREEN_H
+#endif // UITK_CELL_WIDGET_H
+

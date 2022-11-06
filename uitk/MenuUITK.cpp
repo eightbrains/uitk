@@ -23,6 +23,7 @@
 #include "MenuUITK.h"
 
 #include "Application.h"
+#include "Icon.h"
 #include "Label.h"
 #include "ListView.h"
 #include "Menu.h"
@@ -78,9 +79,9 @@
 namespace uitk {
 
 namespace {
-class MenuItemWidget : public Widget
+class MenuItemWidget : public CellWidget
 {
-    using Super = Widget;
+    using Super = CellWidget;
 public:
     enum Separator { kSeparator };
     MenuItemWidget(const std::string& text, const std::string& shortcut) : mText(text), mShortcut(shortcut) {}
@@ -113,6 +114,8 @@ public:
 
     Menu* removeSubmenu() { return mSubmenu.release(); }  // transfers ownership to caller
 
+    virtual CellWidget* cell() const { return nullptr; }
+
     virtual PicaPt preferredShortcutWidth(const LayoutContext& context) const = 0;
 
     void setShortcutWidth(const PicaPt& w) { mShortcutWidth = w; }
@@ -126,6 +129,10 @@ public:
             }
         }
     }
+
+    // ---- CellWidget ---
+    void setForegroundColorNoRedraw(const Color& fg) override { }  // no-op, draw already does this
+    // ----
 
 protected:
     std::string mText;
@@ -164,10 +171,75 @@ public:
                                : Theme::MenuItemAttribute::kNormal);
         auto s = themeState();
         context.theme.drawMenuItem(context, bounds(), mShortcutWidth, text(), shortcut(), attr, style(s), s);
+
+        Super::draw(context);
     }
 
 private:
     mutable PicaPt mPreferredShortcutWidth;
+};
+
+class CustomMenuItem : public StringMenuItem
+{
+    using Super = StringMenuItem;
+public:
+    CustomMenuItem(CellWidget *cell, const ShortcutKey& shortcut)
+        : StringMenuItem("", shortcut)
+        , mCell(*cell)
+    {
+        addChild(cell);
+    }
+
+    CellWidget* cell() const override { return &mCell; }
+
+    Size preferredSize(const LayoutContext& context) const override
+    {
+        auto h = context.theme.calcPreferredMenuItemSize(context.dc, "Ag", "",
+                                                         Theme::MenuItemAttribute::kNormal, nullptr).height;
+        return Size(mCell.preferredSize(context).width, h);
+    }
+
+    void layout(const LayoutContext& context) override
+    {
+        Rect textRect;
+        context.theme.calcMenuItemFrames(context.dc, frame(), mShortcutWidth,
+                                         nullptr, &textRect, nullptr);
+        mCell.setFrame(Rect(textRect.x, PicaPt::kZero, textRect.width, bounds().height));
+        mNeedsLayout = false;
+        Super::layout(context);
+    }
+
+    void draw(UIContext& context) override
+    {
+        // This is a little hacky: a ComboBox draws the menu item directly (so that the
+        // positioning of the popup menu is easier to get correct), but that means the
+        // layout has not been done and the cell child widget is not in the correct place.
+        // As long as we ensure that the layout is not done again (which we do with
+        // mNeedsLayout), we will not get an infinite redraw loop.
+        if (mNeedsLayout) {
+            layout({context.theme, context.dc});
+        }
+
+        auto s = themeState();
+        if (s != mLastState) {
+            if (s == Theme::WidgetState::kSelected ||
+                s == Theme::WidgetState::kMouseOver ||
+                s == Theme::WidgetState::kMouseDown)
+            {
+                mCell.setForegroundColorNoRedraw(context.theme.params().accentedBackgroundTextColor);
+            } else {
+                mCell.setForegroundColorNoRedraw(context.theme.params().textColor);
+            }
+            mLastState = s;
+        }
+
+        Super::draw(context);
+    }
+
+private:
+    CellWidget &mCell;
+    mutable bool mNeedsLayout = true;
+    mutable Theme::WidgetState mLastState = (Theme::WidgetState)-1;
 };
 
 class SeparatorMenuItem : public MenuItemWidget
@@ -472,6 +544,117 @@ private:
     std::function<void()> mOnBlinkDone;
 };
 
+class MenuRoot : public Widget
+{
+    using Super = Widget;
+public:
+    MenuRoot()
+    {
+    }
+
+    Size preferredSize(const LayoutContext& context) const override
+    {
+        auto &childs = children();
+        if (!childs.empty()) {
+            auto vertMargin = context.theme.calcPreferredMenuVerticalMargin();
+            auto sz = static_cast<ListView*>(childs[0])->preferredContentSize(context);
+            return Size(sz.width, sz.height + 2.0f * vertMargin);
+        } else {
+            return Size::kZero;
+        }
+    }
+
+    void layout(const LayoutContext& context) override
+    {
+        mScrollDelta = context.dc.ceilToNearestPixel(0.5f * context.theme.params().labelFont.pointSize());
+        mScrollAreaHeight = context.theme.calcMenuScrollAreaHeight(context.dc);
+
+        auto &childs = children();
+        if (!childs.empty()) {
+            auto vertMargin = context.theme.calcPreferredMenuVerticalMargin();
+            childs[0]->setFrame(bounds().insetted(PicaPt::kZero, vertMargin));
+        }
+
+        Super::layout(context);
+    }
+
+    EventResult mouse(const MouseEvent& e) override
+    {
+        // TODO: once we can schedule callbacks at a time delta, change this scroll every 200 ms or something
+
+        Rect rUp = calcScrollAreaRect(-1);
+        Rect rDown = calcScrollAreaRect(1);
+        bool canScroll = !(rUp.isEmpty() && rDown.isEmpty());
+        if (!canScroll || (e.type == MouseEvent::Type::kScroll)
+            || (!rUp.contains(e.pos) && !rDown.contains(e.pos))) {
+            return Super::mouse(e);
+        } else {
+            if (e.type != MouseEvent::Type::kButtonUp) {  // don't down + up to double scroll
+                // (children()[1] is always safe because calcScrollAreaRect returns empty if no children)
+                auto *list = static_cast<ListView*>(children()[0]);
+                if (rUp.contains(e.pos)) {
+                    list->scroll(PicaPt::kZero, -mScrollDelta);
+                } else {
+                    list->scroll(PicaPt::kZero, mScrollDelta);
+                }
+            }
+            return EventResult::kConsumed;
+        }
+    }
+
+    void draw(UIContext& ui) override
+    {
+        auto &childs = children();
+        Rect rUp = calcScrollAreaRect(-1);
+        Rect rDown = calcScrollAreaRect(1);
+        if (rUp.isEmpty() && rDown.isEmpty()) {  // the common case: menu does not require scrolling
+            Super::draw(ui);
+        } else {
+            Rect clipRect = bounds();
+            ui.dc.save();
+            if (!rUp.isEmpty()) {
+                ui.theme.drawMenuScrollArea(ui, rUp, Theme::ScrollDir::kUp);
+                clipRect.y = rUp.maxY();
+                clipRect.height = bounds().maxY() - clipRect.y;
+            }
+            if (!rDown.isEmpty()) {
+                ui.theme.drawMenuScrollArea(ui, rDown, Theme::ScrollDir::kDown);
+                clipRect.height = rDown.y - clipRect.y;
+            }
+            ui.dc.clipToRect(clipRect);
+            Super::draw(ui);
+            ui.dc.restore();
+        }
+    }
+
+private:
+    PicaPt mScrollDelta;
+    PicaPt mScrollAreaHeight;
+
+    Rect calcScrollAreaRect(int dir) const  // dir is -1 or 1
+    {
+        auto &childs = children();
+        if (!childs.empty()) {
+            auto *list = static_cast<ListView*>(childs[0]);
+            if (dir < 0) {
+                if (list->bounds().y < PicaPt::kZero) {
+                    return Rect(PicaPt::kZero, PicaPt::kZero, frame().width, mScrollAreaHeight);
+                } else {
+                    return Rect::kZero;
+                }
+            } else {
+                if (list->bounds().maxY() > list->frame().height) {
+                    return Rect(PicaPt::kZero, frame().height - mScrollAreaHeight,
+                                frame().width, mScrollAreaHeight);
+                } else {
+                    return Rect::kZero;
+                }
+            }
+        }
+        return Rect::kZero;
+    }
+};
+
 } // namspace
 
 //-----------------------------------------------------------------------------
@@ -512,7 +695,7 @@ struct MenuUITK::Impl
         return nullptr;
     }
 
-    void insertItem(int index, MenuItemWidget*item, MenuId id, std::function<void()> onItem)
+    void insertItem(int index, MenuItemWidget *item, MenuId id, std::function<void()> onItem)
     {
         index = std::min(index, int(this->items.size()));
         item->setText(removeMenuItemMnemonics(item->text()));
@@ -520,7 +703,7 @@ struct MenuUITK::Impl
         this->items.insert(this->items.begin() + index, item);
     }
 
-    void addItem(MenuItemWidget*item, MenuId id, std::function<void()> onItem)
+    void addItem(MenuItemWidget *item, MenuId id, std::function<void()> onItem)
     {
         insertItem(int(this->items.size()), item, id, onItem);
     }
@@ -583,6 +766,18 @@ void MenuUITK::addItem(const std::string& text, MenuId id,
 void MenuUITK::addItem(const std::string& text, MenuId id, std::function<void()> onSelected)
 {
     mImpl->addItem(new StringMenuItem(text, ShortcutKey::kNone), id, onSelected);
+}
+
+void MenuUITK::addItem(CellWidget *item, MenuId id, const ShortcutKey& shortcut)
+{
+    mImpl->addItem(new CustomMenuItem(item, shortcut), id, nullptr);
+    Application::instance().keyboardShortcuts().add(id, shortcut);
+}
+
+void MenuUITK::addItem(CellWidget *item, MenuId id, std::function<void()> onSelected)
+{
+    mImpl->addItem(new CustomMenuItem(item, ShortcutKey::kNone), id, onSelected);
+
 }
 
 void MenuUITK::addMenu(const std::string& text, Menu *menu)
@@ -717,6 +912,14 @@ bool MenuUITK::isSeparatorAt(int index) const
         return mImpl->items[index]->isSeparator();
     }
     return false;
+}
+
+CellWidget* MenuUITK::itemAt(int index) const
+{
+    if (index >= 0 && index < int(mImpl->items.size())) {
+        return mImpl->items[index]->cell();
+    }
+    return nullptr;
 }
 
 Menu* MenuUITK::itemMenuAt(int index) const
@@ -884,8 +1087,10 @@ bool MenuUITK::isShowing() const
     return mImpl->isShowing;
 }
 
-void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= OSMenu::kInvalidId*/,
-                    const PicaPt& minWidth /*= PicaPt::kZero*/, int extraWindowFlags /*= 0*/)
+void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord,
+                    MenuId id /*= OSMenu::kInvalidId*/,
+                    const PicaPt& minWidth /*= PicaPt::kZero*/,
+                    int extraWindowFlags /*= 0*/)
 {
     if (mImpl->menuWindow) {  // shouldn't happen, but handle it if it does
         cancel();
@@ -900,53 +1105,121 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord, MenuId id /*= 
     // since we are only going to use it in this function. This will be O(n), but
     // presumably menus are going to be reasonably sized.
 
+    float yDir = (Application::instance().isOriginInUpperLeft() ? 1.0f : -1.0f);
     auto osUL = w->convertWindowToOSPoint(upperLeftWindowCoord);
+#if __APPLE__ || defined(_WIN32) || defined(_WIN64)
+    osUL.x = int(std::round(osUL.x));
+    osUL.y = int(std::round(osUL.y));
+#else
+    // I'm not sure why X11 needs to be truncated and macOS/Win32 do not
+    osUL.x = int(osUL.x);
+    osUL.y = int(osUL.y);
+#endif
     mImpl->menuWindow = new Window("", int(osUL.x), int(osUL.y), 0, 0,
                                    (Window::Flags::Value)(Window::Flags::kPopup | extraWindowFlags));
-#if __APPLE__
-    // The window border is inside the window area on macOS
-    auto border = mImpl->menuWindow->borderWidth();
-    mImpl->menuWindow->move(-border, -border);
-#endif // __APPLE__
+    // The window border is inside the window area on macOS and X11
+    // (But, if X11 draws the border on the outside and the window manager
+    // treats a request to move to (x, y) as pertaining to the corner of the
+    // border not the corner of the window, it will be the same thing is the
+    // border being on the inside. Window managers probably do this differently,
+    // which will be a disaster for us.)
+    if (Application::instance().isWindowBorderInsideWindowFrame()) {
+        auto border = mImpl->menuWindow->borderWidth();
+        mImpl->menuWindow->move(-border, yDir * border);
+        osUL = OSPoint{ mImpl->menuWindow->osFrame().x, mImpl->menuWindow->osFrame().y };
+    }
+
     mImpl->menuWindow->setOnWindowDidDeactivate([this](Window &w) {
         cancel();
     });
 
+    // Add the widgets
     auto *list = new MenuListView(this);  // will be owned by menuWindow
     list->setBorderWidth(PicaPt::kZero);
     list->setContentPadding(PicaPt::kZero, PicaPt::kZero);
-    // Highlight on mouseover, unlike normal ListView
+    // ... highlight on mouseover, unlike normal ListView
     list->style(Theme::WidgetState::kMouseOver).fgColor = Application::instance().theme()->params().accentColor;
     list->style(Theme::WidgetState::kMouseOver).flags |= Theme::WidgetStyle::kFGColorSet;
     for (auto *item : mImpl->items) {
         list->addCell(item);
     }
     mImpl->listView = list;
-    mImpl->menuWindow->addChild(list);
+    auto *root = new MenuRoot();
+    root->addChild(list);
+    mImpl->menuWindow->addChild(root);
 
-    mImpl->menuWindow->resizeToFit([list, minWidth](const LayoutContext& context){
-        auto contentSize = list->preferredContentSize(context);
-        auto vertMargin = context.theme.calcPreferredMenuVerticalMargin();
-        return Size(std::max(minWidth, contentSize.width), contentSize.height + 2.0f * vertMargin);
+    // Resize the menu window to its preferred size
+    mImpl->menuWindow->resizeToFit([this, root, minWidth](const LayoutContext& context){
+        auto pref = root->preferredSize(context);
+        return Size(std::max(minWidth, pref.width), pref.height);
     });
+
+    // Adjust the y-value if this is a combobox menu that needs to have the
+    // selected item at the upper left position given in the call to this function.
+    // It would be convenient to simply call mImpl->menuWindow->move(PicaPt::kZero, -p.y)
+    // and then get the OS frame afterwards, but there is no guarantee that window managers
+    // don't do something like center a menu that is too large and not really honor our move,
+    // So we have to keep track of the offset ourselves and apply it.
+    auto dy = PicaPt::kZero;
     if (id != kInvalidId) {
-        auto osf = w->osFrame();
         for (auto& kv : mImpl->id2item) {
             if (kv.first == id) {
                 auto p = kv.second.item->frame().upperLeft();
-                mImpl->menuWindow->move(PicaPt::kZero, -p.y);
+                dy -= p.y;
                 break;
             }
         }
     }
 
-    mImpl->menuWindow->setFocusWidget(list, Window::ShowFocusRing::kNo);
+    // Now clamp to the desktop rect.
+    // It turns out that as long as we are clamping both the top and bottom, it
+    // doesn't matter whether the OS' coordinate system origin is upper left
+    // or lower right.
+    auto osDY = mImpl->menuWindow->convertWindowToOSPoint(Point(PicaPt::kZero, dy)).y - mImpl->menuWindow->convertWindowToOSPoint(Point::kZero).y;
+    auto screen = mImpl->menuWindow->screen();
+    auto osScreen = screen.osScreen();
+    auto osf = mImpl->menuWindow->osFrame();
+    auto osInitialY = osf.y;
+    auto osInitialHeight = osf.height;
+    if (id == kInvalidId) {
+        osf.y = std::max(osScreen.desktopFrame.y, osf.y);
+        osf.height = std::min(osf.y + osf.height,
+                              osScreen.desktopFrame.y + osScreen.desktopFrame.height) - osf.y;
+    } else {
+        // If this is a combobox menu, the positioning of the selected element is important,
+        // so we'd rather make the menu shorter than ideal rather than misposition from the top.
+        if (yDir > 0.0f) {
+            osf.y = std::max(osScreen.desktopFrame.y, osf.y + osDY);
+            osf.height = std::min(osf.y + osf.height,
+                                  osScreen.desktopFrame.y + osScreen.desktopFrame.height) - osf.y;
+        } else {
+            auto ul = osUL.y + osDY;
+            osf.y = std::max(osScreen.desktopFrame.y, ul - osf.height);  // y is bottom of window
+            osf.height = std::min(osScreen.desktopFrame.height, ul - osf.y);
+#if __APPLE__
+            if (osf.y < osScreen.desktopFrame.y) {
+                osf.y = 2;
+                osf.height -= 2;
+            }
+#endif // __APPLE__
+        }
+    }
+    mImpl->menuWindow->setOSFrame(osf.x, osf.y, osf.width, osf.height);
 
-    mImpl->menuWindow->setOnWindowLayout([this, list, id](Window& w, const LayoutContext& context) {
-        auto contentSize = w.contentRect().size();
-        auto vertMargin = context.theme.calcPreferredMenuVerticalMargin();
-        list->setFrame(Rect(PicaPt::kZero, vertMargin, contentSize.width, contentSize.height));
-    });
+    // The window's frame is correctly set, but if we moved the top of the menu
+    // we moved the upper left back down, so we need to scroll up that amount so
+    // that the correct item is at the y specified when this function was called.
+    if (osInitialHeight > osf.height) {
+        auto osCoordMultiplier = screen.desktopRect().height.asFloat() / osScreen.desktopFrame.height;
+        auto osAdjustedY = (yDir > 0.0f ? osf.y - (osUL.y + osDY)
+                                        : osf.y + osf.height - (osUL.y + osDY) );
+        auto adjustedY = PicaPt(osAdjustedY * osCoordMultiplier);
+        list->setBounds(list->bounds().translated(PicaPt::kZero, -yDir * adjustedY));
+    }
+
+    // The menu geometry is now correct, so we can continue setting up other things
+
+    mImpl->menuWindow->setFocusWidget(list, Window::ShowFocusRing::kNo);
 
     list->setOnSelectionChanged([this](ListView *lv) {
         auto *mlv = (MenuListView*)lv;

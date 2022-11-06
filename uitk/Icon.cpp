@@ -90,7 +90,7 @@ Icon* Icon::setColor(const Color& fg)
     return this;
 }
 
-void Icon::setColorNoRedraw(const Color& fg)
+void Icon::setForegroundColorNoRedraw(const Color& fg)
 {
     mImpl->fg = fg;
 }

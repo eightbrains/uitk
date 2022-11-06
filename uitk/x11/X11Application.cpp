@@ -305,6 +305,11 @@ std::string X11Application::tempDir() const
     return "/tmp";
 }
 
+std::vector<std::string> X11Application::availableFontFamilies() const
+{
+    return Font::availableFontFamilies();
+}
+
 void X11Application::beep()
 {
     if (mImpl->display) {
@@ -313,6 +318,13 @@ void X11Application::beep()
 }
 
 bool X11Application::isOriginInUpperLeft() const { return true; }
+
+// The question is really whether (0, 0) is inside the border or not.
+// If X11 draws the border outside the window, but the window manager positions
+// the window such that the corner of the border is at (x, y) instead of the
+// corner of the window, then it is effectively the same thing. Of course,
+// window managers may do this differently, which will be a disaster for us.
+bool X11Application::isWindowBorderInsideWindowFrame() const { return true; }
 
 bool X11Application::shouldHideScrollbars() const { return false; }
 

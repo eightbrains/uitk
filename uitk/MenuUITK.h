@@ -32,6 +32,7 @@
 
 namespace uitk {
 
+class CellWidget;
 class Menu;
 
 class MenuUITK : public OSMenu
@@ -47,8 +48,17 @@ public:
     /// marks the key navigation for the menu item; on all other platform underscores are
     /// removed.
     void addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut) override;
-    /// Adds an item with a callback function. This should only be used for popup menus.
+
+    /// Adds an item with a callback function this is called when the item is clicked.
+    /// This should only be used for popup menus.
     void addItem(const std::string& text, MenuId id, std::function<void()> onSelected);
+    /// Adds a custom item to the text area of a menu. Takes ownership of the pointer.
+    /// This should only be used for popup menus.
+    void addItem(CellWidget *item, MenuId id, const ShortcutKey& shortcut);
+    /// Adds a custom item to the text area of a menu. Takes ownership of the pointer.
+    /// This should only be used for popup menus.
+    void addItem(CellWidget *item, MenuId id, std::function<void()> onSelected);
+
     /// Takes ownership of menu.
     void addMenu(const std::string& text, Menu *menu) override;
     void addSeparator() override;
@@ -74,6 +84,8 @@ public:
 
     bool isSubmenuAt(int index) const override;
     bool isSeparatorAt(int index) const override;
+    /// Returns the item at index, otherwise nullptr. Retains ownership.
+    CellWidget* itemAt(int index) const;
     Menu* itemMenuAt(int index) const override;
 
     bool itemCheckedAt(int index) const override;
@@ -86,10 +98,10 @@ public:
     void setItemTextAt(int index, const std::string& text) override;
 
     void removeItem(MenuId id);
-    // Returns ownership of the menu (if it exists)
+    /// Returns ownership of the menu (if it exists)
     Menu* removeMenu(const std::string& text);
 
-    // Returns the menu associated with the text, otherwise nullptr. Retains ownership.
+    /// Returns the menu associated with the text, otherwise nullptr. Retains ownership.
     Menu* itemMenu(const std::string& text) const;
 
     bool itemChecked(MenuId id) const;
@@ -108,8 +120,10 @@ public:
     Size preferredSize(const LayoutContext& context) const;
 
     bool isShowing() const;
-    void show(Window *w, const Point& upperLeftWindowCoord, MenuId id = OSMenu::kInvalidId,
-              const PicaPt& minWidth = PicaPt::kZero, int extraWindowFlags = 0);
+    void show(Window *w, const Point& upperLeftWindowCoord,
+              MenuId id = OSMenu::kInvalidId,
+              const PicaPt& minWidth = PicaPt::kZero,
+              int extraWindowFlags = 0);
     void cancelHierarchy(); /// Cancels the menu and any parent menus
 
     // ---- IPopupWindow ---

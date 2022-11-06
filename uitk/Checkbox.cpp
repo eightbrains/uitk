@@ -23,7 +23,7 @@
 #include "Checkbox.h"
 
 #include "Label.h"
-#include "LabelCell.h"
+#include "IconAndText.h"
 #include "UIContext.h"
 #include "themes/Theme.h"
 

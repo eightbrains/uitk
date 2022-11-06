@@ -3,6 +3,7 @@ set(ND_NAMESPACE "uitk")
 set(UITK_PUBLIC_HEADERS
                  Application.h
                  Button.h
+                 CellWidget.h
                  Checkbox.h
                  Clipboard.h
                  ColorEdit.h
@@ -12,12 +13,13 @@ set(UITK_PUBLIC_HEADERS
                  Dialog.h
                  Events.h
                  FileDialog.h
+                 FontListComboBox.h
                  Global.h
                  Icon.h
+                 IconAndText.h
                  IncDecWidget.h
                  IPopupWindow.h
                  Label.h
-                 LabelCell.h
                  ListView.h
                  Menu.h
                  MenuUITK.h
@@ -68,10 +70,11 @@ set(UITK_SOURCES Application.cpp
                  Cursor.cpp
                  Dialog.cpp
                  FileDialog.cpp
+                 FontListComboBox.cpp
                  Icon.cpp
+                 IconAndText.cpp
                  IncDecWidget.cpp
                  Label.cpp
-                 LabelCell.cpp
                  ListView.cpp
                  Menu.cpp
                  MenubarUITK.cpp

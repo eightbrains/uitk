@@ -26,6 +26,7 @@
 #include <functional>
 #include <memory>
 #include <set>
+#include <vector>
 
 namespace uitk {
 
@@ -84,6 +85,9 @@ public:
     /// Returns a temp directory for writing in.
     std::string tempDir() const;
 
+    /// Returns the available fonts registered with the operating system.
+    std::vector<std::string> availableFontFamilies() const;
+
     /// Plays a beep, usually when a keypress is rejected. (This is used
     /// to produce the beep when a pressing a keyboard shortcut for a menu
     /// item, and we are not using native OS menus.)
@@ -93,6 +97,14 @@ public:
     /// origin in the upper left (Linux, Windows), otherwise false (macOS,
     /// which has the origin in the lower left).
     bool isOriginInUpperLeft() const;
+
+    /// Returns true if the window's border is outside the frame of the window,
+    /// that is, if a window position of (x, y) returns the upper left corner
+    /// of the actual drawable area, or whether it is the upper left corner
+    /// of the border. MacOS, for instance, draws the border inside the window
+    /// frame (which has the side effect that you can draw over top of the
+    /// border). This is useful for positioning popup windows.
+    bool isWindowBorderInsideWindowFrame() const;
 
     /// Returns true if the operating system hides scrollbars when not
     /// scrolling (e.g. macOS), false otherwise.

@@ -23,7 +23,7 @@
 #ifndef UITK_LABEL_H
 #define UITK_LABEL_H
 
-#include "Widget.h"
+#include "CellWidget.h"
 
 #include <string>
 
@@ -31,8 +31,8 @@ namespace uitk {
 
 class Text;
 
-class Label : public Widget {
-    using Super = Widget;
+class Label : public CellWidget {
+    using Super = CellWidget;
 public:
     explicit Label(const std::string& text);
     explicit Label(const Text& richText);
@@ -66,14 +66,17 @@ public:
 
     const Color& textColor() const;
     /// Sets the text color. If the color is Color(0, 0, 0, 0), the color
-    /// will be automatically chosen. (Use show(false) if you wish to hide
-    /// the label.)
+    /// will be automatically chosen. (Use setVisible(false) if you wish to
+    /// hide the label.)
     Label* setTextColor(const Color& c);
+
+    //---- CellWidget ----
     /// Same as setTextColor(), but does not call setNeedsDraw(). If you need
     /// to set the text color within a draw (for a child element), use this.
     /// (Since this is not intended for label configuration it does not return
     /// a pointer itself.)
-    void setTextColorNoRedraw(const Color& c);
+    void setForegroundColorNoRedraw(const Color& c) override;
+    // ----
 
     Widget* setFrame(const Rect& frame) override;
     void themeChanged() override;

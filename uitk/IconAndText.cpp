@@ -20,7 +20,7 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#include "LabelCell.h"
+#include "IconAndText.h"
 
 #include "Icon.h"
 #include "Label.h"
@@ -30,13 +30,13 @@
 namespace uitk
 {
 
-struct LabelCell::Impl
+struct IconAndText::Impl
 {
     Label *label = nullptr;  // reference (Super owns it as child)
     Icon *icon = nullptr;  // reference (Super owns it as child)
 };
 
-LabelCell::LabelCell()
+IconAndText::IconAndText()
     : mImpl(new Impl())
 {
     mImpl->label = new Label("");
@@ -46,28 +46,28 @@ LabelCell::LabelCell()
     addChild(mImpl->label);  // super owns now
 }
 
-LabelCell::~LabelCell()
+IconAndText::~IconAndText()
 {
     // Superclass will delete the label and icon as children
 }
 
-Label* LabelCell::label() const
+Label* IconAndText::label() const
 {
     return mImpl->label;
 }
 
-Icon* LabelCell::icon() const
+Icon* IconAndText::icon() const
 {
     return mImpl->icon;
 }
 
-void LabelCell::setColorNoRedraw(const Color& c)
+void IconAndText::setForegroundColorNoRedraw(const Color& c)
 {
-    mImpl->label->setTextColorNoRedraw(c);
-    mImpl->icon->setColorNoRedraw(c);
+    mImpl->label->setForegroundColorNoRedraw(c);
+    mImpl->icon->setForegroundColorNoRedraw(c);
 }
 
-Size LabelCell::preferredSize(const LayoutContext& context) const
+Size IconAndText::preferredSize(const LayoutContext& context) const
 {
     bool hasIcon = !mImpl->icon->isEmpty();
     bool hasText = !mImpl->label->text().empty();
@@ -94,7 +94,7 @@ Size LabelCell::preferredSize(const LayoutContext& context) const
     return Size(width, context.theme.calcStandardHeight(context.dc, font));
 }
 
-void LabelCell::layout(const LayoutContext& context)
+void IconAndText::layout(const LayoutContext& context)
 {
     bool hasIcon = !mImpl->icon->isEmpty();
     bool hasText = !mImpl->label->text().empty();
@@ -130,7 +130,7 @@ void LabelCell::layout(const LayoutContext& context)
     Super::layout(context);
 }
 
-void LabelCell::draw(UIContext& ui)
+void IconAndText::draw(UIContext& ui)
 {
     auto themeState = this->themeState();
     mImpl->icon->setThemeState(themeState);

@@ -539,6 +539,11 @@ Size VectorBaseTheme::calcPreferredMenuItemSize(const DrawContext& dc,
                 height);
 }
 
+PicaPt VectorBaseTheme::calcMenuScrollAreaHeight(const DrawContext& dc) const
+{
+    return calcPreferredMenuItemSize(dc, "Ag", "", MenuItemAttribute::kNormal, nullptr).height;
+}
+
 Theme::MenubarMetrics VectorBaseTheme::calcPreferredMenuItemMetrics(const DrawContext& dc, const PicaPt& height) const
 {
     auto fm = dc.fontMetrics(mParams.labelFont);
@@ -1345,6 +1350,24 @@ void VectorBaseTheme::drawMenuSeparatorItem(UIContext& ui, const Rect& frame) co
     ui.dc.setStrokeWidth(float(thicknessPx) * ui.dc.onePixel());
     ui.dc.setStrokeEndCap(kEndCapButt);
     ui.dc.drawLines({Point(frame.x, frame.midY()), Point(frame.maxX(), frame.midY()) });
+}
+
+void VectorBaseTheme::drawMenuScrollArea(UIContext& ui, const Rect& frame, ScrollDir dir) const
+{
+#if __APPLE__
+    auto icon = (dir == ScrollDir::kUp
+                    ? Theme::StandardIcon::kTriangleUp
+                    : Theme::StandardIcon::kTriangleDown);
+    auto margin = std::max(PicaPt::fromStandardPixels(2),
+                           ui.dc.roundToNearestPixel(0.15f * frame.height));
+#else
+    auto icon = (dir == ScrollDir::kUp
+                    ? Theme::StandardIcon::kChevronUp
+                    : Theme::StandardIcon::kChevronDown);
+    auto margin = std::max(PicaPt::fromStandardPixels(2),
+                           ui.dc.roundToNearestPixel(0.2f * frame.height));
+#endif // __APPLE__
+    drawIcon(ui, frame.insetted(PicaPt::kZero, margin), icon, mParams.textColor);
 }
 
 void VectorBaseTheme::drawMenubarBackground(UIContext& ui, const Rect& frame) const

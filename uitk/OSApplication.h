@@ -26,6 +26,8 @@
 #include "themes/Theme.h"
 
 #include <functional>
+#include <string>
+#include <vector>
 
 namespace uitk {
 
@@ -45,10 +47,12 @@ public:
 
     virtual std::string applicationName() const = 0;
     virtual std::string tempDir() const = 0;
+    virtual std::vector<std::string> availableFontFamilies() const = 0;
 
     virtual void beep() = 0;
 
     virtual bool isOriginInUpperLeft() const = 0;
+    virtual bool isWindowBorderInsideWindowFrame() const = 0;
     virtual bool shouldHideScrollbars() const = 0;
     virtual bool canKeyFocusEverything() const = 0;
     virtual bool platformHasMenubar() const = 0;

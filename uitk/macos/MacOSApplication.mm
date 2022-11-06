@@ -86,6 +86,8 @@ MacOSApplication::~MacOSApplication()
 
 bool MacOSApplication::isOriginInUpperLeft() const { return false; }
 
+bool MacOSApplication::isWindowBorderInsideWindowFrame() const { return true; }
+
 bool MacOSApplication::shouldHideScrollbars() const { return true; }
 
 bool MacOSApplication::canKeyFocusEverything() const
@@ -162,6 +164,11 @@ std::string MacOSApplication::applicationName() const
 std::string MacOSApplication::tempDir() const
 {
     return "/tmp";
+}
+
+std::vector<std::string> MacOSApplication::availableFontFamilies() const
+{
+    return Font::availableFontFamilies();
 }
 
 void MacOSApplication::beep()

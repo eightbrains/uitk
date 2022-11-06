@@ -25,7 +25,7 @@
 #include "Events.h"
 #include "Icon.h"
 #include "Label.h"
-#include "LabelCell.h"
+#include "IconAndText.h"
 #include "UIContext.h"
 #include "themes/Theme.h"
 
@@ -76,7 +76,7 @@ SegmentedControl* SegmentedControl::addItem(const std::string& name)
 {
     mImpl->items.push_back({name});
 
-    auto *cell = new LabelCell();
+    auto *cell = new IconAndText();
     cell->label()->setText(name);
     cell->label()->setAlignment(Alignment::kCenter);
     addChild(cell);  // calls setNeedsDraw(), we don't need to
@@ -87,7 +87,7 @@ SegmentedControl* SegmentedControl::addItem(Theme::StandardIcon icon)
 {
     mImpl->items.push_back({""});
 
-    auto *cell = new LabelCell();
+    auto *cell = new IconAndText();
     cell->icon()->setIcon(icon);
     addChild(cell);
     return this;
@@ -97,7 +97,7 @@ SegmentedControl* SegmentedControl::addItem(const Theme::Icon& icon)
 {
     mImpl->items.push_back({""});
 
-    auto *cell = new LabelCell();
+    auto *cell = new IconAndText();
     cell->icon()->setIcon(icon);
     addChild(cell);
     return this;
@@ -107,7 +107,7 @@ SegmentedControl* SegmentedControl::addItem(Theme::StandardIcon icon, const std:
 {
     mImpl->items.push_back({name});
 
-    auto *cell = new LabelCell();
+    auto *cell = new IconAndText();
     cell->icon()->setIcon(icon);
     cell->label()->setText(name);
     cell->label()->setAlignment(Alignment::kCenter);
@@ -119,7 +119,7 @@ SegmentedControl* SegmentedControl::addItem(const Theme::Icon& icon, const std::
 {
     mImpl->items.push_back({name});
 
-    auto *cell = new LabelCell();
+    auto *cell = new IconAndText();
     cell->icon()->setIcon(icon);
     cell->label()->setText(name);
     cell->label()->setAlignment(Alignment::kCenter);
@@ -432,7 +432,7 @@ void SegmentedControl::draw(UIContext& context)
                                       item.isOn, showKeyFocus, i, nItems);
         }
         auto ws = context.theme.segmentTextStyle(item.state, ds, item.isOn);
-        static_cast<LabelCell*>(children()[i])->setColorNoRedraw(ws.fgColor);
+        static_cast<IconAndText*>(children()[i])->setForegroundColorNoRedraw(ws.fgColor);
     }
 
     Super::draw(context);

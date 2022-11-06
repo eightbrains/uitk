@@ -27,8 +27,10 @@
 #include "../Window.h"
 #include "../themes/EmpireTheme.h"
 
+#include <algorithm>
 #include <list>
 #include <mutex>
+#include <set>
 #include <unordered_map>
 
 #define WIN32_LEAN_AND_MEAN
@@ -166,12 +168,19 @@ std::string Win32Application::tempDir() const
     return spath;
 }
 
+std::vector<std::string> Win32Application::availableFontFamilies() const
+{
+    return Font::availableFontFamilies();
+}
+
 void Win32Application::beep()
 {
     MessageBeep(MB_OK);  // default beep
 }
 
 bool Win32Application::isOriginInUpperLeft() const { return true; }
+
+bool Win32Application::isWindowBorderInsideWindowFrame() const { return false; }
 
 bool Win32Application::shouldHideScrollbars() const { return false; }
 

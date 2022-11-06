@@ -158,6 +158,11 @@ std::string Application::currentPath() const
     return path;
 }
 
+std::vector<std::string> Application::availableFontFamilies() const
+{
+    return mImpl->osApp->availableFontFamilies();
+}
+
 void Application::beep()
 {
     mImpl->osApp->beep();
@@ -166,6 +171,11 @@ void Application::beep()
 bool Application::isOriginInUpperLeft() const
 {
     return mImpl->osApp->isOriginInUpperLeft();
+}
+
+bool Application::isWindowBorderInsideWindowFrame() const
+{
+    return mImpl->osApp->isWindowBorderInsideWindowFrame();
 }
 
 bool Application::shouldHideScrollbars() const

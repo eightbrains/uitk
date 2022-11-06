@@ -89,6 +89,7 @@ PicaPt layoutItems(const uitk::LayoutContext& context, LayoutMode mode,
 
 } // namespace
 
+//-----------------------------------------------------------------------------
 struct ListView::Impl
 {
     Widget *content = nullptr;  // super owns this
@@ -194,7 +195,7 @@ void ListView::clearCells()
     setContentOffset(Point::kZero);
 }
 
-ListView* ListView::addCell(Widget *cell)
+ListView* ListView::addCell(ListViewCell *cell)
 {
     mImpl->content->addChild(cell);
     return this;
@@ -206,16 +207,16 @@ ListView* ListView::addStringCell(const std::string& text)
     return this;
 }
 
-Widget* ListView::cellAtIndex(int index) const
+ListViewCell* ListView::cellAtIndex(int index) const
 {
     auto &childs = mImpl->content->children();
     if (index < 0 || index >= int(childs.size())) {
         return nullptr;
     }
-    return childs[index];
+    return static_cast<ListViewCell*>(childs[index]);
 }
 
-Widget* ListView::removeCellAtIndex(int index)
+ListViewCell* ListView::removeCellAtIndex(int index)
 {
     auto& childs = mImpl->content->children();
     if (index < 0 || index >= int(childs.size())) {
@@ -226,7 +227,7 @@ Widget* ListView::removeCellAtIndex(int index)
     mImpl->setMouseOverIndex(-1);
     auto *w = childs[index];
     mImpl->content->removeChild(w);
-    return w;
+    return static_cast<ListViewCell*>(w);
 }
 
 int ListView::selectedIndex() const
@@ -462,7 +463,16 @@ Widget::EventResult ListView::mouse(const MouseEvent& e)
         mImpl->setMouseOverIndex(calcRowIndex(e.pos));
     }
 
-    return Super::mouse(e);
+    auto retval = Super::mouse(e);
+
+    // Since super scrolls we cannot set the mouse over index until after we super,
+    // otherwise we get a frame behind. This is a problem when scrolling quickly
+    // through a long menu (e.g. fonts).
+    if (e.type == MouseEvent::Type::kScroll) {
+        mImpl->setMouseOverIndex(calcRowIndex(e.pos));
+    }
+
+    return retval;
 }
 
 void ListView::mouseExited()

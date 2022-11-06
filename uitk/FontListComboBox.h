@@ -20,45 +20,43 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_SCREEN_H
-#define UITK_SCREEN_H
+#ifndef UITK_FONT_LIST_COMBO_BOX_H
+#define UITK_FONT_LIST_COMBO_BOX_H
 
-#include <nativedraw.h>
-
-#include "OSWindow.h"
+#include "ComboBox.h"
 
 namespace uitk {
 
-struct OSScreen;
-
-class Screen
+class FontListComboBox : public ComboBox
 {
+    using Super = ComboBox;
 public:
-    Screen();
-    Screen(const OSScreen& osscreen);
+    FontListComboBox();
+    FontListComboBox(const std::vector<std::string>& fontNames);
 
-    /// Returns the area usable by windows. This does not include the
-    /// menubar and dock area on macOS, and the taskbar on Windows.
-    /// You should use this rectangle for positioning windows.
-    /// Note that this may NOT be the actual size of the monitor, especially
-    /// on macOS if scaling is enabled (which it is by default on recent
-    /// MacBook Pros). Also note that on macOS, a hidden dock does reserve
-    /// a little bit of room.
-    const Rect& desktopRect() const;
+    bool drawWithFont() const;
+    /// If true the menu items are drawn in the font they represent, otherwise
+    /// they will be drawn in the normal ComboBox font. The ComboBox itself
+    /// is always drawn in the ComboBox font, since variations in font size
+    /// and contents (e.g. symbol fonts) may make the font difficult to read.
+    /// The default value is false, draw normally.
+    FontListComboBox* setDrawWithFont(bool with);
 
-    /// Returns the monitor size, including non-desktop area.
-    /// Note that this may NOT be the actual size of the monitor, especially
-    /// on macOS if scaling is enabled (which it is by default on recent
-    /// MacBook Pros).
-    const Rect& monitorRect() const;
+    /// Adds a font to the list. Note that this is different than using the
+    /// base class addItem() functions, which will not work when drawing with
+    /// the font is true.
+    void addFont(const std::string& fontName);
 
-    const OSScreen& osScreen() const;
+    void willChangeSelection() override;
+    void didChangeSelection() override;
+    void willShowMenu() override;
+    void didHideMenu() override;
 
 private:
-    Rect mDesktop;
-    Rect mMonitor;
-    OSScreen mOSScreen;
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
 };
 
 }  // namespace uitk
-#endif // UITK_SCREEN_H
+#endif // UITK_FONT_LIST_COMBO_BOX_H
+

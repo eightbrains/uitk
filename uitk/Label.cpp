@@ -198,12 +198,12 @@ const Color& Label::textColor() const { return mImpl->textColor; }
 
 Label* Label::setTextColor(const Color& c)
 {
-    setTextColorNoRedraw(c);
+    setForegroundColorNoRedraw(c);
     setNeedsDraw();
     return this;
 }
 
-void Label::setTextColorNoRedraw(const Color& c)
+void Label::setForegroundColorNoRedraw(const Color& c)
 {
     // Layout is expensive, so try to avoid doing it. While this is called by setTextColor(),
     // it is also called by widgets that use the label as child object, and in that case the
