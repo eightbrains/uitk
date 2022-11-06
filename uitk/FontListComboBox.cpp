@@ -58,9 +58,6 @@ public:
             if (mUseThemeFont) {
                 setText(fontName);
             } else {
-                if (fontName == "Arial Black") {
-                    mNeedsLayout = mNeedsLayout;
-                }
                 auto labelFontSize = context.theme.params().labelFont.pointSize();
                 auto labelFontMetrics = context.theme.params().labelFont.metrics(context.dc);
                 Text t(fontName, Font(), textColor());

@@ -58,6 +58,7 @@ public:
                                    const std::string& text, const std::string& shortcut,
                                    MenuItemAttribute itemAttr,
                                    PicaPt *shortcutWidth) const override;
+    PicaPt calcMenuScrollAreaHeight(const DrawContext& dc) const override;
     MenubarMetrics calcPreferredMenuItemMetrics(const DrawContext& dc, const PicaPt& height) const override;
     PicaPt calcPreferredMenuVerticalMargin() const override;
     PicaPt calcPreferredMenubarItemHorizMargin(const DrawContext& dc, const PicaPt& height) const override;
@@ -131,6 +132,7 @@ public:
                       MenuItemAttribute itemAttr,
                       const WidgetStyle& style, WidgetState state) const override;
     void drawMenuSeparatorItem(UIContext& ui, const Rect& frame) const override;
+    void drawMenuScrollArea(UIContext& ui, const Rect& frame, ScrollDir dir) const override;
     void drawMenubarBackground(UIContext& ui, const Rect& frame) const override;
     void drawMenubarItem(UIContext& ui, const Rect& frame, const std::string& text,
                          WidgetState state) const override;

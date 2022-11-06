@@ -62,8 +62,8 @@ public:
         enum Value {
             kNormal = 0,
             kDialog = (1 << 0),
-            kPopup = (2 << 0),
-            kMenuEdges = (3 << 1),  // used internally for menus: makes the top corners square
+            kPopup = (1 << 1),
+            kMenuEdges = (1 << 2),  // used internally for menus: makes the top corners square
         };
     };
 

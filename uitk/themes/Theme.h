@@ -246,6 +246,7 @@ public:
                                            const std::string& text, const std::string& shortcut,
                                            MenuItemAttribute itemAttr,
                                            PicaPt *shortcutWidth) const = 0;
+    virtual PicaPt calcMenuScrollAreaHeight(const DrawContext& dc) const = 0;
     struct MenubarMetrics {
         PicaPt horizMargin;
         PicaPt checkboxWidth;
@@ -343,6 +344,8 @@ public:
                               MenuItemAttribute itemAttr,
                               const WidgetStyle& style, WidgetState state) const = 0;
     virtual void drawMenuSeparatorItem(UIContext& ui, const Rect& frame) const = 0;
+    enum class ScrollDir { kUp, kDown };
+    virtual void drawMenuScrollArea(UIContext& ui, const Rect& frame, ScrollDir dir) const = 0;
     virtual void drawMenubarBackground(UIContext& ui, const Rect& frame) const = 0;
     virtual void drawMenubarItem(UIContext& ui, const Rect& frame, const std::string& text,
                                  WidgetState state) const = 0;

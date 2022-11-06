@@ -23,6 +23,7 @@
 #include "MenuUITK.h"
 
 #include "Application.h"
+#include "Icon.h"
 #include "Label.h"
 #include "ListView.h"
 #include "Menu.h"
@@ -543,6 +544,117 @@ private:
     std::function<void()> mOnBlinkDone;
 };
 
+class MenuRoot : public Widget
+{
+    using Super = Widget;
+public:
+    MenuRoot()
+    {
+    }
+
+    Size preferredSize(const LayoutContext& context) const override
+    {
+        auto &childs = children();
+        if (!childs.empty()) {
+            auto vertMargin = context.theme.calcPreferredMenuVerticalMargin();
+            auto sz = static_cast<ListView*>(childs[0])->preferredContentSize(context);
+            return Size(sz.width, sz.height + 2.0f * vertMargin);
+        } else {
+            return Size::kZero;
+        }
+    }
+
+    void layout(const LayoutContext& context) override
+    {
+        mScrollDelta = context.dc.ceilToNearestPixel(0.5f * context.theme.params().labelFont.pointSize());
+        mScrollAreaHeight = context.theme.calcMenuScrollAreaHeight(context.dc);
+
+        auto &childs = children();
+        if (!childs.empty()) {
+            auto vertMargin = context.theme.calcPreferredMenuVerticalMargin();
+            childs[0]->setFrame(bounds().insetted(PicaPt::kZero, vertMargin));
+        }
+
+        Super::layout(context);
+    }
+
+    EventResult mouse(const MouseEvent& e) override
+    {
+        // TODO: once we can schedule callbacks at a time delta, change this scroll every 200 ms or something
+
+        Rect rUp = calcScrollAreaRect(-1);
+        Rect rDown = calcScrollAreaRect(1);
+        bool canScroll = !(rUp.isEmpty() && rDown.isEmpty());
+        if (!canScroll || (e.type == MouseEvent::Type::kScroll)
+            || (!rUp.contains(e.pos) && !rDown.contains(e.pos))) {
+            return Super::mouse(e);
+        } else {
+            if (e.type != MouseEvent::Type::kButtonUp) {  // don't down + up to double scroll
+                // (children()[1] is always safe because calcScrollAreaRect returns empty if no children)
+                auto *list = static_cast<ListView*>(children()[0]);
+                if (rUp.contains(e.pos)) {
+                    list->scroll(PicaPt::kZero, -mScrollDelta);
+                } else {
+                    list->scroll(PicaPt::kZero, mScrollDelta);
+                }
+            }
+            return EventResult::kConsumed;
+        }
+    }
+
+    void draw(UIContext& ui) override
+    {
+        auto &childs = children();
+        Rect rUp = calcScrollAreaRect(-1);
+        Rect rDown = calcScrollAreaRect(1);
+        if (rUp.isEmpty() && rDown.isEmpty()) {  // the common case: menu does not require scrolling
+            Super::draw(ui);
+        } else {
+            Rect clipRect = bounds();
+            ui.dc.save();
+            if (!rUp.isEmpty()) {
+                ui.theme.drawMenuScrollArea(ui, rUp, Theme::ScrollDir::kUp);
+                clipRect.y = rUp.maxY();
+                clipRect.height = bounds().maxY() - clipRect.y;
+            }
+            if (!rDown.isEmpty()) {
+                ui.theme.drawMenuScrollArea(ui, rDown, Theme::ScrollDir::kDown);
+                clipRect.height = rDown.y - clipRect.y;
+            }
+            ui.dc.clipToRect(clipRect);
+            Super::draw(ui);
+            ui.dc.restore();
+        }
+    }
+
+private:
+    PicaPt mScrollDelta;
+    PicaPt mScrollAreaHeight;
+
+    Rect calcScrollAreaRect(int dir) const  // dir is -1 or 1
+    {
+        auto &childs = children();
+        if (!childs.empty()) {
+            auto *list = static_cast<ListView*>(childs[0]);
+            if (dir < 0) {
+                if (list->bounds().y < PicaPt::kZero) {
+                    return Rect(PicaPt::kZero, PicaPt::kZero, frame().width, mScrollAreaHeight);
+                } else {
+                    return Rect::kZero;
+                }
+            } else {
+                if (list->bounds().maxY() > list->frame().height) {
+                    return Rect(PicaPt::kZero, frame().height - mScrollAreaHeight,
+                                frame().width, mScrollAreaHeight);
+                } else {
+                    return Rect::kZero;
+                }
+            }
+        }
+        return Rect::kZero;
+    }
+};
+
 } // namspace
 
 //-----------------------------------------------------------------------------
@@ -1009,30 +1121,25 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord,
         cancel();
     });
 
+    // Add the widgets
     auto *list = new MenuListView(this);  // will be owned by menuWindow
     list->setBorderWidth(PicaPt::kZero);
     list->setContentPadding(PicaPt::kZero, PicaPt::kZero);
-    // Highlight on mouseover, unlike normal ListView
+    // ... highlight on mouseover, unlike normal ListView
     list->style(Theme::WidgetState::kMouseOver).fgColor = Application::instance().theme()->params().accentColor;
     list->style(Theme::WidgetState::kMouseOver).flags |= Theme::WidgetStyle::kFGColorSet;
     for (auto *item : mImpl->items) {
         list->addCell(item);
     }
     mImpl->listView = list;
-    mImpl->menuWindow->addChild(list);
-
-    // Override layout(). Need to do this *before* we resize!
-    mImpl->menuWindow->setOnWindowLayout([this, list, id](Window& w, const LayoutContext& context) {
-        auto contentSize = w.contentRect().size();
-        auto vertMargin = context.theme.calcPreferredMenuVerticalMargin();
-        list->setFrame(Rect(PicaPt::kZero, vertMargin, contentSize.width, contentSize.height));
-        });
+    auto *root = new MenuRoot();
+    root->addChild(list);
+    mImpl->menuWindow->addChild(root);
 
     // Resize the menu window to its preferred size
-    mImpl->menuWindow->resizeToFit([this, list, minWidth](const LayoutContext& context){
-        auto contentSize = list->preferredContentSize(context);
-        auto vertMargin = context.theme.calcPreferredMenuVerticalMargin();
-        return Size(std::max(minWidth, contentSize.width), contentSize.height + 2.0f * vertMargin);
+    mImpl->menuWindow->resizeToFit([this, root, minWidth](const LayoutContext& context){
+        auto pref = root->preferredSize(context);
+        return Size(std::max(minWidth, pref.width), pref.height);
     });
 
     // Adjust the y-value if this is a combobox menu that needs to have the

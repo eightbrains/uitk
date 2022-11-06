@@ -40,9 +40,21 @@ public:
     ScrollView* setBounds(const Rect& bounds);
 
     ScrollView* setContentSize(const Size& size);
-    /// Scrolls the content. Note that (0, 0) is scrolled to the top
+    /// Scrolls the content to offset. Note that (0, 0) is scrolled to the top
     /// and (0, -(bounds().height - frame().height)) is scrolled to the bottom
     ScrollView* setContentOffset(const Point& offset);
+
+    /// Convenience function for calling setContentOffset(). The positive direction is as
+    /// if you are pulling the scrollbar forward:  +dx is to the right (moves the
+    /// bounds left), +dy is down (moves bounds up).
+    void scroll(const PicaPt& dx, const PicaPt& dy);
+    /// Convenience function for calling setContentOffset() The positive direction is as
+    /// if you are pulling the scrollbar forward:  +dx is to the right (moves the
+    /// bounds left), +dy is down (moves bounds up).
+    void scrollTo(const PicaPt& x, const PicaPt& y);
+    /// Convenience function for calling bounds(), but returns the result in the
+    /// same coordinate system that scrollTo() uses.
+    Point scrollPosition() const;
 
     Size preferredSize(const LayoutContext& context) const override;
     void layout(const LayoutContext& context) override;

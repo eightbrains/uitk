@@ -183,6 +183,23 @@ ScrollView* ScrollView::setContentOffset(const Point& offset)
     return setBounds(Rect(offset.x, offset.y, bounds().width, bounds().height));
 }
 
+void ScrollView::scroll(const PicaPt& dx, const PicaPt& dy)
+{
+    auto pos = scrollPosition();
+    scrollTo(pos.x + dx, pos.y + dy);
+}
+
+void ScrollView::scrollTo(const PicaPt& x, const PicaPt& y)
+{
+    setContentOffset(Point(-x, -y));
+}
+
+Point ScrollView::scrollPosition() const
+{
+    auto &b = bounds();
+    return Point(-b.x, -b.y);
+}
+
 Size ScrollView::preferredSize(const LayoutContext& context) const
 {
     return Size(kDimGrow, kDimGrow);
