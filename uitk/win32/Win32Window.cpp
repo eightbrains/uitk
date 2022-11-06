@@ -470,7 +470,8 @@ void Win32Window::setOSFrame(float x, float y, float width, float height)
     width = min(16383.0f, width);  // note @#$! windows.h #defines min/max; this isn't std::min()
     height = min(16383.0f, height);
 
-    MoveWindow(mImpl->hwnd, int(x), int(y), int(width), int(height), FALSE /* don't repaint */);
+    MoveWindow(mImpl->hwnd, int(x), int(y),
+               int(std::round(width)), int(std::round(height)), FALSE /* don't repaint */);
     // MoveWindow() does not send WM_SIZING, it sends WM_SIZE. If we put onResize() there,
     // we seem to get an infinite draw loop. My understanding was that InvalidateRect()
     // (in postRedraw()) coalesces draw requests, but maybe not?

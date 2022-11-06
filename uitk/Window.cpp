@@ -568,7 +568,10 @@ void Window::resizeToFit(std::function<Size(const LayoutContext&)> calcSizeFunc)
     mImpl->window->callWithLayoutContext([this, calcSizeFunc](const DrawContext& dc) {
         LayoutContext context{ *mImpl->theme, dc };
         auto size = calcSizeFunc(context);
-        resize(size);
+        // Size up to the next complete pixel. We cannot actually get a partial pixel,
+        // and it may cause perfectly-sized widgets to be a partial pixel to small,
+        // causing an unnecessary scrollbar otherwise.
+        resize(Size(dc.ceilToNearestPixel(size.width), dc.ceilToNearestPixel(size.height)));
     });
 }
 
