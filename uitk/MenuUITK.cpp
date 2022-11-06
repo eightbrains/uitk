@@ -1107,19 +1107,26 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord,
 
     float yDir = (Application::instance().isOriginInUpperLeft() ? 1.0f : -1.0f);
     auto osUL = w->convertWindowToOSPoint(upperLeftWindowCoord);
+#if __APPLE__ || defined(_WIN32) || defined(_WIN64)
     osUL.x = int(std::round(osUL.x));
     osUL.y = int(std::round(osUL.y));
+#else
+    // I'm not sure why X11 needs to be truncated and macOS/Win32 do not
+    osUL.x = int(osUL.x);
+    osUL.y = int(osUL.y);
+#endif
     mImpl->menuWindow = new Window("", int(osUL.x), int(osUL.y), 0, 0,
                                    (Window::Flags::Value)(Window::Flags::kPopup | extraWindowFlags));
-#if __APPLE__
-    // The window border is inside the window area on macOS
-    auto border = mImpl->menuWindow->borderWidth();
-    mImpl->menuWindow->move(-border, yDir * border);
-    osUL = OSPoint{ mImpl->menuWindow->osFrame().x, mImpl->menuWindow->osFrame().y };
-#endif // __APPLE__
+#if defined(_WIN32) || defined(_WIN64)
     mImpl->menuWindow->setOnWindowDidDeactivate([this](Window &w) {
         cancel();
     });
+#else
+    // The window border is inside the window area on macOS and X11
+    auto border = mImpl->menuWindow->borderWidth();
+    mImpl->menuWindow->move(-border, yDir * border);
+    osUL = OSPoint{ mImpl->menuWindow->osFrame().x, mImpl->menuWindow->osFrame().y };
+#endif // windows
 
     // Add the widgets
     auto *list = new MenuListView(this);  // will be owned by menuWindow

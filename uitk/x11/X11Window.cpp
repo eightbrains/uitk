@@ -669,11 +669,11 @@ void X11Window::setOSFrame(float x, float y, float width, float height)
     ::Window childRet;
     XTranslateCoordinates(mImpl->display, rootWindow, mImpl->xwindow,
                           _x, _y, &osX, &osY, &childRet);
-    osX += x;
-    osY += y;
+    osX += int(x);
+    osY += int(y);
 
     XMoveResizeWindow(mImpl->display, mImpl->xwindow,
-                      int(std::round(osX)), int(std::round(osY)),
+                      osX, osY,
                       (unsigned int)std::round(width),
                       (unsigned int)std::round(height));
 }
