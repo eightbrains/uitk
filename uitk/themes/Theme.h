@@ -242,6 +242,12 @@ public:
     virtual Size calcPreferredIncDecSize(const DrawContext& dc) const = 0;
     virtual PicaPt calcPreferredScrollbarThickness(const DrawContext& dc) const = 0;
     enum class MenuItemAttribute { kNormal, kChecked, kSubmenu };
+    /// Returns preferred size of a menu item. If 'shortcutWidth' is non-null,
+    /// the max of its value and the calculated shortcut width will be used in
+    /// the calculation, and that value will be assigned to the pointer.
+    /// This is so that a menu's preferred size can be calculated twice: once
+    /// to get the maximum shortcut width needed, and then once using the
+    /// same shortcut width for all items.
     virtual Size calcPreferredMenuItemSize(const DrawContext& dc,
                                            const std::string& text, const std::string& shortcut,
                                            MenuItemAttribute itemAttr,

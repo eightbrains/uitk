@@ -521,14 +521,15 @@ Size VectorBaseTheme::calcPreferredMenuItemSize(const DrawContext& dc,
     auto textMetrics = dc.textMetrics(text.c_str(), mParams.labelFont, kPaintFill);
     auto twidth = dc.ceilToNearestPixel(textMetrics.width);
 
-    PicaPt swidth;
+    PicaPt swidth = PicaPt::kZero;
     if (itemAttr == MenuItemAttribute::kSubmenu) {
         swidth = metrics.submenuIconSize.width;
-    } else {
+    } else if (!shortcut.empty()) {
         auto shortcutMetrics = dc.textMetrics(shortcut.c_str(), mParams.labelFont, kPaintFill);
         swidth = dc.ceilToNearestPixel(shortcutMetrics.width);
     }
     if (shortcutWidth) {
+        swidth = std::max(*shortcutWidth, swidth);
         *shortcutWidth = swidth;
     }
 
@@ -1396,10 +1397,16 @@ void VectorBaseTheme::drawMenubarBackground(UIContext& ui, const Rect& frame) co
 void VectorBaseTheme::drawMenubarItem(UIContext& ui, const Rect& frame, const std::string& text,
                                       WidgetState state) const
 {
+    
     auto s = mMenubarItemStyles[int(state)];
+    // Draw background (if selected)
     drawFrame(ui, frame, s);
+    
+    // Draw text: inset by the margin
+    auto horizMargin = calcPreferredMenubarItemHorizMargin(ui.dc, frame.height);
+    Rect textFrame(frame.x + horizMargin, frame.y, frame.width - horizMargin, frame.height);
     ui.dc.setFillColor(s.fgColor);
-    ui.dc.drawText(text.c_str(), frame, Alignment::kLeft | Alignment::kVCenter, kWrapNone,
+    ui.dc.drawText(text.c_str(), textFrame, Alignment::kLeft | Alignment::kVCenter, kWrapNone,
                    mParams.nonNativeMenubarFont, kPaintFill);
 }
 

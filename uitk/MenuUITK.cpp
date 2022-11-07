@@ -116,9 +116,9 @@ public:
 
     virtual CellWidget* cell() const { return nullptr; }
 
-    virtual PicaPt preferredShortcutWidth(const LayoutContext& context) const = 0;
+    virtual PicaPt preferredShortcutWidth() const = 0;
 
-    void setShortcutWidth(const PicaPt& w) { mShortcutWidth = w; }
+    void setShortcutWidth(const PicaPt& w) const { mShortcutWidth = w; }
 
     void mouseEntered() override
     {
@@ -140,7 +140,12 @@ protected:
     std::unique_ptr<Menu> mSubmenu;
     bool mIsSeparator = false;
     bool mChecked = false;
-    PicaPt mShortcutWidth;
+    // It is a bit hacky that setShortcutWidth needs to be const, but in order
+    // for the menu to calculate the preferred width, we need to calculate the
+    // preferred shortcut widths, take the maximum, set the shortcut width,
+    // and re-calculate the preferred width (in case it got larger). But
+    // preferredSize() is const, as it ought to be.
+    mutable PicaPt mShortcutWidth;
 };
 
 class StringMenuItem : public MenuItemWidget
@@ -152,7 +157,7 @@ public:
     {}
     ~StringMenuItem() {}
 
-    PicaPt preferredShortcutWidth(const LayoutContext& context) const override
+    PicaPt preferredShortcutWidth() const override
     {
         return mPreferredShortcutWidth;
     }
@@ -161,6 +166,7 @@ public:
     {
         auto attr = (checked() ? Theme::MenuItemAttribute::kChecked
                                    : Theme::MenuItemAttribute::kNormal);
+        mPreferredShortcutWidth = mShortcutWidth;
         return context.theme.calcPreferredMenuItemSize(context.dc, mText, mShortcut, attr,
                                                        &mPreferredShortcutWidth);
     }
@@ -251,7 +257,7 @@ public:
         setEnabled(false);
     }
 
-    PicaPt preferredShortcutWidth(const LayoutContext& context) const override { return PicaPt::kZero; }
+    PicaPt preferredShortcutWidth() const override { return PicaPt::kZero; }
 
     Size preferredSize(const LayoutContext& context) const override
     {
@@ -291,7 +297,7 @@ public:
         }
     }
 
-    PicaPt preferredShortcutWidth(const LayoutContext& context) const override
+    PicaPt preferredShortcutWidth() const override
     {
         return frame().height;
     }
@@ -328,6 +334,34 @@ public:
 
     ~MenuListView()
     {
+    }
+
+    Size preferredSize(const LayoutContext& context) const override
+    {
+        // Calculate the preferred size so that we know what the shortcut
+        // widths are, but we don't care about the resulting size.
+        Super::preferredSize(context);
+
+        // Set the shortcut widths to the max. It is not entirely clear what
+        // to do here; this is not good for long shortcuts. macOS, for instance,
+        // limits the shortcut size to two characters, which is the size of
+        // most shortcuts on macOS. But other platforms need to write out the
+        // keymods, and it is not so simple.
+        auto shortcutWidth = PicaPt::kZero;
+        int nItems = size();
+        for (int i = 0;  i < nItems;  ++i) {
+            if (auto item = dynamic_cast<MenuItemWidget*>(cellAtIndex(i))) {
+                shortcutWidth = std::max(shortcutWidth, item->preferredShortcutWidth());
+            }
+        }
+        for (int i = 0;  i < nItems;  ++i) {
+            if (auto item = dynamic_cast<MenuItemWidget*>(cellAtIndex(i))) {
+                item->setShortcutWidth(shortcutWidth);
+            }
+        }
+
+        // Now calculate the real size
+        return Super::preferredSize(context);
     }
 
     EventResult mouse(const MouseEvent& e) override
@@ -1057,13 +1091,20 @@ Size MenuUITK::preferredSize(const LayoutContext& context) const
 {
     auto shortcutWidth = PicaPt::kZero;
     Size pref(PicaPt::kZero, PicaPt::kZero);
+    // Calculate preferred height and the shortcut width
     for (auto item : mImpl->items) {
         auto itemPref = item->preferredSize(context);
         pref.width = std::max(pref.width, itemPref.width);
         pref.height += itemPref.height;
-        shortcutWidth = std::max(shortcutWidth, item->preferredShortcutWidth(context));
+        shortcutWidth = std::max(shortcutWidth, item->preferredShortcutWidth());
     }
     mImpl->shortcutWidth = shortcutWidth;
+    // Now calculate the preferred width
+    for (auto item : mImpl->items) {
+        item->setShortcutWidth(shortcutWidth);
+        auto itemPref = item->preferredSize(context);
+        pref.width = std::max(pref.width, itemPref.width);
+    }
     return pref;
 }
 
