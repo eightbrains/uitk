@@ -66,6 +66,8 @@ struct Application::Impl
 };
 Application* Application::Impl::instance = nullptr;
 
+Application::ScheduledId Application::kInvalidScheduledId = OSApplication::kInvalidSchedulingId;
+
 Application& Application::instance()
 {
     assert(Application::Impl::instance);  // make sure you created an Application
@@ -131,6 +133,17 @@ bool Application::quit()
 void Application::scheduleLater(Window* w, std::function<void()> f)
 {
     return mImpl->osApp->scheduleLater(w, f);
+}
+
+Application::ScheduledId Application::scheduleLater(Window* w, float delay, ScheduleMode mode,
+                          std::function<void(ScheduledId)> f)
+{
+    return mImpl->osApp->scheduleLater(w, delay, (mode == ScheduleMode::kRepeating), f);
+}
+
+void Application::cancelScheduled(ScheduledId id)
+{
+    mImpl->osApp->cancelScheduled(id);
 }
 
 std::string Application::applicationName() const

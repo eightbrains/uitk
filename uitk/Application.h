@@ -42,6 +42,9 @@ class Application
 {
     friend class Window;
 public:
+    using ScheduledId = unsigned long;
+    static ScheduledId kInvalidScheduledId;
+
     /// The Application constructor will set the instance, so that you can
     /// inherit from Application if you want.
     static Application& instance();
@@ -74,6 +77,20 @@ public:
     /// Posts a function that will be called on the main thread later.
     /// This function is safe to call on either the main thread or another thread.
     void scheduleLater(Window* w, std::function<void()> f);
+
+    enum class ScheduleMode { kOnce = 0, kRepeating = 1 };
+    /// Posts a function that will be called on the main thread later.
+    /// This function is safe to call on either the main thread or another thread.
+    /// The actual delay amount is not very precise; Windows may only be accurate
+    /// to within 10 ms, for instance, and macOS states that there is some
+    /// inherent imprecision. The system may skip a repeat if the system is too
+    /// busy to notice that it needs to call a scheduled function by the time the
+    /// repeat comes around.
+    ScheduledId scheduleLater(Window* w, float delay, ScheduleMode mode,
+                              std::function<void(ScheduledId)> f);
+
+    /// Cancels a scheduled callback.
+    void cancelScheduled(ScheduledId id);
 
     /// Returns the name of the application (used by some MacOS menus, the
     /// the About dialog, and can be useful for window titles).

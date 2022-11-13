@@ -191,7 +191,10 @@ void ScrollView::scroll(const PicaPt& dx, const PicaPt& dy)
 
 void ScrollView::scrollTo(const PicaPt& x, const PicaPt& y)
 {
-    setContentOffset(Point(-x, -y));
+    auto maxScrollX = std::max(PicaPt::kZero, bounds().width - frame().width);
+    auto maxScrollY = std::max(PicaPt::kZero, bounds().height - frame().height);
+    setContentOffset(Point(std::min(std::max(-x, -maxScrollX), PicaPt::kZero),
+                           std::min(std::max(-y, -maxScrollY), PicaPt::kZero)));
 }
 
 Point ScrollView::scrollPosition() const

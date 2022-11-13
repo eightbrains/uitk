@@ -29,6 +29,8 @@
 
 #import <Cocoa/Cocoa.h>
 
+#include <map>
+
 @interface AppDelegate : NSObject <NSApplicationDelegate>
 @end
 
@@ -69,6 +71,7 @@ struct MacOSApplication::Impl
 {
     AppDelegate *delegate;
     std::unique_ptr<MacOSClipboard> clipboard;
+    std::map<SchedulingId, NSTimer*> timers;
     bool isHidingOtherApplications = false;
 };
 
@@ -154,6 +157,33 @@ void MacOSApplication::setExitWhenLastWindowCloses(bool exits)
 void MacOSApplication::scheduleLater(Window* w, std::function<void()> f)
 {
     dispatch_async(dispatch_get_main_queue(), ^{ f(); });
+}
+
+OSApplication::SchedulingId MacOSApplication::scheduleLater(Window* w, float delay, bool repeat,
+                                                            std::function<void(SchedulingId)> f)
+{
+    static unsigned long gId = kInvalidSchedulingId;
+
+    unsigned long newId = ++gId;
+    NSTimer *timer = [NSTimer scheduledTimerWithTimeInterval:(NSTimeInterval)delay
+                                                     repeats:(repeat ? YES : NO)
+                                                       block:^(NSTimer * _Nonnull timer) {
+        f(newId);
+    }];
+    if (repeat) {
+        mImpl->timers[newId] = timer;
+    }
+    return newId;
+}
+
+void MacOSApplication::cancelScheduled(SchedulingId id)
+{
+    auto it = mImpl->timers.find(id);
+    if (it != mImpl->timers.end()) {
+        [it->second invalidate];
+        it->second = nil;  // just in case erase() doesn't cause ARC to delete the NSTimer
+        mImpl->timers.erase(it);
+    }
 }
 
 std::string MacOSApplication::applicationName() const

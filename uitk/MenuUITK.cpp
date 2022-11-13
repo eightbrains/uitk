@@ -586,6 +586,11 @@ public:
     {
     }
 
+    ~MenuRoot()
+    {
+        cancelAutoScroll();
+    }
+
     Size preferredSize(const LayoutContext& context) const override
     {
         auto &childs = children();
@@ -600,8 +605,9 @@ public:
 
     void layout(const LayoutContext& context) override
     {
-        mScrollDelta = context.dc.ceilToNearestPixel(0.5f * context.theme.params().labelFont.pointSize());
+        mScrollDelta = context.dc.ceilToNearestPixel(1.0f * context.theme.params().labelFont.pointSize());
         mScrollAreaHeight = context.theme.calcMenuScrollAreaHeight(context.dc);
+        mOnePixel = context.dc.onePixel();
 
         auto &childs = children();
         if (!childs.empty()) {
@@ -614,23 +620,29 @@ public:
 
     EventResult mouse(const MouseEvent& e) override
     {
-        // TODO: once we can schedule callbacks at a time delta, change this scroll every 200 ms or something
-
         Rect rUp = calcScrollAreaRect(-1);
         Rect rDown = calcScrollAreaRect(1);
         bool canScroll = !(rUp.isEmpty() && rDown.isEmpty());
         if (!canScroll || (e.type == MouseEvent::Type::kScroll)
             || (!rUp.contains(e.pos) && !rDown.contains(e.pos))) {
+            cancelAutoScroll();
             return Super::mouse(e);
         } else {
             if (e.type != MouseEvent::Type::kButtonUp) {  // don't down + up to double scroll
-                // (children()[1] is always safe because calcScrollAreaRect returns empty if no children)
-                auto *list = static_cast<ListView*>(children()[0]);
-                if (rUp.contains(e.pos)) {
-                    list->scroll(PicaPt::kZero, -mScrollDelta);
-                } else {
-                    list->scroll(PicaPt::kZero, mScrollDelta);
+                if (mAutoScrollTimerId == Application::kInvalidScheduledId) {
+                    float dir = (rUp.contains(e.pos) ? -1.0f : 1.0f);
+                    mAutoScrollTimerId = Application::instance()
+                        .scheduleLater(window(), 0.05f,
+                                       Application::ScheduleMode::kRepeating,
+                                       [this, dir](Application::ScheduledId) {
+                            // (children()[1] is always safe because calcScrollAreaRect returns empty
+                            // if no children)
+                            auto *list = static_cast<ListView*>(children()[0]);
+                            list->scroll(PicaPt::kZero, dir * mScrollDelta);
+                        });
                 }
+            } else {
+                cancelAutoScroll();
             }
             return EventResult::kConsumed;
         }
@@ -664,6 +676,8 @@ public:
 private:
     PicaPt mScrollDelta;
     PicaPt mScrollAreaHeight;
+    PicaPt mOnePixel;
+    Application::ScheduledId mAutoScrollTimerId = Application::kInvalidScheduledId;
 
     Rect calcScrollAreaRect(int dir) const  // dir is -1 or 1
     {
@@ -677,7 +691,13 @@ private:
                     return Rect::kZero;
                 }
             } else {
-                if (list->bounds().maxY() > list->frame().height) {
+                // Due to floating point math, 'list->bounds().maxY() > list->frame().height'
+                // may fail for things a little epsilon over, so compare that the difference
+                // is greater than an epsilon. Epsilon should be a pixel, since the
+                // ScrollView may need to adjust by the scroll position so that it is
+                // on a full pixel.
+                auto excessMaxY = list->bounds().maxY() - list->frame().height;
+                if (excessMaxY >= mOnePixel) {
                     return Rect(PicaPt::kZero, frame().height - mScrollAreaHeight,
                                 frame().width, mScrollAreaHeight);
                 } else {
@@ -686,6 +706,14 @@ private:
             }
         }
         return Rect::kZero;
+    }
+
+    void cancelAutoScroll()
+    {
+        if (mAutoScrollTimerId != Application::kInvalidScheduledId) {
+            Application::instance().cancelScheduled(mAutoScrollTimerId);
+            mAutoScrollTimerId = Application::kInvalidScheduledId;
+        }
     }
 };
 
