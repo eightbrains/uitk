@@ -24,6 +24,7 @@
 
 #include "Win32Clipboard.h"
 #include "Win32Utils.h"
+#include "../Application.h"
 #include "../Window.h"
 #include "../themes/EmpireTheme.h"
 
@@ -42,7 +43,11 @@
 
 namespace uitk {
 
+namespace {
 static const int kCheckPostedFunctionsMsg = WM_USER + 1534;
+
+static OSApplication::SchedulingId gNextTimerId = OSApplication::kInvalidSchedulingId;
+} // namespace;
 
 struct Win32Application::Impl {
     std::unique_ptr<Win32Clipboard> clipboard;
@@ -53,6 +58,91 @@ struct Win32Application::Impl {
     // This is a linked list because adding and removing does not invalidate
     // iterators.
     std::list<std::function<void()>> postedFunctions;
+    struct DelayedFunc {
+        std::function<void(SchedulingId)> callback;
+        SchedulingId id;
+        HWND hwnd;  // so we can remove if window is destroyed without stopping timer
+        bool repeats;
+    };
+    // Index on UINT_PTR so that repeating functions do not need to linear search,
+    // only canceling does (and realistically there's probably only going to be one,
+    // maybe two or three at a time).
+    // NOTE: unordered_map does not invalidate iterators when erasing, if you need to change
+    //       the data structure make sure to update clearPostedFunctionsForHwnd()
+    std::unordered_map<UINT_PTR, DelayedFunc> postedLaterFunctions;
+
+    static void TimerCallback(HWND hwnd, UINT arg2, UINT_PTR timerId, DWORD arg4)
+    {
+        auto &self = static_cast<Win32Application&>(Application::instance().osApplication()).mImpl;  // is ref to unique_ptr
+        std::function<void(SchedulingId)> f;
+        SchedulingId id = OSApplication::kInvalidSchedulingId;
+        bool removeNow = false;
+
+        {
+            std::lock_guard<std::mutex> locker(self->postedFunctionsLock);
+            auto it = self->postedLaterFunctions.find(timerId);
+            if (it != self->postedLaterFunctions.end()) {
+                f = it->second.callback;
+                id = it->second.id;
+                removeNow = !it->second.repeats;
+            } else {
+                // We could not find a callback, no point wasting time not finding it again in the future
+                KillTimer(hwnd, timerId);
+            }
+        }
+
+        // We must be unlocked during the function call, in case call schedules or cancels a callback
+        f(id);
+
+        if (removeNow) {
+            std::lock_guard<std::mutex> locker(self->postedFunctionsLock);
+            auto it = self->postedLaterFunctions.find(timerId);
+            self->removePostedLater_locked(it);
+        }
+    }
+
+    std::unordered_map<UINT_PTR, DelayedFunc>::iterator removePostedLater_locked(std::unordered_map<UINT_PTR, DelayedFunc>::iterator& plfIt)
+    {
+        // We should be locked here (since caller is holding an iterator)
+
+        // (We take an iterator so that a single-shot callback does not need to linear search on the SchedulingId to cancel)
+        KillTimer(NULL, plfIt->first);
+        return this->postedLaterFunctions.erase(plfIt);  // returns the next iterator after the one erased
+    }
+
+    SchedulingId addPostedLater_unlocked(Window *w, float delay, bool repeat, std::function<void(SchedulingId)> f)
+    {
+        // The MS docs say that the auto-exception eating blocks should be disabled when using
+        // timers. This is done in the constructor.
+
+        auto id = ++gNextTimerId;
+        UINT delayMilliSec = UINT(std::round(delay * 1000.0f));
+
+        auto win32id = SetTimer(NULL, 0, delayMilliSec, Impl::TimerCallback);
+        assert(win32id != 0);  // SetTimer should not fail
+
+        {
+            std::lock_guard<std::mutex> locker(this->postedFunctionsLock);
+            this->postedLaterFunctions[win32id] = { f, id, (HWND)w->nativeHandle(), repeat };
+        }
+
+        return id;
+    }
+
+    void clearPostedFunctionsForHwnd(HWND hwnd)
+    {
+        std::lock_guard<std::mutex> locker(this->postedFunctionsLock);
+        // NOTE: std::unordered_map does not invalidate iterators on erase (except the one erased),
+        //       so we can erase and continue iterating;
+        auto it = this->postedLaterFunctions.begin();
+        while (it != this->postedLaterFunctions.end()) {
+            if (it->second.hwnd == hwnd) {
+                it = removePostedLater_locked(it);
+            } else {
+                ++it;
+            }
+        }
+    }
 };
 
 Win32Application::Win32Application()
@@ -146,6 +236,25 @@ void Win32Application::scheduleLater(Window *w, std::function<void()> f)
         // Docs say this acts like PostThreadMessage(), which uses GetMessage()
         // the same as our run loop, so this should be okay.
         PostMessage(NULL, kCheckPostedFunctionsMsg, 0, 0);
+    }
+}
+
+Win32Application::SchedulingId Win32Application::scheduleLater(Window* w, float delay, bool repeat,
+                                                               std::function<void(SchedulingId)> f)
+{
+    return mImpl->addPostedLater_unlocked(w, delay, repeat, f);
+}
+
+void Win32Application::cancelScheduled(SchedulingId id)
+{
+    std::lock_guard<std::mutex> locker(mImpl->postedFunctionsLock);
+    // postedLaterFunctions is indexed on the Win32 timer id not UITK's id, so we need
+    // to do a linear search.
+    for (auto it = mImpl->postedLaterFunctions.begin(); it != mImpl->postedLaterFunctions.end(); ++it) {
+        if (it->second.id == id) {
+            mImpl->removePostedLater_locked(it);
+            break;
+        }
     }
 }
 
@@ -258,6 +367,7 @@ void Win32Application::unregisterWindow(void* hwnd)
     if (wit != mImpl->hwnd2window.end()) {
         mImpl->hwnd2window.erase(wit);
     }
+    mImpl->clearPostedFunctionsForHwnd((HWND)hwnd);
     if (mImpl->hwnd2window.empty()) {
         PostQuitMessage(0);
     }
