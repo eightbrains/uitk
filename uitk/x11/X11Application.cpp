@@ -35,10 +35,12 @@
 
 #include <locale.h>
 
+#include <chrono>
 #include <iostream>
 #include <list>
 #include <map>
 #include <mutex>
+#include <thread>
 #include <unordered_map>
 
 // How do we get the binary name? argv[0] may actually be null or incorrect
@@ -51,15 +53,15 @@
 extern char *__progname;
 const char *gBinaryName = __progname;
 
+namespace uitk {
+
 namespace {
 static const char *kDB_XftDPI = "Xft.dpi";
 static const char *kDB_XftDPI_alt = "Xft.Dpi";
 
 static const long kDoubleClickMaxMillisecs = 500;  // Windows' default
 static const uitk::PicaPt kDoubleClickMaxRadiusPicaPt(2);  // 2/72 inch
-}
-
-namespace uitk {
+}  // namespace
 
 static std::unordered_map<KeySym, Key> gKeysym2key = {
     { XK_BackSpace, Key::kBackspace },
@@ -204,6 +206,145 @@ private:
     int mLastClickY = 0;
 };
 
+class DeferredFunctions // has it's own lock
+{
+public:
+    OSApplication::SchedulingId add(::Window xwin, float delaySecs, bool repeats,
+                                    std::function<void(OSApplication::SchedulingId)> f)
+    {
+        std::lock_guard<std::mutex> locker(mLock);
+
+        auto id = ++mNextId;
+        auto now = std::chrono::steady_clock::now();
+        mFunctions.push_back(std::make_shared<Func>(id, f, xwin, delaySecs,
+                                                    repeats, now, now));
+        updateNextTime(*mFunctions.back());
+        reSort_locked();
+
+        return id;
+    }
+
+    void remove(OSApplication::SchedulingId id)
+    {
+        std::lock_guard<std::mutex> locker(mLock);
+
+        for (auto it = mFunctions.begin();  it != mFunctions.end();  ++it) {
+            if ((*it)->id == id) {
+                it = mFunctions.erase(it);  // mFunctions is still sorted afterwards
+                break;
+            }
+        }
+    }
+
+    void removeForWindow(::Window xwin)
+    {
+        std::lock_guard<std::mutex> locker(mLock);
+
+        for (auto it = mFunctions.begin();  it != mFunctions.end();  ++it) {
+            if ((*it)->xwin == xwin) {
+                it = mFunctions.erase(it);  // mFunctions is still sorted afterwards
+            }
+        }
+    }
+
+    void executeTick()
+    {
+        if (mFunctions.empty()) {
+            return;
+        }
+
+        auto now = std::chrono::steady_clock::now();
+        int nCallbacksRun = 0;
+
+        // A callback may close the window that other callbacks are using,
+        // or it may remove itself or other callbacks. In both cases we should
+        // not execute any of those other callbacks. There seem to be two
+        // options for this:
+        // a) the (current) simple algorithm that starts over from the beginning
+        //    after running a callback. It is potentially O(n^2), although
+        //    large N is unlikely.
+        // b) store all the callbacks that need to be executed in an instance
+        //    variable, and removing a callback should also remove it from the
+        //    mToExecute queue.
+
+        while (true) {
+            std::shared_ptr<Func> f;
+            for (auto it = mFunctions.begin();  it != mFunctions.end();  ++it) {
+                if (now >= (*it)->nextTime) {
+                    f = (*it);
+                    if ((*it)->repeats) {
+                        updateNextTime(*(*it));
+                    } else {
+                        it = mFunctions.erase(it);
+                    }
+                    break;
+                }
+            }
+            if (f) {
+                f->f(f->id);
+                nCallbacksRun += 1;
+            } else {
+                break;  // didn't execute anything; break: nothing else is ready
+            }
+        }
+
+        if (nCallbacksRun > 0) {
+            std::lock_guard<std::mutex> locker(mLock);
+            reSort_locked();
+        }
+    }
+
+private:
+    struct Func
+    {
+        OSApplication::SchedulingId id;
+        std::function<void(OSApplication::SchedulingId)> f;
+        ::Window xwin;
+        float delaySec;
+        bool repeats;
+        std::chrono::time_point<std::chrono::steady_clock> startTime;
+        std::chrono::time_point<std::chrono::steady_clock> nextTime;
+
+        Func(OSApplication::SchedulingId id_,
+             std::function<void(OSApplication::SchedulingId)> f_,
+             ::Window xwin_, float d, bool r, 
+             std::chrono::time_point<std::chrono::steady_clock> st,
+             std::chrono::time_point<std::chrono::steady_clock> nt)
+            : id(id_), f(f_), xwin(xwin_), delaySec(d), repeats(r)
+            , startTime(st), nextTime(nt)
+        {}
+    };
+
+    OSApplication::SchedulingId mNextId = OSApplication::kInvalidSchedulingId;
+    std::mutex mLock;
+    // Should always be sorted. Uses shared_ptr<> so that an executing callback
+    // can safely unschedule itself.
+    std::list<std::shared_ptr<Func>> mFunctions;
+
+    void reSort_locked()
+    {
+        mFunctions.sort([](const std::shared_ptr<Func>& x,
+                           const std::shared_ptr<Func>& y) -> bool {
+            return (x->nextTime < y->nextTime);
+        });
+    }
+
+    void updateNextTime(Func &func)
+    {
+        // Try to avoid drift from accumulated floating point error from
+        // just doing 'nextTime += delaySec'.
+
+        // std::chrono::duration stores values as int not double, so using
+        // seconds is no good. Note that std::chrono::microseconds specs
+        // at least 55 bits, which is 1141 years' of microseconds.
+        double totalDT = std::chrono::duration_cast<std::chrono::microseconds>(func.nextTime - func.startTime).count() / 1e6;
+        double n = std::round(totalDT / double(func.delaySec)); // fix (n-1).9999999 or n.0000001
+        double dt = (n + 1.0) * double(func.delaySec);
+        uint64_t dt_usec = (uint64_t)(std::round(dt * 1e6));
+        func.nextTime = func.startTime + std::chrono::microseconds(dt_usec);
+    }
+};
+
 //-----------------------------------------------------------------------------
 struct X11Application::Impl
 {
@@ -221,6 +362,8 @@ struct X11Application::Impl
     // This is a linked list because adding and removing does not invalidate
     // iterators.
     std::list<std::function<void()>> postedFunctions;
+
+    DeferredFunctions postedLater;  // note: has its own lock
 };
 
 X11Application::X11Application()
@@ -370,6 +513,18 @@ void X11Application::scheduleLater(uitk::Window* w, std::function<void()> f)
     // Else: the function is still posted, we just have no way to send an event
 }
 
+OSApplication::SchedulingId X11Application::scheduleLater(
+                               Window* w, float delay, bool repeat,
+                               std::function<void(SchedulingId)> f)
+{
+    return mImpl->postedLater.add((::Window)w->nativeHandle(), delay, repeat, f);
+}
+
+void X11Application::cancelScheduled(SchedulingId id)
+{
+    mImpl->postedLater.remove(id);
+}
+
 int X11Application::run()
 {
     Atom kWMProtocolType = XInternAtom(mImpl->display, "WM_PROTOCOLS", True);
@@ -381,6 +536,25 @@ int X11Application::run()
     bool done = false;
     XEvent event;
     while (!done) {
+        // There is a way to use select() to timeout on the file descriptors
+        // Xlib uses under the hood, but small timeouts caused large latencies.
+        // Anyway, this method is simpler and does not require arcane knowledge
+        // gathered from dusty tomes.
+        // (See https://www.linuxquestions.org/questions/programming-9/xnextevent-select-409355)
+        while (!XPending(mImpl->display)) {
+            mImpl->postedLater.executeTick();
+            if (!XPending(mImpl->display)) {
+                // std::this_thread::yield() produces fairly high CPU usage,
+                // since multicore CPUs generally can reschedule the thread
+                // immediately. Even 1 ms is enough to drop CPU usage down to
+                // almost the level if this loop is eliminated. (Using a magic
+                // number here because this is highly context dependent and
+                // it we put it anywhere else we'd have to explain this whole
+                // thing about the timers anyway.)
+                std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            }
+        }
+
         XNextEvent(mImpl->display, &event);
 
         X11Window *w;
@@ -727,6 +901,7 @@ void X11Application::registerWindow(long unsigned int xwindow,
 void X11Application::unregisterWindow(long unsigned int xwindow)
 {
     mImpl->xwin2window.erase((::Window)xwindow);
+    mImpl->postedLater.removeForWindow(xwindow);
 }
 
 float X11Application::dpiForScreen(int screen)
