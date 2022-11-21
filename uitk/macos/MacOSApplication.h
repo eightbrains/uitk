@@ -40,6 +40,9 @@ public:
     void exitRun() override;
 
     void scheduleLater(Window* w, std::function<void()> f) override;
+    SchedulingId scheduleLater(Window* w, float delay, bool repeat,
+                                std::function<void(SchedulingId)> f) override;
+    void cancelScheduled(SchedulingId id) override;
 
     std::string applicationName() const override;
     std::string tempDir() const override;
@@ -62,6 +65,8 @@ public:
     void hideOtherApplications();
     void showOtherApplications();
     bool isHidingOtherApplications() const;
+
+    void onWindowWillClose(void* nswindow);
 
 private:
     struct Impl;

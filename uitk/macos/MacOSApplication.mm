@@ -25,9 +25,12 @@
 #include "MacOSClipboard.h"
 
 #include "../Application.h"
+#include "../Window.h"
 #include "../themes/EmpireTheme.h"
 
 #import <Cocoa/Cocoa.h>
+
+#include <unordered_map>
 
 @interface AppDelegate : NSObject <NSApplicationDelegate>
 @end
@@ -67,9 +70,24 @@ namespace uitk {
 
 struct MacOSApplication::Impl
 {
+    struct Timer {
+        NSTimer* timer;
+        void* nswindow;  // void* because just used for an id: ARC won't retain
+    };
+
     AppDelegate *delegate;
     std::unique_ptr<MacOSClipboard> clipboard;
+    std::unordered_map<SchedulingId, Timer> timers;
     bool isHidingOtherApplications = false;
+
+    std::unordered_map<SchedulingId, Timer>::iterator removeTimer(std::unordered_map<SchedulingId, Timer>::iterator it)
+    {
+        [it->second.timer invalidate];
+        it->second.timer = nil;  // just in case erase() doesn't cause ARC to delete the NSTimer
+        it->second.nswindow = nullptr;
+        return this->timers.erase(it);
+    }
+
 };
 
 MacOSApplication::MacOSApplication()
@@ -154,6 +172,43 @@ void MacOSApplication::setExitWhenLastWindowCloses(bool exits)
 void MacOSApplication::scheduleLater(Window* w, std::function<void()> f)
 {
     dispatch_async(dispatch_get_main_queue(), ^{ f(); });
+}
+
+OSApplication::SchedulingId MacOSApplication::scheduleLater(Window* w, float delay, bool repeat,
+                                                            std::function<void(SchedulingId)> f)
+{
+    static unsigned long gId = kInvalidSchedulingId;
+
+    unsigned long newId = ++gId;
+    NSTimer *timer = [NSTimer scheduledTimerWithTimeInterval:(NSTimeInterval)delay
+                                                     repeats:(repeat ? YES : NO)
+                                                       block:^(NSTimer * _Nonnull timer) {
+        f(newId);
+    }];
+    if (repeat) {
+        mImpl->timers[newId] = { timer, w->nativeHandle() };
+    }
+    return newId;
+}
+
+void MacOSApplication::cancelScheduled(SchedulingId id)
+{
+    auto it = mImpl->timers.find(id);
+    if (it != mImpl->timers.end()) {
+        mImpl->removeTimer(it);
+    }
+}
+
+void MacOSApplication::onWindowWillClose(void* nswindow)
+{
+    auto it = mImpl->timers.begin();
+    while (it != mImpl->timers.end()) {
+        if (it->second.nswindow == nswindow) {
+            it = mImpl->removeTimer(it);
+        } else {
+            ++it;
+        }
+    }
 }
 
 std::string MacOSApplication::applicationName() const

@@ -26,6 +26,8 @@
 
 #include "MacOSWindow.h"
 
+#include "MacOSApplication.h"
+
 #include "../Application.h"
 #include "../Cursor.h"
 #include "../Events.h"
@@ -789,6 +791,9 @@ void MacOSWindow::close()
         [mImpl->contentView addDeferredCall: [this]() { this->close(); }];
         return;
     }
+
+    static_cast<MacOSApplication&>(Application::instance().osApplication())
+        .onWindowWillClose((__bridge void*)mImpl->window);
 
     if (mImpl->userCanClose) {
         // Simulate clicking the close button, so that onWindowShouldClose can

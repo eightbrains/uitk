@@ -37,6 +37,9 @@ class Window;
 class OSApplication
 {
 public:
+    using SchedulingId = unsigned long;
+    static constexpr SchedulingId kInvalidSchedulingId = 0;
+
     virtual ~OSApplication() {};
 
     virtual void setExitWhenLastWindowCloses(bool exits) = 0;
@@ -44,6 +47,9 @@ public:
     virtual void exitRun() = 0;
 
     virtual void scheduleLater(Window* w, std::function<void()> f) = 0;
+    virtual SchedulingId scheduleLater(Window* w, float delay, bool repeat,
+                                       std::function<void(SchedulingId)> f) = 0;
+    virtual void cancelScheduled(SchedulingId id) = 0;
 
     virtual std::string applicationName() const = 0;
     virtual std::string tempDir() const = 0;
