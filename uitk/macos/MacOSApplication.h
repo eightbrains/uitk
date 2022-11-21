@@ -66,6 +66,8 @@ public:
     void showOtherApplications();
     bool isHidingOtherApplications() const;
 
+    void onWindowWillClose(void* nswindow);
+
 private:
     struct Impl;
     std::unique_ptr<Impl> mImpl;
