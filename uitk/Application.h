@@ -85,7 +85,12 @@ public:
     /// to within 10 ms, for instance, and macOS states that there is some
     /// inherent imprecision. The system may skip a repeat if the system is too
     /// busy to notice that it needs to call a scheduled function by the time the
-    /// repeat comes around.
+    /// repeat comes around. There may be performance problems with large numbers;
+    /// it is better to have one timer update many things rather than each having
+    /// its own timer. (But, a huge do-everything timer is also a bad idea; normal
+    /// code is hardly likely to have more than a handful of callbacks active at
+    /// a time, anyway.) Due to the timing inaccuracy, this is not well-suited
+    /// for animations.
     ScheduledId scheduleLater(Window* w, float delay, ScheduleMode mode,
                               std::function<void(ScheduledId)> f);
 

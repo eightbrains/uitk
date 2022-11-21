@@ -46,6 +46,7 @@ set(UITK_PUBLIC_HEADERS
                  StringEditorLogic.h
                  TextEditorLogic.h
                  UIContext.h
+                 Waiting.h
                  Widget.h
                  Window.h
                  themes/Theme.h
@@ -96,6 +97,7 @@ set(UITK_SOURCES Application.cpp
                  StringEdit.cpp
                  StringEditorLogic.cpp
                  TextEditorLogic.cpp
+                 Waiting.cpp
                  Widget.cpp
                  Window.cpp
                  private/MenuIterator.cpp

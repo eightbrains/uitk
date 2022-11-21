@@ -54,6 +54,7 @@
 #include "StackedWidget.h"
 #include "StringEdit.h"
 #include "UIContext.h"
+#include "Waiting.h"
 #include "Window.h"
 
 #include "io/Directory.h"

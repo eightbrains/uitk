@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -20,24 +20,31 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_CHECKBOX_H
-#define UITK_CHECKBOX_H
+#ifndef UITK_WAITING_H
+#define UITK_WAITING_H
 
-#include "Button.h"
+#include "Widget.h"
 
 namespace uitk {
 
-class Checkbox : public Button {
-    using Super = Button;
+class Waiting : public Widget {
+    using Super = Widget;
 public:
-    explicit Checkbox(const std::string& text);
-    ~Checkbox();
+    Waiting();
+    ~Waiting();
+
+    bool isAnimating() const;
+    /// Sets the an
+    Waiting* setAnimating(bool animating);
 
     Size preferredSize(const LayoutContext& context) const override;
-    void layout(const LayoutContext& context) override;
 
     void draw(UIContext& context) override;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
 };
 
 }  // namespace uitk
-#endif // UITK_CHECKBOX_H
+#endif // UITK_WAITING_H

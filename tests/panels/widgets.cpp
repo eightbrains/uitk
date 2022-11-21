@@ -617,6 +617,60 @@ private:
     ProgressBar *mProgress;
 };
 
+class WaitingTest : public Widget
+{
+    using Super = Widget;
+public:
+    WaitingTest()
+    {
+        mStart1 = new Button("Start (1)");
+        mStart1->setToggleable(true);
+        addChild(mStart1);
+
+        mWaiting1 = new Waiting();
+        addChild(mWaiting1);
+
+        mStart2 = new Button("Start (2)");
+        mStart2->setToggleable(true);
+        addChild(mStart2);
+
+        mWaiting2 = new Waiting();
+        addChild(mWaiting2);
+
+        mStart1->setOnClicked([this](Button *b) {
+            mWaiting1->setAnimating(b->isOn());
+        });
+        mStart2->setOnClicked([this](Button *b) {
+            mWaiting2->setAnimating(b->isOn());
+        });
+    }
+
+    Size preferredSize(const LayoutContext& context) const override
+    {
+        auto pref = mStart1->preferredSize(context);
+        return Size(PicaPt(200.0f), 2.0f * pref.height);
+    }
+
+    void layout(const LayoutContext& context) override
+    {
+        auto spacing = context.dc.roundToNearestPixel(0.5f * context.theme.params().labelFont.pointSize());
+        auto pref = mStart1->preferredSize(context);
+        auto h = pref.height;
+        mStart1->setFrame(Rect(bounds().x, bounds().y, pref.width, pref.height));
+        mWaiting1->setFrame(Rect(mStart1->frame().maxX() + spacing, mStart1->frame().y, h, h));
+        mStart2->setFrame(Rect(mWaiting1->frame().maxX() + 4.0f * spacing, mWaiting1->frame().y,
+                               pref.width, pref.height));
+        mWaiting2->setFrame(Rect(mStart2->frame().maxX() + spacing, mStart2->frame().y, h, h));
+        Super::layout(context);
+    }
+
+private:
+    Button *mStart1;
+    Waiting *mWaiting1;
+    Button *mStart2;
+    Waiting *mWaiting2;
+};
+
 class TextEditTest : public Widget
 {
     using Super = Widget;
@@ -823,6 +877,8 @@ public:
         addChild(mSliders);
         mProgress = new ProgressBarTest();
         addChild(mProgress);
+        mWaiting = new WaitingTest();
+        addChild(mWaiting);
         mText = new TextEditTest();
         addChild(mText);
         mScroll = new ScrollTest();
@@ -849,8 +905,10 @@ public:
         mSliders->setFrame(Rect(x, mCombos->frame().maxY(), pref.width, pref.height));
         pref = mProgress->preferredSize(context);
         mProgress->setFrame(Rect(x, mSliders->frame().maxY(), pref.width, pref.height));
+        pref = mWaiting->preferredSize(context);
+        mWaiting->setFrame(Rect(x, mProgress->frame().maxY(), pref.width, pref.height));
         pref = mText->preferredSize(context);
-        mText->setFrame(Rect(x, mProgress->frame().maxY(), pref.width, pref.height));
+        mText->setFrame(Rect(x, mWaiting->frame().maxY(), pref.width, pref.height));
 
         x += PicaPt(350);
         pref = mListView->preferredSize(context);
@@ -869,6 +927,7 @@ private:
     ComboBoxTest *mCombos;
     SliderTest *mSliders;
     ProgressBarTest *mProgress;
+    WaitingTest *mWaiting;
     TextEditTest *mText;
     ScrollTest *mScroll;
     ListViewTest *mListView;
