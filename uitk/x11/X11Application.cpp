@@ -218,7 +218,7 @@ public:
         auto now = std::chrono::steady_clock::now();
         mFunctions.push_back(std::make_shared<Func>(id, f, xwin, delaySecs,
                                                     repeats, now, now));
-        updateNextTime(*mFunctions.back());
+        updateNextTime(mFunctions.back().get());
         reSort_locked();
 
         return id;
@@ -273,7 +273,7 @@ public:
                 if (now >= (*it)->nextTime) {
                     f = (*it);
                     if ((*it)->repeats) {
-                        updateNextTime(*(*it));
+                        updateNextTime(it->get());
                     } else {
                         it = mFunctions.erase(it);
                     }
@@ -329,7 +329,7 @@ private:
         });
     }
 
-    void updateNextTime(Func &func)
+    void updateNextTime(Func *func)
     {
         // Try to avoid drift from accumulated floating point error from
         // just doing 'nextTime += delaySec'.
@@ -337,11 +337,11 @@ private:
         // std::chrono::duration stores values as int not double, so using
         // seconds is no good. Note that std::chrono::microseconds specs
         // at least 55 bits, which is 1141 years' of microseconds.
-        double totalDT = std::chrono::duration_cast<std::chrono::microseconds>(func.nextTime - func.startTime).count() / 1e6;
-        double n = std::round(totalDT / double(func.delaySec)); // fix (n-1).9999999 or n.0000001
-        double dt = (n + 1.0) * double(func.delaySec);
+        double totalDT = std::chrono::duration_cast<std::chrono::microseconds>(func->nextTime - func->startTime).count() / 1e6;
+        double n = std::round(totalDT / double(func->delaySec)); // fix (n-1).9999999 or n.0000001
+        double dt = (n + 1.0) * double(func->delaySec);
         uint64_t dt_usec = (uint64_t)(std::round(dt * 1e6));
-        func.nextTime = func.startTime + std::chrono::microseconds(dt_usec);
+        func->nextTime = func->startTime + std::chrono::microseconds(dt_usec);
     }
 };
 
