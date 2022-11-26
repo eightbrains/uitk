@@ -127,4 +127,16 @@ void X11Cursor::set(void *window /*= nullptr*/, void *windowSystem /*= nullptr*/
     XDefineCursor(display, (::Window)window, mImpl->cursor);
 }
 
+void X11Cursor::getHotspotPx(float *x, float *y) const
+{
+}
+
+void X11Cursor::getSizePx(float *width, float *height) const
+{
+}
+
+Rect X11Cursor::rectForPosition(void *window, const Point& pos) const
+{
+}
+
 }  // namespace uitk

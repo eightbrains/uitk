@@ -460,6 +460,11 @@ void X11Application::beep()
     }
 }
 
+void X11Application::debugPrint(const std::string& s)
+{
+    std::cout << s << std::endl;
+}
+
 bool X11Application::isOriginInUpperLeft() const { return true; }
 
 // The question is really whether (0, 0) is inside the border or not.

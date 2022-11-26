@@ -26,7 +26,9 @@
 #include "Cursor.h"
 #include "Dialog.h"
 #include "Events.h"
+#include "Label.h"
 #include "ListView.h"
+#include "OSCursor.h"
 #include "OSMenubar.h"
 #include "OSWindow.h"
 #include "Menu.h"
@@ -310,6 +312,82 @@ bool widgetCanAcceptKeyFocus(Widget *w, Application::KeyFocusCandidates candidat
     return false;
 }
 
+class TooltipWidget : public Widget
+{
+    using Super = Widget;
+private:
+    Point mPosition;
+    PicaPt mYOffset;
+public:
+    TooltipWidget(Widget *tooltip)  // takes ownership
+    {
+        addChild(tooltip);
+    }
+
+    void setBasePosition(const Point& pos, const PicaPt& yOffset)
+    {
+        mPosition = pos;
+        mYOffset = yOffset;
+    }
+
+    void layout(const LayoutContext& context) override
+    {
+        // Setting a widget's frame in layout() is really uncouth, but we cannot
+        // get a context in setTooltip(), so we do it here. Besides, it's basically
+        // a toplevel widget, so nothing else depends on it.
+
+        if (children().empty()) {
+            setFrame(Rect::kZero);
+            return;
+        }
+
+        auto *tooltip = children()[0];
+        auto pref = tooltip->preferredSize(context);
+        // Add a little extra spacing so that the tooltip is not exactly at the bottom of the cursor
+        auto extraSpacingY = context.dc.roundToNearestPixel(PicaPt::fromStandardPixels(3.0f));
+        Rect r(mPosition.x, mPosition.y + mYOffset + extraSpacingY, pref.width, pref.height);
+        if (auto *p = parent()) {
+            r.translate(-p->frame().x, -p->frame().y);
+            auto parentFrame = p->frame().translated(-bounds().x, -bounds().y);
+            if (r.x < parentFrame.x || r.y < parentFrame.y || r.maxX() > parentFrame.maxX() || r.maxY() > parentFrame.maxY()) {
+                if (r.maxX() > parentFrame.maxX()) {
+                    r.x = parentFrame.maxX() - r.width;
+                }
+                if (r.maxY() > parentFrame.maxY()) {
+                    r.y = mPosition.y - mYOffset - r.height;
+                }
+                if (r.x < parentFrame.x) {
+                    r.x = parentFrame.x;
+                    r.width = std::min(parentFrame.width, r.width);
+                }
+                if (r.y < parentFrame.y) {
+                    r.y = parentFrame.y;
+                    r.height = std::min(parentFrame.height, r.height);
+                }
+            }
+        }
+        setFrame(r);
+        tooltip->setFrame(bounds());
+
+        Super::layout(context);
+    }
+
+    Widget::EventResult mouse(const MouseEvent& e) override
+    {
+        Super::mouse(e);
+        if (auto *w = window()) {
+            w->clearTooltip();
+        }
+        return EventResult::kConsumed;
+    }
+
+    void draw(UIContext& context) override
+    {
+        context.theme.drawTooltip(context, bounds());
+        Super::draw(context);
+    }
+};
+
 }  // namespace
 
 //-----------------------------------------------------------------------------
@@ -321,9 +399,11 @@ struct Window::Impl
     std::unique_ptr<OSWindow> window;
     std::string title;
     std::vector<Cursor> cursorStack;
+    Point lastMousePos;
     int flags;
     std::unique_ptr<Widget> menubarWidget;
     std::unique_ptr<Widget> rootWidget;
+    TooltipWidget *tooltipWidget = nullptr;  // owned by rootWidget
     Widget *grabbedWidget = nullptr;
     Widget *focusedWidget = nullptr;
     IPopupWindow *activePopup = nullptr;
@@ -864,6 +944,35 @@ void Window::moveKeyFocus(int dir)
 
 PicaPt Window::borderWidth() const { return mImpl->window->borderWidth(); }
 
+void Window::setTooltip(Widget *tooltip)
+{
+    if (!isActive()) {
+        return;
+    }
+
+    clearTooltip();
+
+    mImpl->tooltipWidget = new TooltipWidget(tooltip);  // TooltipWidget now owns
+    mImpl->rootWidget->addChild(mImpl->tooltipWidget);
+    auto *tw = mImpl->tooltipWidget;
+    auto cursorRect = mImpl->cursorStack.back().osCursor()
+                           ->rectForPosition(mImpl->window.get(), mImpl->lastMousePos);
+    tw->setBasePosition(mImpl->lastMousePos, cursorRect.maxY() - mImpl->lastMousePos.y);
+    tw->setNeedsLayout();
+}
+
+void Window::clearTooltip()
+{
+    if (mImpl->tooltipWidget) {
+        mImpl->tooltipWidget->setVisible(false);
+        mImpl->rootWidget->removeChild(mImpl->tooltipWidget);  // transfers ownership to us
+        Application::instance().scheduleLater(this, [widget=mImpl->tooltipWidget] {
+            delete widget;
+        });
+        mImpl->tooltipWidget = nullptr;
+    }
+}
+
 IPopupWindow* Window::popupWindow() const { return mImpl->activePopup; }
 
 void Window::setPopupWindow(IPopupWindow *popup)
@@ -942,6 +1051,8 @@ void Window::onMouse(const MouseEvent& eOrig)
     if (mImpl->dialog.dialog || mImpl->dialog.window) {
         return;
     }
+
+    mImpl->lastMousePos = eOrig.pos;
 
     if (mImpl->activePopup) {
         if (eOrig.type == MouseEvent::Type::kButtonDown) {
@@ -1174,7 +1285,9 @@ void Window::onLayout(const DrawContext& dc)
     } else {
         auto &children = mImpl->rootWidget->children();
         for (auto *child : children) {
-            child->setFrame(mImpl->rootWidget->bounds());
+            if (child != mImpl->tooltipWidget) {
+                child->setFrame(mImpl->rootWidget->bounds());
+            }
         }
     }
     mImpl->rootWidget->layout(context);

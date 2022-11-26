@@ -89,6 +89,9 @@ public:
         addChild(mLabel);
 
         mHoriz = new SegmentedControl({ "L", "C", "R" });
+        mHoriz->setTooltip(0, "Align::kLeft");
+        mHoriz->setTooltip(1, "Align::kCenter");
+        mHoriz->setTooltip(2, "Align::kRight");
         mHoriz->setAction(SegmentedControl::Action::kSelectOne);
         mHoriz->setSegmentOn(0, true);
         mHoriz->setOnClicked([this](int indexClicked) {
@@ -103,6 +106,9 @@ public:
         addChild(mHoriz);
 
         mVert = new SegmentedControl({"T", "C", "B"});
+        mVert->setTooltip(0, "Align::kTop");
+        mVert->setTooltip(1, "Align::kCenter");
+        mVert->setTooltip(2, "Align::kBottom");
         mVert->setAction(SegmentedControl::Action::kSelectOne);
         mVert->setSegmentOn(0, true);
         mVert->setOnClicked([this](int indexClicked) {
@@ -625,6 +631,7 @@ public:
     {
         mStart1 = new Button("Start (1)");
         mStart1->setToggleable(true);
+        mStart1->setTooltip("Start/stop waiting indicator");
         addChild(mStart1);
 
         mWaiting1 = new Waiting();
@@ -632,6 +639,7 @@ public:
 
         mStart2 = new Button("Start (2)");
         mStart2->setToggleable(true);
+        mStart2->setTooltip("Start/stop waiting indicator");
         addChild(mStart2);
 
         mWaiting2 = new Waiting();
@@ -691,6 +699,7 @@ public:
         addChild(mPassword);
 
         mShowPassword = new Button(Theme::StandardIcon::kEye);
+        mShowPassword->setTooltip("Show/hide password");
         mShowPassword->setDrawStyle(Button::DrawStyle::kNoDecoration);
         mShowPassword->setToggleable(true);
         addChild(mShowPassword);
@@ -745,6 +754,7 @@ public:
 
         mIncLabel = new Label("0");
         mIncButton = new Button("Increment");
+        mIncButton->setTooltip("Add one to the value");
         mIncButton->setOnClicked([this](Button *b) {
             int n = std::atoi(mIncLabel->text().c_str());
             mIncLabel->setText(std::to_string(n + 1));
@@ -762,6 +772,7 @@ public:
         mScroll->addChild(mSliderLabel);
 
         mButton2 = new Button("Magic");
+        mButton2->setTooltip("Toggles the magic!");
         mButton2->setToggleable(true);
         mScroll->addChild(mButton2);
     }

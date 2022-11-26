@@ -48,6 +48,7 @@
 
 #include <assert.h>
 #include <algorithm>
+#include <chrono>
 
 namespace uitk {
 
@@ -62,6 +63,7 @@ struct Application::Impl
     std::unique_ptr<Shortcuts> shortcuts;
     std::vector<Window*> windows;  // we do not own these
     Window* activeWindow = nullptr;  // we do not own this
+    std::chrono::time_point<std::chrono::steady_clock> t0 = std::chrono::steady_clock::now();
     bool supportsNativeDialogs;
 };
 Application* Application::Impl::instance = nullptr;
@@ -176,9 +178,21 @@ std::vector<std::string> Application::availableFontFamilies() const
     return mImpl->osApp->availableFontFamilies();
 }
 
+double Application::microTime() const
+{
+    auto t1 = std::chrono::steady_clock::now();
+    auto dt_usec = std::chrono::duration_cast<std::chrono::microseconds>(t1 - mImpl->t0).count() / 1e6;
+    return dt_usec;
+}
+
 void Application::beep()
 {
     mImpl->osApp->beep();
+}
+
+void Application::debugPrint(const std::string& s)
+{
+    mImpl->osApp->debugPrint(s);
 }
 
 bool Application::isOriginInUpperLeft() const
@@ -195,6 +209,8 @@ bool Application::shouldHideScrollbars() const
 {
     return mImpl->osApp->shouldHideScrollbars();
 }
+
+double Application::tooltipDelaySecs() const { return 2.0f; }
 
 Application::KeyFocusCandidates Application::keyFocusCandidates() const
 {

@@ -127,6 +127,15 @@ SegmentedControl* SegmentedControl::addItem(const Theme::Icon& icon, const std::
     return this;
 }
 
+SegmentedControl* SegmentedControl::setTooltip(int index, const std::string& tooltip)
+{
+    if (index >= 0 && children().size() > index) {
+        children()[index]->setTooltip(tooltip);
+    }
+
+    return this;
+}
+
 SegmentedControl::Action SegmentedControl::action() const
 {
     return mImpl->action;

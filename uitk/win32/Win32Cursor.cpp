@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -85,6 +85,18 @@ Win32Cursor::~Win32Cursor()
 void Win32Cursor::set(void* /*window = nullptr*/, void* /*windowSystem = nullptr*/) const
 {
 	SetCursor(mImpl->cursor);
+}
+
+void Win32Cursor::getHotspotPx(float *x, float *y) const
+{
+}
+
+void Win32Cursor::getSizePx(float *width, float *height) const
+{
+}
+
+Rect Win32Cursor::rectForPosition(void *window, const Point& pos) const
+{
 }
 
 }  // namespace uitk

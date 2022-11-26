@@ -287,6 +287,11 @@ void Win32Application::beep()
     MessageBeep(MB_OK);  // default beep
 }
 
+void Win32Application::debugPrint(const std::string& s)
+{
+    DPrint() << s;  // includes \n
+}
+
 bool Win32Application::isOriginInUpperLeft() const { return true; }
 
 bool Win32Application::isWindowBorderInsideWindowFrame() const { return false; }

@@ -136,6 +136,7 @@ public:
     void drawMenubarBackground(UIContext& ui, const Rect& frame) const override;
     void drawMenubarItem(UIContext& ui, const Rect& frame, const std::string& text,
                          WidgetState state) const override;
+    void drawTooltip(UIContext& ui, const Rect& frame) const override;
 
 protected:
     void setVectorParams(const Params& params);
@@ -175,6 +176,7 @@ protected:
     WidgetStyle mListViewStyles[5];
     WidgetStyle mMenuItemStyles[5];
     WidgetStyle mMenubarItemStyles[5];
+    WidgetStyle mTooltipStyle;
 };
 
 }  // namespace uitk

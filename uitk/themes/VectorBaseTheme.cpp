@@ -394,6 +394,24 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mMenubarItemStyles[OVER].bgColor = mMenubarItemStyles[NORMAL].bgColor;
     mMenubarItemStyles[DOWN].bgColor = params.accentColor;
     mMenubarItemStyles[DOWN].fgColor = params.accentedBackgroundTextColor;
+
+    // Tooltips
+    // Neither macOS nor Win32 offer any good way of getting tooltip colors.
+    // Tooltips are not consistent within native apps, although typically
+    // dark mode has the background a little lighter, but light mode uses the
+    // same background as the window background. The border color is also not
+    // consistent: on macOS the border is usually darker/lighter than the background
+    // color, but the macOS 10.14 Settings app has a black border. Windows 10 still
+    // has the old yellow tooltips in some places, like the close/minimize/maximize
+    // buttons on the window.
+    if (isDarkMode) {
+        mTooltipStyle.bgColor = params.windowBackgroundColor.lighter();
+        mTooltipStyle.borderColor = mTooltipStyle.bgColor.lighter();
+    } else {
+        mTooltipStyle.bgColor = params.windowBackgroundColor;  // gets too dark if we use darker()
+        mTooltipStyle.borderColor = mTooltipStyle.bgColor.darker();
+    }
+    mTooltipStyle.borderWidth = mBorderWidth;
 }
 
 const Theme::Params& VectorBaseTheme::params() const { return mParams; }
@@ -1408,6 +1426,11 @@ void VectorBaseTheme::drawMenubarItem(UIContext& ui, const Rect& frame, const st
     ui.dc.setFillColor(s.fgColor);
     ui.dc.drawText(text.c_str(), textFrame, Alignment::kLeft | Alignment::kVCenter, kWrapNone,
                    mParams.nonNativeMenubarFont, kPaintFill);
+}
+
+void VectorBaseTheme::drawTooltip(UIContext& ui, const Rect& frame) const
+{
+    drawFrame(ui, frame, mTooltipStyle);
 }
 
 }  // namespace uitk

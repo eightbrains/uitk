@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -36,6 +36,9 @@ public:
     ~X11Cursor();
 
     void set(void *window = nullptr, void *windowSystem = nullptr) const override;
+    void getHotspotPx(float *x, float *y) const override;
+    void getSizePx(float *width, float *height) const override;
+    Rect rectForPosition(void *window, const Point& pos) const override;
 
 private:
     struct Impl;
