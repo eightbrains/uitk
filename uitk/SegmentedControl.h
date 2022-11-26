@@ -40,10 +40,16 @@ public:
 
     void clearItems();
     SegmentedControl* addItem(const std::string& name);
+    /// Tooltip is intentionally required: the meaning of icons may not be obvious to
+    /// all users, especially those with visual difficulties.
     SegmentedControl* addItem(Theme::StandardIcon icon);
     SegmentedControl* addItem(const Theme::Icon& icon);
     SegmentedControl* addItem(Theme::StandardIcon icon, const std::string& name);
     SegmentedControl* addItem(const Theme::Icon& icon, const std::string& name);
+
+    /// Sets the tooltip for an indivdual index. Super::setTooltip() will set the
+    /// tooltip for the entire widget, which is probably not what you want.
+    SegmentedControl* setTooltip(int index, const std::string& tooltip);
 
     enum class Action {
         kButton,            /// segment acts as a momentary push-button (like Button)

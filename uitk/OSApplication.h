@@ -56,6 +56,7 @@ public:
     virtual std::vector<std::string> availableFontFamilies() const = 0;
 
     virtual void beep() = 0;
+    virtual void debugPrint(const std::string& s) = 0;
 
     virtual bool isOriginInUpperLeft() const = 0;
     virtual bool isWindowBorderInsideWindowFrame() const = 0;

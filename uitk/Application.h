@@ -110,10 +110,32 @@ public:
     /// Returns the available fonts registered with the operating system.
     std::vector<std::string> availableFontFamilies() const;
 
+    /// Returns a value in seconds, with microsecond precision. The actual
+    /// value is not useful, as 0.0 is undefined; only deltas are useful.
+    /// This is a monotonically increasing value, so can be useful in
+    /// animations or manual profiling.
+    /// Note that the *accuracy* of may not be microseconds: this is
+    /// currently a wrapper around std::chrono::steady_clock().
+    /// Design note:  the name of the function comes from Java's nanoTime)(
+    /// function. However, the 52 bits of the fraction allows durations of
+    /// over 142 years before we lose microsecond precision due to lack of
+    /// bits. Nanoseconds would only give us 52 days, and programs can
+    /// easily run for more than 52 days. (For instance, Windows NT 4 had
+    /// a bug where the OS needed to be rebooted every 52 days because of
+    /// timer overflow)
+    double microTime() const;
+
     /// Plays a beep, usually when a keypress is rejected. (This is used
     /// to produce the beep when a pressing a keyboard shortcut for a menu
     /// item, and we are not using native OS menus.)
     void beep();
+
+    /// Prints the string to the debug output. Normally this is std::cout,
+    /// but Win32 applications entering from WinMain() do not have std::cout
+    /// connected, so this will print to the debug console. This is for
+    /// DEBUGGING ONLY; do NOT use for user-visible error messages (at least
+    /// not by itself), use Dialog::showAlert() instead!
+    void debugPrint(const std::string& s);
 
     /// Returns true if the operating system's coordinate system has the
     /// origin in the upper left (Linux, Windows), otherwise false (macOS,
@@ -131,6 +153,10 @@ public:
     /// Returns true if the operating system hides scrollbars when not
     /// scrolling (e.g. macOS), false otherwise.
     bool shouldHideScrollbars() const;
+
+    /// Returns the amount of time the mouse must hover in a widget before
+    /// the tooltip is displayed, in seconds.
+    double tooltipDelaySecs() const;
 
     enum class KeyFocusCandidates { kAll, kTextAndLists };
     KeyFocusCandidates keyFocusCandidates() const;

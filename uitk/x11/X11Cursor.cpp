@@ -22,9 +22,13 @@
 
 #include "X11Cursor.h"
 
+#include "../OSWindow.h"
+
 #include <assert.h>
 #include <X11/Xcursor/Xcursor.h>
+#include <X11/extensions/Xfixes.h>
 
+#include <unordered_map>
 #include <vector>
 
 namespace uitk {
@@ -43,6 +47,15 @@ namespace {
     return cursor;
 }
 
+struct CursorInfo
+{
+    float hotspotX;
+    float hotspotY;
+    float width;
+    float height;
+};
+std::unordered_map<::Cursor, CursorInfo> gCursorInfoCache;
+
 }  // namespace
 
 struct X11Cursor::Impl
@@ -50,6 +63,26 @@ struct X11Cursor::Impl
     OSCursor::System cursorId;
     ::Display *display = nullptr;
     ::Cursor cursor;
+
+    const CursorInfo& getInfo()
+    {
+        // Note: X11 offers no way to get information about a specific cursor,
+        //       just the current one.
+        auto it = gCursorInfoCache.find(this->cursor);
+        if (it == gCursorInfoCache.end()) {
+            CursorInfo info;
+            auto *xinfo = XFixesGetCursorImage(this->display);
+            info.hotspotX = float(xinfo->xhot);
+            info.hotspotY = float(xinfo->yhot);
+            info.width = float(xinfo->width);
+            info.height = float(xinfo->height);
+            XFree(xinfo);
+
+            gCursorInfoCache[this->cursor] = info;
+            it = gCursorInfoCache.find(this->cursor);
+        }
+        return it->second;
+    }
 };
 
 X11Cursor::X11Cursor(OSCursor::System id)
@@ -60,6 +93,9 @@ X11Cursor::X11Cursor(OSCursor::System id)
 
 X11Cursor::~X11Cursor()
 {
+    // Note: if we support custom cursors, we need to remove the custom
+    //       cursor from the info cache, it case its id gets reused.
+
     if (mImpl->display) {
         // It is not clear from the "documentation" (consisting entirely of the
         // header file) if a Cursor needs to be freed. The fact that there is
@@ -68,7 +104,7 @@ X11Cursor::~X11Cursor()
     }
 }
 
-void X11Cursor::set(void *window /*= nullptr*/, void *windowSystem /*= nullptr*/) const
+void X11Cursor::set(OSWindow *oswindow /*= nullptr*/, void *windowSystem /*= nullptr*/) const
 {
     Display *display = (Display*)windowSystem;
     assert(mImpl->display == nullptr || mImpl->display == display);
@@ -124,7 +160,36 @@ void X11Cursor::set(void *window /*= nullptr*/, void *windowSystem /*= nullptr*/
                 break;
         }
     }
-    XDefineCursor(display, (::Window)window, mImpl->cursor);
+    XDefineCursor(display, (::Window)oswindow->nativeHandle(), mImpl->cursor);
+}
+
+void X11Cursor::getHotspotPx(float *x, float *y) const
+{
+    auto &info = mImpl->getInfo();
+    *x = info.hotspotX;
+    *y = info.hotspotY;
+}
+
+void X11Cursor::getSizePx(float *width, float *height) const
+{
+    auto &info = mImpl->getInfo();
+    *width = info.width;
+    *height = info.height;
+}
+
+Rect X11Cursor::rectForPosition(OSWindow *oswindow, const Point& pos) const
+{
+    // Note: X11 offers no way to get information about a specific cursor,
+    //       just the current one.
+
+    auto dpi = oswindow->dpi();
+    auto &info = mImpl->getInfo();
+    Rect r(pos.x, pos.y,
+           PicaPt::fromPixels(info.width, dpi),
+           PicaPt::fromPixels(info.height, dpi));
+    r.translate(PicaPt::fromPixels(-info.hotspotX, dpi),
+                PicaPt::fromPixels(-info.hotspotY, dpi));
+    return r;
 }
 
 }  // namespace uitk

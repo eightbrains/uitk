@@ -355,6 +355,7 @@ public:
     virtual void drawMenubarBackground(UIContext& ui, const Rect& frame) const = 0;
     virtual void drawMenubarItem(UIContext& ui, const Rect& frame, const std::string& text,
                                  WidgetState state) const = 0;
+    virtual void drawTooltip(UIContext& ui, const Rect& frame) const = 0;
 };
 
 }  // namespace uitk

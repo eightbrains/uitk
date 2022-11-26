@@ -22,11 +22,14 @@
 
 #include "Widget.h"
 
+#include "Application.h"
 #include "Events.h"
+#include "Label.h"
 #include "UIContext.h"
 #include "Window.h"
 #include <nativedraw.h>
 
+#include <limits>
 #include <optional>
 
 namespace uitk {
@@ -44,6 +47,9 @@ struct Widget::Impl {
     Theme::WidgetStyle styles[kNStyles];
     MouseState state = MouseState::kNormal;
     std::optional<Theme::WidgetState> forcedThemeState = kUnsetThemeState;
+    std::string tooltip;
+    double lastTooltipPreventingActivityTime = std::numeric_limits<double>::max();
+    Application::ScheduledId tooltipTimer = Application::kInvalidScheduledId;
     bool drawsFrame = false;
     bool visible = true;
     bool enabled = true;
@@ -64,6 +70,14 @@ struct Widget::Impl {
         // a usable check that we are an actual base class.
         if (typeid(*w) == typeid(Widget) || (this->styles[0].flags & userSetBorderMask)) {
             this->drawsFrame = true;
+        }
+    }
+
+    void clearTooltip()
+    {
+        if (this->tooltipTimer != Application::kInvalidScheduledId) {
+            Application::instance().cancelScheduled(this->tooltipTimer);
+            this->tooltipTimer = Application::kInvalidScheduledId;
         }
     }
 };
@@ -160,6 +174,16 @@ Widget* Widget::setEnabled(bool enabled)
 
     return this;
 }
+
+const std::string& Widget::tooltip() const { return mImpl->tooltip; }
+
+Widget* Widget::setTooltip(const std::string& tooltip)
+{
+    mImpl->tooltip = tooltip;
+    return this;
+}
+
+bool Widget::hasTooltip() const { return (!mImpl->tooltip.empty()); }
 
 const Color& Widget::backgroundColor() const
 {
@@ -460,6 +484,13 @@ Widget::EventResult Widget::mouse(const MouseEvent& e)
         return EventResult::kIgnored;
     }
 
+    if (e.type == MouseEvent::Type::kButtonDown) {
+        mImpl->clearTooltip();
+        if (auto *w = window()) {
+            w->clearTooltip();
+        }
+    }
+
     auto result = EventResult::kIgnored;
     for (auto *child : mImpl->children) {
         result = mouseChild(e, child, result);
@@ -523,14 +554,40 @@ Widget::EventResult Widget::mouseChild(const MouseEvent& e, Widget *child, Event
 
 void Widget::mouseEntered()
 {
+    if (hasTooltip()) {
+        assert(mImpl->tooltipTimer == Application::kInvalidScheduledId);
+        mImpl->lastTooltipPreventingActivityTime = Application::instance().microTime();
+        auto tooltipDelay = Application::instance().tooltipDelaySecs();
+        mImpl->tooltipTimer = Application::instance().scheduleLater(window(), 0.1f,
+                                                                    Application::ScheduleMode::kRepeating,
+                                                                    [this,tooltipDelay](Application::ScheduledId id) {
+            assert(state() != MouseState::kNormal);
+            auto now = Application::instance().microTime();
+            if (now >= mImpl->lastTooltipPreventingActivityTime + tooltipDelay) {
+                onTooltip();
+                mImpl->clearTooltip();
+            }
+        });
+    } else {
+        if (auto *w = window()) {
+            w->clearTooltip();
+        }
+    }
 }
 
 void Widget::mouseExited()
 {
+    if (hasTooltip()) {
+        mImpl->clearTooltip();
+        if (auto *w = window()) {
+            w->clearTooltip();
+        }
+    }
+
     // Normally it is not necessary to set the state back to normal, as the mouse
     // event handler will take care of this. However, if the application loses focus
-    // be a key event, this event will be generated but obviously the mouse will not
-    // have moved.
+    // by a key event (e.g. Alt-Tab, this event will be generated but obviously
+    // the mouse will not have moved.
     if (state() != MouseState::kNormal) {
         setState(MouseState::kNormal, true);
     }
@@ -539,6 +596,17 @@ void Widget::mouseExited()
         if (child->state() == MouseState::kMouseOver
             || child->state() == MouseState::kMouseDown) {
             child->mouseExited();
+        }
+    }
+}
+
+void Widget::onTooltip() const
+{
+    if (auto *w = window()) {
+        if (!mImpl->tooltip.empty()) {
+            w->setTooltip(new Label(mImpl->tooltip));
+        } else {
+            w->clearTooltip();
         }
     }
 }

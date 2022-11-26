@@ -174,13 +174,16 @@ public:
         mNestedLabel = new Label("Nested cursors test (move mouse horiz and vert)");
         addChild(mNestedLabel);
         mNested = new CursorObj(Cursor::crosshair());
+        mNested->setTooltip("Crosshair cursor");
         mNested->setBorderColor(crosshairColor);
         mNested->setBorderWidth(PicaPt(1));
         mNested1 = new CursorObj(Cursor::pointingHand());
+        mNested->setTooltip("Pointing hand cursor");
         mNested1->setBorderColor(phandColor);
         mNested1->setBorderWidth(PicaPt(1));
         mNested->addChild(mNested1);
         mNested2 = new CursorObj(Cursor::forbidden());
+        mNested->setTooltip("Forbidden cursor");
         mNested2->setBorderColor(forbiddenColor);
         mNested2->setBorderWidth(PicaPt(1));
         mNested1->addChild(mNested2);

@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2022 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -68,6 +68,12 @@ public:
 
     virtual bool enabled() const;
     virtual Widget* setEnabled(bool enabled);
+
+    const std::string& tooltip() const;
+    /// Sets the tooltip text. This intentionally does not accept a RichText,
+    /// since tooltips should be simple and understated. If you need a custom
+    /// tooltip, override onTooltip() and hasTooltip() if necessary.
+    Widget* setTooltip(const std::string& tooltip);
 
     const Color& backgroundColor() const;
     Widget* setBackgroundColor(const Color& bg);
@@ -212,16 +218,24 @@ public:
     void resetThemeState();
 
 protected:
-    // Return true if parent's mouse() should grab the widget if mouse down is consumed.
-    // Default implementation returns true.
+    /// Return true if parent's mouse() should grab the widget if mouse down is consumed.
+    /// Default implementation returns true.
     virtual bool shouldAutoGrab() const;
 
-    // Since the window does not know about visibility changes, if our widget changes
-    // visibility, we need to ensure that ourself or a child widget does not have
-    // key focus if we became invisible and/or disabled. This is called by setVisible()
-    // and setEnabled(), so you would only need to call it in the case you are
-    // something like StackedWidget, where switching panels could make an ancestor
-    // of a focused widget invisible.
+    /// Return true if widget has a tooltip. Override this if you need a custom
+    /// tooltip for which a string is insufficient.
+    virtual bool hasTooltip() const;
+
+    /// Called when the tooltip should be shown. This should create a Widget
+    /// and pass to Widget::setTooltip().
+    virtual void onTooltip() const;
+
+    /// Since the window does not know about visibility changes, if our widget changes
+    /// visibility, we need to ensure that ourself or a child widget does not have
+    /// key focus if we became invisible and/or disabled. This is called by setVisible()
+    /// and setEnabled(), so you would only need to call it in the case you are
+    /// something like StackedWidget, where switching panels could make an ancestor
+    /// of a focused widget invisible.
     void updateKeyFocusOnVisibilityOrEnabledChange();
 
     void setWindow(Window* window);  // for Window

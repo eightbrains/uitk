@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -25,7 +25,11 @@
 
 #include "Cursor.h"
 
+#include <nativedraw.h>
+
 namespace uitk {
+
+class OSWindow;
 
 class OSCursor
 {
@@ -50,7 +54,11 @@ public:
     // The cursor functions on Windows and macOS do not require a window or
     // window system, but some platforms like X11 do. Systems that do not
     // require these parameters should use the defaults.
-    virtual void set(void *window = nullptr, void *windowSystem = nullptr) const = 0;
+    virtual void set(OSWindow *oswindow = nullptr, void *windowSystem = nullptr) const = 0;
+
+    virtual void getHotspotPx(float *x, float *y) const = 0;
+    virtual void getSizePx(float *width, float *height) const = 0;
+    virtual Rect rectForPosition(OSWindow *oswindow, const Point& pos) const = 0;
 };
 
 }  // namespace uitk

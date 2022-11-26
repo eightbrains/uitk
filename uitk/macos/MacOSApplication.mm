@@ -30,6 +30,7 @@
 
 #import <Cocoa/Cocoa.h>
 
+#include <iostream>
 #include <unordered_map>
 
 @interface AppDelegate : NSObject <NSApplicationDelegate>
@@ -136,7 +137,7 @@ Theme::Params MacOSApplication::themeParams() const
                               : EmpireTheme::lightModeParams(accentColor));
     params.accentColor = accentColor;
     params.keyFocusColor = toUITKColor(NSColor.keyboardFocusIndicatorColor);
-    params.windowBackgroundColor = Color(0.0f, 0.0f, 0.0f, 0.0f); // draw nothing
+    params.windowBackgroundColor = toUITKColor(NSColor.windowBackgroundColor);
     params.editableBackgroundColor = toUITKColor(NSColor.controlColor);
     params.nonEditableBackgroundColor = toUITKColor(NSColor.controlColor);
     params.textColor = textColor;
@@ -229,6 +230,11 @@ std::vector<std::string> MacOSApplication::availableFontFamilies() const
 void MacOSApplication::beep()
 {
     NSBeep();
+}
+
+void MacOSApplication::debugPrint(const std::string& s)
+{
+    std::cout << s << std::endl;
 }
 
 int MacOSApplication::run()

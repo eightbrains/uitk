@@ -22,6 +22,8 @@
 
 #include "MacOSCursor.h"
 
+#include "../OSWindow.h"
+
 #import <AppKit/AppKit.h>
 
 namespace uitk {
@@ -82,9 +84,38 @@ MacOSCursor::~MacOSCursor()
     mImpl->cursor = nil;  // release
 }
 
-void MacOSCursor::set(void */*window = nullptr*/, void */*windowSystem = nullptr*/) const
+void MacOSCursor::set(OSWindow */*oswindow = nullptr*/, void */*windowSystem = nullptr*/) const
 {
     [mImpl->cursor set];
+}
+
+void MacOSCursor::getHotspotPx(float *x, float *y) const
+{
+    NSPoint hotspot = mImpl->cursor.hotSpot;
+    *x = hotspot.x;
+    *y = hotspot.y;
+}
+
+void MacOSCursor::getSizePx(float *width, float *height) const
+{
+    NSSize size = mImpl->cursor.image.size;
+    *width = size.width;
+    *height = size.height;
+}
+
+Rect MacOSCursor::rectForPosition(OSWindow *oswindow, const Point& pos) const
+{
+    // The cursor seems to have its own resolution, and appears to always be
+    // the theoretical resolution (1x = 96 dpi * scale factor), no matter what
+    // UI scaling is.
+    auto dpi = 96.0f * ((__bridge NSWindow*)oswindow->nativeHandle()).backingScaleFactor;
+
+    float hotspotX, hotspotY, widthPx, heightPx;
+    getHotspotPx(&hotspotX, &hotspotY);
+    getSizePx(&widthPx, &heightPx);
+    Rect r(pos.x, pos.y, PicaPt::fromPixels(widthPx, dpi), PicaPt::fromPixels(heightPx, dpi));
+    r.translate(PicaPt::fromPixels(hotspotX, dpi), PicaPt::fromPixels(hotspotY, dpi));
+    return r;
 }
 
 }  // namespace uitk

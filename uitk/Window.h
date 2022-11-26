@@ -87,6 +87,13 @@ public:
     void toggleMaximize();
     void centerInScreen();
 
+    void raiseToTop() const;
+
+    /// Returns true if the window can receive key events. On some operating
+    /// systems or window managers windows *may* receive mouse events if they
+    /// are inactive. On most operating systems, the active window is always
+    /// topmost, although if no application is active the topmost window might
+    /// not be active.
     bool isActive() const;
 
     enum class CloseBehavior { kAllowCancel, /// (default) allows onWindowShouldClose to return false
@@ -137,10 +144,10 @@ public:
 
     /// Resizes the window so that the content rect is of the specified size.
     /// The actual window may be larger due to the title bar (if the size of the
-    /// window includes the title bar on the OS) and the menubar (if a menubar is
-    /// specified and if the OS includes the menubar as part of the window).
-    /// Use setOSFrame if you need to set the size of the actual window (this is
-    /// not normally helpful).
+    /// window includes the title bar on the OS) and the menubar (if a menubar
+    /// is specified and if the OS includes the menubar as part of the window).
+    /// Use setOSFrame if you need to set the size of the actual window (this
+    /// is not normally helpful).
     void resize(const Size& contentSize);
     /// Resizes the window to the largest preferred size of the children.
     void resizeToFit();
@@ -150,11 +157,12 @@ public:
     void move(const PicaPt& dx, const PicaPt& dy);
 
     OSRect osFrame() const;
-    /// Sets the window rectangle of the operating system's window, in operating
-    /// system coordinates (pixels in Windows and X11, virtual-pixels in macOS).
-    /// Note that this is NOT the content rect, as the operating system may include
-    /// titlebars and/or menubars in the window area. resize() is probably a
-    /// more convenient function if you need to change the window's size.
+    /// Sets the window rectangle of the operating system's window, in
+    /// operating system coordinates (pixels in Windows and X11, virtual-pixels
+    /// in macOS). Note that this is NOT the content rect, as the operating
+    /// system may include titlebars and/or menubars in the window area.
+    /// resize() is probably a more convenient function if you need to change
+    /// the window's size.
     void setOSFrame(float x, float y, float width, float height);
 
     /// Returns the point in the operating system's window manager of the
@@ -186,10 +194,15 @@ public:
     /// Schedules a layout
     void setNeedsLayout();
 
-    void raiseToTop() const;
-
     PicaPt borderWidth() const;
-    
+
+    /// Shows the tooltip based on the current mouse point. Takes ownership of
+    /// the widget passed in. Calling preferredSize() should return the minimal
+    /// size for the tooltip. Generally you should let Widget handle this
+    /// (see Widget::onTooltip()).
+    void setTooltip(Widget *tooltip);
+    void clearTooltip();
+
     OSWindow* nativeWindow();
     void* nativeHandle();
 

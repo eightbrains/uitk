@@ -181,7 +181,19 @@ int main(int argc, char *argv[])
 #endif
 {
     Application app;
-    app.setExitWhenLastWindowCloses(true);
+    //app.setExitWhenLastWindowCloses(true);
+
+    // Since this is a test app, print out the time for something very simple, since
+    // just the timer measurement takes less than a microsecond.
+    // This will give us a hint what the actual accuracy of the timer is
+    // for this platform:
+    //     0.0:  worse than microsecond accuracy (should take a dozen or to usec)
+    //    nn.0:  microsecong accuracy
+    //  nn.nnn:  nanosecond accuracy
+    auto t0 = app.microTime();
+    app.setExitWhenLastWindowCloses(true); // we need to do this, even if we aren't timing
+    auto t1 = app.microTime();
+    app.debugPrint("[debug] measured time was " + std::to_string((t1 - t0) * 1e6) + " usec");
 
     auto *submenu = new Menu();
     submenu->addItem("Item 1", 20, ShortcutKey::kNone);
