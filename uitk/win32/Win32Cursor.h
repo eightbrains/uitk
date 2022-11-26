@@ -35,11 +35,11 @@ public:
     Win32Cursor(OSCursor::System id);
     ~Win32Cursor();
 
-    void set(void *window = nullptr, void *windowSystem = nullptr) const override;
+    void set(OSWindow *oswindow = nullptr, void *windowSystem = nullptr) const override;
 
     void getHotspotPx(float *x, float *y) const override;
     void getSizePx(float *width, float *height) const override;
-    Rect rectForPosition(void *window, const Point& pos) const override;
+    Rect rectForPosition(OSWindow *oswindow, const Point& pos) const override;
 
 private:
     struct Impl;
