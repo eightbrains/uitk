@@ -603,7 +603,7 @@ void X11Window::setTitle(const std::string& title)
 void X11Window::setCursor(const Cursor& cursor)
 {
     if (auto *osCursor = cursor.osCursor()) {
-        osCursor->set((void*)mImpl->xwindow, mImpl->display);
+        osCursor->set(this, mImpl->display);
     }
 }
 

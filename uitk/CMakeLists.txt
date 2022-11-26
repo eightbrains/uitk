@@ -230,6 +230,7 @@ elseif (UNIX)  # note that APPLE is UNIX, so need to check that first
                           ${PANGO_LIBRARIES}
                           ${X11_Xcursor_LIB}
                           ${X11_Xrender_LIB}
+                          ${X11_Xfixes_LIB}
                           ${X11_LIBRARIES})
 endif()
 

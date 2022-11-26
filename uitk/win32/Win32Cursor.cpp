@@ -148,14 +148,14 @@ void Win32Cursor::set(OSWindow* /*oswindow = nullptr*/, void* /*windowSystem = n
 
 void Win32Cursor::getHotspotPx(float *x, float *y) const
 {
-	auto info = mImpl->getInfo();
+	auto &info = mImpl->getInfo();
 	*x = info.hotspotX;
 	*y = info.hotspotY;
 }
 
 void Win32Cursor::getSizePx(float *width, float *height) const
 {
-	auto info = mImpl->getInfo();
+	auto &info = mImpl->getInfo();
 	*width = info.width;
 	*height = info.height;
 }
@@ -184,7 +184,7 @@ Rect Win32Cursor::rectForPosition(OSWindow *oswindow, const Point& pos) const
 	auto scaleFactor = max(1.0f, rawMultiplier / integerMultiplier);
 
 	auto dpi = oswindow->dpi();
-	auto info = mImpl->getInfo();
+	auto &info = mImpl->getInfo();
 	Rect r(pos.x, pos.y,
 		PicaPt::fromPixels(info.width / scaleFactor, dpi),
 		PicaPt::fromPixels(info.height / scaleFactor, dpi));
