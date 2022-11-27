@@ -154,6 +154,10 @@ public:
     /// scrolling (e.g. macOS), false otherwise.
     bool shouldHideScrollbars() const;
 
+    /// If shouldHideScrollbars() == true, this is the time in seconds after
+    /// a scroll event when the scrollbars should hide.
+    double autoHideScrollbarDelaySecs() const;
+
     /// Returns the amount of time the mouse must hover in a widget before
     /// the tooltip is displayed, in seconds.
     double tooltipDelaySecs() const;

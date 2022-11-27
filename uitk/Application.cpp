@@ -210,6 +210,8 @@ bool Application::shouldHideScrollbars() const
     return mImpl->osApp->shouldHideScrollbars();
 }
 
+double Application::autoHideScrollbarDelaySecs() const { return 0.666f; }
+
 double Application::tooltipDelaySecs() const { return 2.0f; }
 
 Application::KeyFocusCandidates Application::keyFocusCandidates() const

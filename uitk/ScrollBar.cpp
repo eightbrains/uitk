@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -98,7 +98,7 @@ void ScrollBar::drawTrack(UIContext& context, const Point& thumbMid)
 void ScrollBar::drawThumb(UIContext& context, Widget *thumb)
 {
     if (mImpl->thumbNeedsResize) {
-        auto thumbPref = preferredThumbSize(LayoutContext{context.theme, context.dc});
+/*        auto thumbPref = preferredThumbSize(LayoutContext{context.theme, context.dc});
         auto thumbMid = thumb->frame().center();
         Rect r(thumbMid.x - 0.5f * thumbPref.width,
                thumbMid.y - 0.5f * thumbPref.height,
@@ -116,7 +116,7 @@ void ScrollBar::drawThumb(UIContext& context, Widget *thumb)
             } else if (r.maxY() > frame().maxY()) {
                 r.y = frame().maxY() - r.height;
             }
-        }
+        } */
         mImpl->thumbNeedsResize = false;
     }
 

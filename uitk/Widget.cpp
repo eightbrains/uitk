@@ -91,6 +91,7 @@ Widget::Widget()
 
 Widget::~Widget()
 {
+    mImpl->clearTooltip();
     clearAllChildren();
 }
 
@@ -149,9 +150,12 @@ bool Widget::visible() const { return mImpl->visible; }
 
 Widget* Widget::setVisible(bool vis)
 {
-    mImpl->visible = vis;
-    if (!vis) {
-        updateKeyFocusOnVisibilityOrEnabledChange();
+    if (mImpl->visible != vis) {
+        mImpl->visible = vis;
+        if (!vis) {
+            updateKeyFocusOnVisibilityOrEnabledChange();
+        }
+        setNeedsDraw();
     }
     return this;
 }

@@ -27,6 +27,8 @@
 #include "ScrollBar.h"
 #include "UIContext.h"
 
+#include <limits>
+
 namespace uitk {
 
 namespace {
@@ -55,6 +57,9 @@ struct ScrollView::Impl
     bool usesHorizScrollbar = false;
     bool usesVertScrollbar = false;
     Tristate drawsFrame = Tristate::kUndefined;
+    Application::ScheduledId hideScrollbarsTimer = Application::kInvalidScheduledId;
+    double lastShowScrollActionTime = std::numeric_limits<double>::max();
+    bool mouseIsInScrollbar = false;
 
     void updateContentRect(const Rect& frame)
     {
@@ -95,6 +100,16 @@ struct ScrollView::Impl
             this->horizScroll->setFrame(f);
         }
     }
+
+    void hideScrollbars()
+    {
+        if (this->hideScrollbarsTimer != Application::kInvalidScheduledId) {
+            Application::instance().cancelScheduled(this->hideScrollbarsTimer);
+            this->hideScrollbarsTimer = Application::kInvalidScheduledId;
+        }
+        this->horizScroll->setVisible(false);
+        this->vertScroll->setVisible(false);
+    }
 };
 
 ScrollView::ScrollView()
@@ -116,6 +131,7 @@ ScrollView::ScrollView()
 
 ScrollView::~ScrollView()
 {
+    mImpl->hideScrollbars();  // just in case timer is still going
 }
 
 ScrollView* ScrollView::setFrame(const Rect& frame)
@@ -232,10 +248,12 @@ Widget::EventResult ScrollView::mouse(const MouseEvent& e)
     // Mouse the scrollbars (see comment in draw() for why)
     bool inScrollbar = ((mImpl->vertScroll->visible() && mImpl->vertScroll->frame().contains(e.pos)) ||
                         (mImpl->horizScroll->visible() && mImpl->horizScroll->frame().contains(e.pos)));
+    mImpl->mouseIsInScrollbar = inScrollbar;
     result = mouseChild(e, mImpl->vertScroll, result);
     result = mouseChild(e, mImpl->horizScroll, result);
     if (result == EventResult::kConsumed && inScrollbar) {
         result = Widget::EventResult::kConsumed;
+        mImpl->lastShowScrollActionTime = Application::instance().microTime();
     }
 
     // Now mouse the scrollable children
@@ -252,22 +270,35 @@ Widget::EventResult ScrollView::mouse(const MouseEvent& e)
     // Finally, handle scroll events (note that this gives scroll priority to
     // scrollable children).
     if (e.type == MouseEvent::Type::kScroll && result != EventResult::kConsumed) {
+        mImpl->lastShowScrollActionTime = Application::instance().microTime();
         auto minOffsetX = calcMinOffsetX(frame(), bounds());
         auto minOffsetY = calcMinOffsetY(frame(), bounds());
         auto offsetX = std::min(PicaPt::kZero, std::max(e.scroll.dx + mImpl->bounds.x, minOffsetX));
         auto offsetY = std::min(PicaPt::kZero, std::max(e.scroll.dy + mImpl->bounds.y, minOffsetY));
         setContentOffset(Point(offsetX, offsetY));
         if (Application::instance().shouldHideScrollbars()) {
+            // Should show the scrollbar until the autohide timeout, even if mouse is moved or
+            // exits the frame. Mouse in the scroll area will prevent it from being hidden.
             mImpl->horizScroll->setVisible(mImpl->usesHorizScrollbar);
             mImpl->vertScroll->setVisible(mImpl->usesVertScrollbar);
+            if (mImpl->hideScrollbarsTimer == Application::kInvalidScheduledId) {
+                if (auto *w = window()) {
+                    mImpl->hideScrollbarsTimer = Application::instance()
+                                                       .scheduleLater(w, 0.1,
+                                                                      Application::ScheduleMode::kRepeating,
+                                                                      [this](Application::ScheduledId id) {
+                        assert(mImpl->hideScrollbarsTimer == id);
+                        auto &app = Application::instance();
+                        auto timeToHide = mImpl->lastShowScrollActionTime + app.autoHideScrollbarDelaySecs();
+                        if (!mImpl->mouseIsInScrollbar && app.microTime() >= timeToHide) {
+                            mImpl->hideScrollbars();
+                        }
+                    });
+                }
+            }
         }
         setNeedsDraw();
         result = EventResult::kConsumed;
-    } else {
-        if (!inScrollbar && Application::instance().shouldHideScrollbars()) {
-            mImpl->horizScroll->setVisible(false);
-            mImpl->vertScroll->setVisible(false);
-        }
     }
 
     return result;
@@ -313,6 +344,9 @@ void ScrollView::draw(UIContext& context)
     Rect drawRect = context.drawRect.translated(-mImpl->bounds.x, -mImpl->bounds.y);
     UIContext scrollContext = { context.theme, context.dc, drawRect, context.isWindowActive };
     for (auto *child : children()) {
+        if (child == mImpl->horizScroll || child == mImpl->vertScroll) {
+            continue;
+        }
         drawChild(scrollContext, child);
     }
     context.dc.translate(-mImpl->bounds.x, -mImpl->bounds.y);
