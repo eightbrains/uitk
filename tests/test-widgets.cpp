@@ -22,6 +22,8 @@
 
 #include <uitk/uitk.h>
 
+#include <sstream>
+
 using namespace uitk;
 
 // Include the .cpp files for the panels here. Since all the panels just

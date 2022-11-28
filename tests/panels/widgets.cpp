@@ -868,6 +868,124 @@ private:
     ListView *mLV;
 };
 
+class DrawTimingPanel : public Widget
+{
+    using Super = Widget;
+public:
+    DrawTimingPanel()
+    {
+        mStart = new Button("Start Draw Timing");
+        mStart->setTooltip("Get approximate timing for drawing");
+        addChild(mStart);
+
+        mDirty = new AlwaysDirty();
+        addChild(mDirty);
+
+        mProgress = new ProgressBar();
+        mProgress->setVisible(false);
+        addChild(mProgress);
+
+        mLabel = new Label("");
+        addChild(mLabel);
+
+        mStart->setOnClicked([this](Button*) { onStart(); });
+    }
+
+    void onStart()
+    {
+        mNDraws = 0;
+        mDirty->dirty = true;
+        mStart->setEnabled(false);
+        mLabel->setVisible(false);
+        mProgress->setVisible(true);
+        mNDraws = 0;
+        mStartTime = Application::instance().microTime();
+        Application::instance().scheduleLater(window(), mTimingLengthSecs,
+                                              Application::ScheduleMode::kOnce,
+                                              [this](Application::ScheduledId) {
+            onEnd();
+        });
+    }
+
+    void onEnd()
+    {
+        auto now = Application::instance().microTime();
+        mDirty->dirty = false;
+        mStart->setEnabled(true);
+        mProgress->setVisible(false);
+        auto dt = now - mStartTime;
+        auto tpf = dt / float(mNDraws);
+        // No good way to get printf("%.1f", n) with iostreams, but we can be
+        // pretty sure that we are not going to draw faster than 0.1 msec, so
+        // round to an integer value of 0.1 msec and then divide by ten.
+        tpf = std::round(tpf * 1e4) / 10.0f;
+        std::stringstream info;
+        info << "~" << tpf << " ms/draw (" << mNDraws << " draws)";
+        mLabel->setText(info.str());
+        mLabel->setVisible(true);
+    }
+
+    Size preferredSize(const LayoutContext& context) const override
+    {
+        auto em = context.theme.params().labelFont.pointSize();
+        auto pref = mStart->preferredSize(context);
+        return Size(context.dc.roundToNearestPixel(20.0f * em),
+                    context.dc.roundToNearestPixel(pref.height + em));
+    }
+
+    void layout(const LayoutContext& context) override
+    {
+        auto em = context.theme.params().labelFont.pointSize();
+        auto spacing = context.dc.roundToNearestPixel(0.5f * em);
+
+        auto pref = mStart->preferredSize(context);
+        mStart->setFrame(Rect(PicaPt::kZero, PicaPt::kZero,
+                              pref.width, pref.height));
+        auto x = mStart->frame().maxX() + spacing;
+        mDirty->setFrame(Rect(x, mStart->frame().y,
+                              bounds().width - x, mStart->frame().height));
+        mLabel->setFrame(mDirty->frame());
+        mProgress->setFrame(mLabel->frame());
+
+        Super::layout(context);
+    }
+
+    void draw(UIContext &ui) override
+    {
+        if (mDirty->dirty) {
+            auto now = Application::instance().microTime();
+            auto dt = now - mStartTime;
+            mProgress->setValue(std::min(100.f, float(dt / mTimingLengthSecs) * 100.0f));
+            mNDraws += 1;
+        }
+        Super::draw(ui);
+    }
+
+private:
+    class AlwaysDirty : public Widget
+    {
+    public:
+        bool dirty = false;
+
+        void draw(UIContext &ui) override
+        {
+            Widget::draw(ui);
+            if (dirty) {
+                Application::instance().scheduleLater(window(), [this]() { setNeedsDraw(); });
+            }
+        }
+    };
+
+    const float mTimingLengthSecs = 2.0f;
+
+    Button *mStart;
+    AlwaysDirty *mDirty;
+    ProgressBar *mProgress;
+    Label *mLabel;
+    double mStartTime;
+    int mNDraws;
+};
+
 class AllWidgetsPanel : public Widget
 {
     using Super = Widget;
@@ -896,6 +1014,8 @@ public:
         addChild(mScroll);
         mListView = new ListViewTest();
         addChild(mListView);
+        mDrawTiming = new DrawTimingPanel();
+        addChild(mDrawTiming);
     }
 
     void layout(const LayoutContext& context)
@@ -927,6 +1047,10 @@ public:
         pref = mScroll->preferredSize(context);
         mScroll->setFrame(Rect(x, mListView->frame().maxY() + spacing, pref.width, pref.height));
 
+        pref = mDrawTiming->preferredSize(context);
+        mDrawTiming->setFrame(Rect(x, mScroll->frame().maxY() + spacing,
+                                   pref.width, pref.height));
+
         Super::layout(context);
     }
 
@@ -942,6 +1066,7 @@ private:
     TextEditTest *mText;
     ScrollTest *mScroll;
     ListViewTest *mListView;
+    DrawTimingPanel *mDrawTiming;
 };
 
 }  // namespace widgets

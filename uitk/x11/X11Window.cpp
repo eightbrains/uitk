@@ -246,6 +246,16 @@ struct X11Window::Impl {
     int height;
     int flags = 0;
     float dpi = 96.0f;
+    // X11 does not have any kind of double-buffering, so everything draws
+    // immediately. This results in flickering, as the old image will be
+    // painted over with the background and sent to the graphics card before
+    // the foreground has time to get drawn. We have to implement our own
+    // buffering (although in our case we only need one buffer, since the
+    // other buffer is the window contents in the X server.
+    // (It turns out that drawing to a pixmap and then drawing the pixmap is
+    // about pretty much the same speed as drawing directly, although it is
+    // 5 - 10% faster in the non-release build.)
+    std::shared_ptr<DrawContext> windowDC;
     std::shared_ptr<DrawContext> dc;
     std::string title;
     TextEditorLogic *textEditor = nullptr;
@@ -265,8 +275,11 @@ struct X11Window::Impl {
         X11Application& x11app = static_cast<X11Application&>(Application::instance().osApplication());
         this->dpi = x11app.dpiForScreen(this->xscreenNo);
 
-        this->dc = DrawContext::fromX11(this->display, &this->xwindow,
-                                        this->width, this->height, this->dpi);
+        this->windowDC = DrawContext::fromX11(this->display, &this->xwindow,
+                                              this->width, this->height,
+                                              this->dpi);
+        this->dc = this->windowDC->createBitmap(
+                        kBitmapRGBA, this->width, this->height, this->dpi);
     }
 
     void destroyWindow()
@@ -277,6 +290,7 @@ struct X11Window::Impl {
         x11app.unregisterWindow(this->xwindow);
 
         this->dc = nullptr;
+        this->windowDC = nullptr;
 
         XDestroyIC(this->xic);
         this->xic = nullptr;
@@ -788,6 +802,14 @@ void X11Window::onDraw()
     mImpl->drawRequested = false;
 
     mImpl->callbacks.onDraw(*mImpl->dc);
+    // On X11 copyToImage() should be a simple pointer copy
+    std::shared_ptr<Image> image = mImpl->dc->copyToImage();
+    mImpl->windowDC->beginDraw();
+    mImpl->windowDC->drawImage(
+                         image,
+                         Rect::fromPixels(0, 0, mImpl->dc->width(),
+                                          mImpl->dc->height(), mImpl->dpi));
+    mImpl->windowDC->endDraw();
 }
 
 void X11Window::onMouse(MouseEvent& e, int x, int y)
