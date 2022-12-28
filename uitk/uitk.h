@@ -41,6 +41,7 @@
 #include "FontListComboBox.h"
 #include "Icon.h"
 #include "IconAndText.h"
+#include "ImageView.h"
 #include "Label.h"
 #include "ListView.h"
 #include "NumberEdit.h"

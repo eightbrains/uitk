@@ -22,6 +22,8 @@
 
 #include <uitk/uitk.h>
 
+#include <array>
+#include <random>
 #include <sstream>
 
 using namespace uitk;
@@ -34,6 +36,7 @@ using namespace uitk;
 #include "panels/icons.cpp"
 #include "panels/cursors.cpp"
 #include "panels/dialogs.cpp"
+#include "panels/images.cpp"
 
 class RootWidget : public Widget
 {
@@ -160,6 +163,7 @@ public:
         root->addPanel("Icons", new icons::Panel());
         root->addPanel("Cursors", new cursor::Panel());
         root->addPanel("Dialogs", new dialogs::Panel());
+        root->addPanel("Images", new images::Panel());
         addChild(root);
 
         show(true);

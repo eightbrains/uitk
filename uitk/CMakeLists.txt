@@ -17,6 +17,7 @@ set(UITK_PUBLIC_HEADERS
                  Global.h
                  Icon.h
                  IconAndText.h
+                 ImageView.h
                  IncDecWidget.h
                  IPopupWindow.h
                  Label.h
@@ -74,6 +75,7 @@ set(UITK_SOURCES Application.cpp
                  FontListComboBox.cpp
                  Icon.cpp
                  IconAndText.cpp
+                 ImageView.cpp
                  IncDecWidget.cpp
                  Label.cpp
                  ListView.cpp
