@@ -127,13 +127,17 @@ public:
             dlg->addAllowedType("", "All files");
             dlg->showModal(w, [dlg, w, this](Dialog::Result result, int) {
                 if (result == Dialog::Result::kFinished) {
-                    IOError::Error err;
-                    auto data = File(dlg->selectedPath()).readContents(&err);
-                    if (err == IOError::kNone) {
-                        mUser->setImage(Image::fromEncoded(data.data(), data.size()));
-                    } else {
-                        Dialog::showAlert(w, "Could not read file", "Could not read file: error " + std::to_string(int(err)), "");
-                    }
+                    auto path = dlg->selectedPath();
+                    mImageUpdateFunc = [this, w, path /*copy*/](const DrawContext& dc) {
+                        IOError::Error err;
+                        auto data = File(path).readContents(&err);
+                        if (err == IOError::kNone) {
+                            mUser->setImage(dc.createImageFromEncodedData((uint8_t*)data.data(), data.size()));
+                        }
+                        else {
+                            Dialog::showAlert(w, "Could not read file", "Could not read file: error " + std::to_string(int(err)), "");
+                        }
+                    };
                 }
                 delete dlg;
             });
@@ -142,8 +146,9 @@ public:
 
     void layout(const LayoutContext &context) override
     {
-        auto dpi = context.dc.dpi();
-        auto em = context.dc.roundToNearestPixel(context.theme.params().labelFont.pointSize());
+        auto& dc = context.dc;
+        auto dpi = dc.dpi();
+        auto em = dc.roundToNearestPixel(context.theme.params().labelFont.pointSize());
         auto margin = em;
         auto spacing = 2.0f * em;
         auto smallSpacing = em;
@@ -151,23 +156,23 @@ public:
         auto aspectHeight = context.dc.roundToNearestPixel(10.0f * em);
         auto aspectWide = context.dc.roundToNearestPixel(1.333f * aspectHeight);
         auto aspectHigh = context.dc.roundToNearestPixel(0.75f * aspectHeight);
-        int fractalHeightPx = 1.5f * aspectHeight.toPixels(context.dc.dpi());  // we want extra pixels
+        int fractalHeightPx = int(1.5f * aspectHeight.toPixels(context.dc.dpi()));  // we want extra pixels
 
         // Update the images if necessary
         for (auto &test : mBasicTests) {
             if (!test.view->image() || test.view->image()->dpi() != dpi) {
-                test.view->setImage(createTestImage(test.format, dpi));
+                test.view->setImage(createTestImage(dc, test.format, dpi));
             }
         }
         if (!mWideWide->image() || mWideWide->image()->dpi() != dpi) {
-            mWideWide->setImage(calcFractalImage(0x7a32d601, 2.0f * fractalHeightPx, fractalHeightPx, dpi));
-            mWideHigh->setImage(calcFractalImage(0x2f33c09d, 1.0f * fractalHeightPx, fractalHeightPx, dpi));
-            mHighWide->setImage(calcFractalImage(0x067b8821, 2.0f * fractalHeightPx, fractalHeightPx, dpi));
-            mHighHigh->setImage(calcFractalImage(0xbc690252, 1.0f * fractalHeightPx, fractalHeightPx, dpi));
+            mWideWide->setImage(calcFractalImage(dc, 0x7a32d601, int(2.0f * fractalHeightPx), fractalHeightPx, dpi));
+            mWideHigh->setImage(calcFractalImage(dc, 0x2f33c09d, int(1.0f * fractalHeightPx), fractalHeightPx, dpi));
+            mHighWide->setImage(calcFractalImage(dc, 0x067b8821, int(2.0f * fractalHeightPx), fractalHeightPx, dpi));
+            mHighHigh->setImage(calcFractalImage(dc, 0xbc690252, int(1.0f * fractalHeightPx), fractalHeightPx, dpi));
             mStretch->setImage(mHighWide->image());
-            mFixed->setImage(calcFractalImage(0x33a8c416, 1.0f * fractalHeightPx, fractalHeightPx, dpi));
-            mSmall->setImage(calcFractalImage(0x5f02b002, 0.5f * aspectHeight.toPixels(dpi),
-                                              0.5f * aspectHeight.toPixels(dpi), dpi));
+            mFixed->setImage(calcFractalImage(dc, 0x33a8c416, int(1.0f * fractalHeightPx), fractalHeightPx, dpi));
+            mSmall->setImage(calcFractalImage(dc, 0x5f02b002, int(0.5f * aspectHeight.toPixels(dpi)),
+                                              int(0.5f * aspectHeight.toPixels(dpi)), dpi));
         }
 
         // Layout
@@ -202,18 +207,22 @@ public:
 
     void draw(UIContext& context) override
     {
+        if (mImageUpdateFunc) {
+            mImageUpdateFunc(context.dc);
+            mImageUpdateFunc = nullptr;
+        }
         if (!mUser->image()) {
             uint32_t seed = std::random_device()();
             auto dpi = context.dc.dpi();
-            mUser->setImage(calcFractalImage(seed, mUser->frame().width.toPixels(dpi),
-                                             mUser->frame().height.toPixels(dpi), dpi));
+            mUser->setImage(calcFractalImage(context.dc, seed, int(mUser->frame().width.toPixels(dpi)),
+                                             int(mUser->frame().height.toPixels(dpi)), dpi));
         }
 
         Super::draw(context);
     }
 
 private:
-    std::shared_ptr<Image> createTestImage(ImageFormat format, float dpi)
+    std::shared_ptr<Image> createTestImage(const DrawContext& dc, ImageFormat format, float dpi)
     {
         int nChannels = 0;
         std::array<int, 4> rgbaMap = { 0, 0, 0, 0 };
@@ -313,10 +322,10 @@ private:
             }
         }
 
-        return Image::fromBytes((char*)imgData.data(), width, height, format, dpi);
+        return dc.createImageFromBytes(imgData.data(), width, height, format, dpi);
     }
 
-    std::shared_ptr<Image> calcFractalImage(uint32_t seed, int width, int height, float dpi)
+    std::shared_ptr<Image> calcFractalImage(const DrawContext& dc, uint32_t seed, int width, int height, float dpi)
     {
         const float kJuliaMin = -1.6f;
         const float kJuliaMax = 1.6f;
@@ -358,7 +367,7 @@ private:
                     z_imag = newZi;
                     nIt += 1;
                 }
-                iterations[pos++] = nIt;
+                iterations[pos++] = float(nIt);
                 if (nIt > maxValue) {
                     maxValue = nIt;
                 }
@@ -389,7 +398,7 @@ private:
             rgba[4 * i + 3] = 0xff;
         }
 
-        return Image::fromBytes((char*)rgba.data(), width, height, kImageRGBA32, dpi);
+        return dc.createImageFromBytes(rgba.data(), width, height, kImageRGBA32, dpi);
     }
 
     // Returns 1 if point is on the edge of the mandelbrot set, 0 otherwise
@@ -445,6 +454,8 @@ private:
     }
 
 private:
+    std::function<void(const DrawContext& dc)> mImageUpdateFunc;
+
     struct BasicTest {
         ImageFormat format;
         ImageView *view;  // this is a ref; parent owns the actual widget

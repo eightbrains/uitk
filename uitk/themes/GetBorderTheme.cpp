@@ -43,6 +43,13 @@ public:
                                               float dpi = 72.0f) override
         { return mRealDC.createBitmap(type, width, height, dpi); }
 
+    std::shared_ptr<Image> createImageFromEncodedData(const unsigned char* bytes, size_t length) const override
+        { return mRealDC.createImageFromEncodedData(bytes, length); }
+
+    std::shared_ptr<Image> createImageFromBytes(const unsigned char* data, int width, int height,
+                                                ImageFormat format, float dpi) const override
+        { return mRealDC.createImageFromBytes(data, width, height, format, dpi); }
+
     std::shared_ptr<BezierPath> createBezierPath() const override
         { return mRealDC.createBezierPath(); }
 
