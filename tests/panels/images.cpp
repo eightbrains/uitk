@@ -138,6 +138,7 @@ public:
                             Dialog::showAlert(w, "Could not read file", "Could not read file: error " + std::to_string(int(err)), "");
                         }
                     };
+                    this->setNeedsDraw();
                 }
                 delete dlg;
             });
