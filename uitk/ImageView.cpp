@@ -29,7 +29,8 @@ namespace uitk {
 struct ImageView::Impl
 {
     Mode mode = Mode::kAspect;
-    std::shared_ptr<Image> image;
+    Image image;
+    std::shared_ptr<DrawableImage> drawableImage;
 };
 
 ImageView::ImageView()
@@ -37,7 +38,7 @@ ImageView::ImageView()
 {
 }
 
-ImageView::ImageView(std::shared_ptr<Image> image)
+ImageView::ImageView(const Image& image)
     : mImpl(new Impl())
 {
     mImpl->image = image;
@@ -47,11 +48,12 @@ ImageView::~ImageView()
 {
 }
 
-std::shared_ptr<Image> ImageView::image() const { return mImpl->image; }
+const Image& ImageView::image() const { return mImpl->image; }
 
-ImageView* ImageView::setImage(std::shared_ptr<Image> image)
+ImageView* ImageView::setImage(const Image& image)
 {
     mImpl->image = image;
+    mImpl->drawableImage.reset();
     setNeedsDraw();
     return this;
 }
@@ -67,9 +69,9 @@ ImageView* ImageView::setMode(Mode mode)
 
 Size ImageView::preferredSize(const LayoutContext &context) const
 {
-    if (mImpl->image) {
-        return Size(context.dc.ceilToNearestPixel(mImpl->image->width()),
-                    context.dc.ceilToNearestPixel(mImpl->image->height()));
+    if (mImpl->image.isValid()) {
+        return Size(context.dc.ceilToNearestPixel(mImpl->image.width()),
+                    context.dc.ceilToNearestPixel(mImpl->image.height()));
     } else {
         auto size = context.dc.roundToNearestPixel(0.75f * context.theme.params().labelFont.pointSize());
         return Size(size, size);
@@ -80,15 +82,19 @@ void ImageView::draw(UIContext &context)
 {
     Super::draw(context);
 
-    if (mImpl->image) {
+    if (mImpl->image.isValid() && !mImpl->drawableImage) {
+        mImpl->drawableImage = context.dc.createDrawableImage(mImpl->image);
+    }
+
+    if (mImpl->drawableImage) {
         Rect r(PicaPt::kZero, PicaPt::kZero, frame().width, frame().height);
         if (borderWidth() > PicaPt::kZero && borderColor().alpha() > 0.0f) {
             r.inset(borderWidth(), borderWidth());
         }
-        auto imgWidth = mImpl->image->width();
-        auto imgHeight = mImpl->image->height();
+        auto imgWidth = mImpl->drawableImage->width();
+        auto imgHeight = mImpl->drawableImage->height();
         if (imgWidth < r.width && imgHeight < r.height) {
-            context.dc.drawImage(mImpl->image,
+            context.dc.drawImage(mImpl->drawableImage,
                                  Rect(r.midX() - 0.5f * imgWidth, r.midY() - 0.5f * imgHeight,
                                       imgWidth, imgHeight));
         } else {
@@ -98,12 +104,12 @@ void ImageView::draw(UIContext &context)
                     drawRect = Rect(r.x + bounds().x, r.y + bounds().y, imgWidth, imgHeight);
                     context.dc.save();
                     context.dc.clipToRect(r);
-                    context.dc.drawImage(mImpl->image, drawRect);
+                    context.dc.drawImage(mImpl->drawableImage, drawRect);
                     context.dc.restore();
                     break;
                 case Mode::kStretch:
                     drawRect = r;
-                    context.dc.drawImage(mImpl->image, drawRect);
+                    context.dc.drawImage(mImpl->drawableImage, drawRect);
                     break;
                 case Mode::kAspect: {
                     auto widgetAspect = r.width / r.height;
@@ -115,7 +121,7 @@ void ImageView::draw(UIContext &context)
                         auto w = r.height * imgAspect;
                         drawRect = Rect(r.midX() - 0.5f * w, r.y, w, r.height);
                     }
-                    context.dc.drawImage(mImpl->image, drawRect);
+                    context.dc.drawImage(mImpl->drawableImage, drawRect);
                     break;
                 }
             }

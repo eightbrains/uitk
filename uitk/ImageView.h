@@ -36,11 +36,11 @@ class ImageView : public Widget
     using Super = Widget;
 public:
     ImageView();
-    explicit ImageView(std::shared_ptr<Image> image);
+    explicit ImageView(const Image& image);
     virtual ~ImageView();
 
-    std::shared_ptr<Image> image() const;
-    ImageView* setImage(std::shared_ptr<Image> image);
+    const Image& image() const;
+    ImageView* setImage(const Image& image);
 
     enum class Mode {
         kFixed = 0,  /// image is displayed its native size

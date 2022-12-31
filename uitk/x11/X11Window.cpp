@@ -803,7 +803,7 @@ void X11Window::onDraw()
 
     mImpl->callbacks.onDraw(*mImpl->dc);
     // On X11 copyToImage() should be a simple pointer copy
-    std::shared_ptr<Image> image = mImpl->dc->copyToImage();
+    std::shared_ptr<DrawableImage> image = mImpl->dc->copyToImage();
     mImpl->windowDC->beginDraw();
     mImpl->windowDC->drawImage(
                          image,

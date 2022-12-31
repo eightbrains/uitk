@@ -113,7 +113,7 @@ public:
         mNewFractal = new Button("New Fractal");
         addChild(mNewFractal);
 
-        mNewFractal->setOnClicked([this](Button*) { mUser->setImage(nullptr); });
+        mNewFractal->setOnClicked([this](Button*) { mUser->setImage(Image()); });
         
         mChoose->setOnClicked([this](Button *b) {
             auto *w = b->window();
@@ -128,16 +128,13 @@ public:
             dlg->showModal(w, [dlg, w, this](Dialog::Result result, int) {
                 if (result == Dialog::Result::kFinished) {
                     auto path = dlg->selectedPath();
-                    mImageUpdateFunc = [this, w, path /*copy*/](const DrawContext& dc) {
-                        IOError::Error err;
-                        auto data = File(path).readContents(&err);
-                        if (err == IOError::kNone) {
-                            mUser->setImage(dc.createImageFromEncodedData((uint8_t*)data.data(), data.size()));
-                        }
-                        else {
-                            Dialog::showAlert(w, "Could not read file", "Could not read file: error " + std::to_string(int(err)), "");
-                        }
-                    };
+                    IOError::Error err;
+                    auto data = File(path).readContents(&err);
+                    if (err == IOError::kNone) {
+                        mUser->setImage(Image::fromEncodedData((uint8_t*)data.data(), data.size()));
+                    } else {
+                        Dialog::showAlert(w, "Could not read file", "Could not read file: error " + std::to_string(int(err)), "");
+                    }
                     this->setNeedsDraw();
                 }
                 delete dlg;
@@ -161,11 +158,11 @@ public:
 
         // Update the images if necessary
         for (auto &test : mBasicTests) {
-            if (!test.view->image() || test.view->image()->dpi() != dpi) {
+            if (!test.view->image().isValid() || test.view->image().dpi() != dpi) {
                 test.view->setImage(createTestImage(dc, test.format, dpi));
             }
         }
-        if (!mWideWide->image() || mWideWide->image()->dpi() != dpi) {
+        if (!mWideWide->image().isValid() || mWideWide->image().dpi() != dpi) {
             mWideWide->setImage(calcFractalImage(dc, 0x7a32d601, int(2.0f * fractalHeightPx), fractalHeightPx, dpi));
             mWideHigh->setImage(calcFractalImage(dc, 0x2f33c09d, int(1.0f * fractalHeightPx), fractalHeightPx, dpi));
             mHighWide->setImage(calcFractalImage(dc, 0x067b8821, int(2.0f * fractalHeightPx), fractalHeightPx, dpi));
@@ -208,11 +205,7 @@ public:
 
     void draw(UIContext& context) override
     {
-        if (mImageUpdateFunc) {
-            mImageUpdateFunc(context.dc);
-            mImageUpdateFunc = nullptr;
-        }
-        if (!mUser->image()) {
+        if (!mUser->image().isValid()) {
             uint32_t seed = std::random_device()();
             auto dpi = context.dc.dpi();
             mUser->setImage(calcFractalImage(context.dc, seed, int(mUser->frame().width.toPixels(dpi)),
@@ -223,7 +216,7 @@ public:
     }
 
 private:
-    std::shared_ptr<Image> createTestImage(const DrawContext& dc, ImageFormat format, float dpi)
+    Image createTestImage(const DrawContext& dc, ImageFormat format, float dpi)
     {
         int nChannels = 0;
         std::array<int, 4> rgbaMap = { 0, 0, 0, 0 };
@@ -323,10 +316,10 @@ private:
             }
         }
 
-        return dc.createImageFromBytes(imgData.data(), width, height, format, dpi);
+        return Image::fromCopyOfBytes(imgData.data(), width, height, format, dpi);
     }
 
-    std::shared_ptr<Image> calcFractalImage(const DrawContext& dc, uint32_t seed, int width, int height, float dpi)
+    Image calcFractalImage(const DrawContext& dc, uint32_t seed, int width, int height, float dpi)
     {
         const float kJuliaMin = -1.6f;
         const float kJuliaMax = 1.6f;
@@ -381,7 +374,8 @@ private:
         }
 
         // Now we can create the image data
-        std::vector<uint8_t> rgba(4 * width * height, 0);
+        Image img(width, height, kImageBGRX32, dpi);
+        uint8_t *bgrx = img.data();
         for (int i = 0;  i < width * height;  ++i) {
             auto normalizedIterations = iterations[i];
             // This gives a more or less solid background
@@ -393,13 +387,13 @@ private:
             if (h > 360.0f) {  h -= 360.0f; }
             float s = std::tanh(2.0f * 3.141592f * normalizedIterations);
             uint32_t pixel = HSVColor(h, s, 1.0f).toColor().toRGBA();
-            rgba[4 * i    ] = (pixel & 0xff000000) >> 24;
-            rgba[4 * i + 1] = (pixel & 0x00ff0000) >> 16;
-            rgba[4 * i + 2] = (pixel & 0x0000ff00) >>  8;
-            rgba[4 * i + 3] = 0xff;
+            bgrx[4 * i    ] = (pixel & 0x0000ff00) >>  8;  // blue
+            bgrx[4 * i + 1] = (pixel & 0x00ff0000) >> 16;  // green
+            bgrx[4 * i + 2] = (pixel & 0xff000000) >> 24;  // red
+            bgrx[4 * i + 3] = 0xff;
         }
 
-        return dc.createImageFromBytes(rgba.data(), width, height, kImageRGBA32, dpi);
+        return img;
     }
 
     // Returns 1 if point is on the edge of the mandelbrot set, 0 otherwise
@@ -455,8 +449,6 @@ private:
     }
 
 private:
-    std::function<void(const DrawContext& dc)> mImageUpdateFunc;
-
     struct BasicTest {
         ImageFormat format;
         ImageView *view;  // this is a ref; parent owns the actual widget
