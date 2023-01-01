@@ -26,6 +26,8 @@
 #include <random>
 #include <sstream>
 
+#include "fractal.h"
+
 using namespace uitk;
 
 // Include the .cpp files for the panels here. Since all the panels just
