@@ -17,6 +17,7 @@ set(UITK_PUBLIC_HEADERS
                  Global.h
                  Icon.h
                  IconAndText.h
+                 ImageView.h
                  IncDecWidget.h
                  IPopupWindow.h
                  Label.h
@@ -74,6 +75,7 @@ set(UITK_SOURCES Application.cpp
                  FontListComboBox.cpp
                  Icon.cpp
                  IconAndText.cpp
+                 ImageView.cpp
                  IncDecWidget.cpp
                  Label.cpp
                  ListView.cpp
@@ -224,6 +226,18 @@ elseif (UNIX)  # note that APPLE is UNIX, so need to check that first
         message(FATAL_ERROR "Cannot find GObject library")
     endif()
     set(PANGO_LIBRARIES ${PANGO_LIB} ${PANGOCAIRO_LIB} ${GLIB_LIB} ${GOBJECT_LIB})
+    find_package(JPEG)
+    if ("${JPEG_INCLUDE_DIRS}" MATCHES "NOTFOUND")
+        message(FATAL_ERROR "Cannot find JPEG library. (We recommend libturbo-jpeg)")
+    endif()
+    find_package(PNG)
+    if ("${PNG_INCLUDE_DIRS}" MATCHES "NOTFOUND")
+        message(FATAL_ERROR "Cannot find PNG library.")
+    endif()
+    find_package(GIF)
+    if ("${GIF_INCLUDE_DIRS}" MATCHES "NOTFOUND")
+        message(FATAL_ERROR "Cannot find GIF library. (Install libgif7, libgif-dev on Ubuntu)")
+    endif()
 
     include_directories(${X11_INCLUDE_DIRS} ${CAIRO_INCLUDE_DIRS})
     list(APPEND UITK_LIBS ${CAIRO_LIBRARIES}
@@ -231,7 +245,10 @@ elseif (UNIX)  # note that APPLE is UNIX, so need to check that first
                           ${X11_Xcursor_LIB}
                           ${X11_Xrender_LIB}
                           ${X11_Xfixes_LIB}
-                          ${X11_LIBRARIES})
+                          ${X11_LIBRARIES}
+                          ${JPEG_LIBRARIES}
+                          ${PNG_LIBRARIES}
+                          ${GIF_LIBRARIES})
 endif()
 
 add_library(uitk ${UITK_HEADERS} ${UITK_SOURCES})

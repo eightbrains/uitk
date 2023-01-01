@@ -20,47 +20,15 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
+#ifndef TEST_FRACTAL_H
+#define TEST_FRACTAL_H
 
-#define ND_NAMESPACE uitk
+#include <uitk/uitk.h>
 
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
+enum class FractalColor { kGrey, kColor };
 
-#include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "Clipboard.h"
-#include "ColorEdit.h"
-#include "ComboBox.h"
-#include "Cursor.h"
-#include "Dialog.h"
-#include "Events.h"
-#include "FileDialog.h"
-#include "FontListComboBox.h"
-#include "Icon.h"
-#include "IconAndText.h"
-#include "ImageView.h"
-#include "Label.h"
-#include "ListView.h"
-#include "NumberEdit.h"
-#include "Menu.h"
-#include "OSMenubar.h"
-#include "ProgressBar.h"
-#include "ScrollView.h"
-#include "SearchBar.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
-#include "StackedWidget.h"
-#include "StringEdit.h"
-#include "UIContext.h"
-#include "Waiting.h"
-#include "Window.h"
+uitk::Image calcFractalImage(const uitk::DrawContext& dc, uint32_t seed,
+                             int width, int height, float dpi,
+                             FractalColor color = FractalColor::kColor);
 
-#include "io/Directory.h"
-#include "io/File.h"
-
-#include <nativedraw.h>
-
-#endif // UITK_H
+#endif // TEST_FRACTAL_H

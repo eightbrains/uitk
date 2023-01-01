@@ -233,7 +233,7 @@ void MacOSDialog::showOpen(Window *w,
                 std::vector<std::string> paths;
                 paths.reserve(dlg.URLs.count);
                 for (int i = 0;  i < dlg.URLs.count;  ++i) {
-                    paths.push_back([dlg.URLs objectAtIndex:i].filePathURL.absoluteString.UTF8String);
+                    paths.push_back([dlg.URLs objectAtIndex:i].fileSystemRepresentation);
                 }
                 onDone(Dialog::Result::kFinished, paths);
             } else {

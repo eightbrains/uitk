@@ -43,6 +43,9 @@ public:
                                               float dpi = 72.0f) override
         { return mRealDC.createBitmap(type, width, height, dpi); }
 
+    std::shared_ptr<DrawableImage> createDrawableImage(const Image& image) const override
+        { return mRealDC.createDrawableImage(image); }
+    
     std::shared_ptr<BezierPath> createBezierPath() const override
         { return mRealDC.createBezierPath(); }
 
@@ -139,13 +142,13 @@ public:
     void drawText(const char *textUTF8, const Point& topLeft, const Font& font, PaintMode mode) override {}
     void drawText(const TextLayout& layout, const Point& topLeft) override {}
 
-    void drawImage(std::shared_ptr<Image> image, const Rect& destRect) override {}
+    void drawImage(std::shared_ptr<DrawableImage> image, const Rect& destRect) override {}
 
     void clipToRect(const Rect& rect) override {}
     void clipToPath(std::shared_ptr<BezierPath> path) override {}
 
     Color pixelAt(int x, int y) override { return Color::kBlack; }
-    std::shared_ptr<Image> copyToImage() override { return nullptr; }
+    std::shared_ptr<DrawableImage> copyToImage() override { return nullptr; }
     Font::Metrics fontMetrics(const Font& font) const override { return mRealDC.fontMetrics(font); }
     TextMetrics textMetrics(const char *textUTF8, const Font& font,
                                 PaintMode mode = kPaintFill) const override

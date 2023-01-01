@@ -868,6 +868,42 @@ private:
     ListView *mLV;
 };
 
+class ImageViewPanel : public Widget
+{
+    using Super = Widget;
+public:
+    ImageViewPanel()
+    {
+        mImage = new ImageView();
+        addChild(mImage);
+    }
+
+    Size preferredSize(const LayoutContext& context) const override
+    {
+        auto em = context.theme.params().labelFont.pointSize();
+        auto size = context.dc.roundToNearestPixel(3.0f * em);
+        return Size(size, size);
+    }
+
+    void layout(const LayoutContext& context) override
+    {
+        const auto dpi = context.dc.dpi();
+
+        auto pref = preferredSize(context);
+        if (mImage->image().dpi() != dpi) {
+            mImage->setImage(calcFractalImage(context.dc, 0x84bd219f,
+                                              int(pref.width.toPixels(dpi)), int(pref.height.toPixels(dpi)),
+                                              dpi, FractalColor::kGrey));
+        }
+        mImage->setFrame(Rect(PicaPt::kZero, PicaPt::kZero, pref.width, pref.height));
+
+        Super::layout(context);
+    }
+
+private:
+    ImageView *mImage;
+};
+
 class DrawTimingPanel : public Widget
 {
     using Super = Widget;
@@ -929,7 +965,7 @@ public:
     {
         auto em = context.theme.params().labelFont.pointSize();
         auto pref = mStart->preferredSize(context);
-        return Size(context.dc.roundToNearestPixel(20.0f * em),
+        return Size(context.dc.roundToNearestPixel(25.0f * em),
                     context.dc.roundToNearestPixel(pref.height + em));
     }
 
@@ -1014,6 +1050,8 @@ public:
         addChild(mScroll);
         mListView = new ListViewTest();
         addChild(mListView);
+        mImageView = new ImageViewPanel();
+        addChild(mImageView);
         mDrawTiming = new DrawTimingPanel();
         addChild(mDrawTiming);
     }
@@ -1047,8 +1085,11 @@ public:
         pref = mScroll->preferredSize(context);
         mScroll->setFrame(Rect(x, mListView->frame().maxY() + spacing, pref.width, pref.height));
 
+        pref = mImageView->preferredSize(context);
+        mImageView->setFrame(Rect(x, mScroll->frame().maxY() + spacing, pref.width, pref.height));
+
         pref = mDrawTiming->preferredSize(context);
-        mDrawTiming->setFrame(Rect(x, mScroll->frame().maxY() + spacing,
+        mDrawTiming->setFrame(Rect(x, mImageView->frame().maxY() + spacing,
                                    pref.width, pref.height));
 
         Super::layout(context);
@@ -1066,6 +1107,7 @@ private:
     TextEditTest *mText;
     ScrollTest *mScroll;
     ListViewTest *mListView;
+    ImageViewPanel *mImageView;
     DrawTimingPanel *mDrawTiming;
 };
 
