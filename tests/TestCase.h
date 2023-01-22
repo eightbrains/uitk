@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2023 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -20,48 +20,43 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
+#include <iostream>
+#include <sstream>
 
-#define ND_NAMESPACE uitk
+std::string getTempDir();
 
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
+class TestCase
+{
+public:
+    TestCase(const std::string& name) : mName(name) {}
+    virtual ~TestCase() {}
 
-#include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "Clipboard.h"
-#include "ColorEdit.h"
-#include "ComboBox.h"
-#include "Cursor.h"
-#include "Dialog.h"
-#include "Events.h"
-#include "FileDialog.h"
-#include "FontListComboBox.h"
-#include "Icon.h"
-#include "IconAndText.h"
-#include "ImageView.h"
-#include "Label.h"
-#include "Layout.h"
-#include "ListView.h"
-#include "NumberEdit.h"
-#include "Menu.h"
-#include "OSMenubar.h"
-#include "ProgressBar.h"
-#include "ScrollView.h"
-#include "SearchBar.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
-#include "StackedWidget.h"
-#include "StringEdit.h"
-#include "UIContext.h"
-#include "Waiting.h"
-#include "Window.h"
+    virtual std::string run() = 0;  // return "" on success
 
-#include "io/Directory.h"
-#include "io/File.h"
+    bool runTest()
+    {
+        auto err = run();
+        if (err.empty()) {
+            std::cout << "[pass] " << mName << std::endl;
+        } else {
+            std::cout << "[FAIL] " << mName << std::endl;
+            std::cout << "    " << err << std::endl;
+        }
+        return err.empty();
+    }
 
-#include <nativedraw.h>
+protected:
+    std::string makeError(const std::string& prefix, uint64_t got, uint64_t expected) const
+    {
+        return prefix + ": got " + std::to_string(got) + ", expected " + std::to_string(expected);
+    }
 
-#endif // UITK_H
+    std::string makeError(const std::string& prefix, const std::string& got, const std::string& expected) const
+    {
+        return prefix + ": got " + got + ", expected " + expected;
+    }
+
+private:
+    std::string mName;
+};
+

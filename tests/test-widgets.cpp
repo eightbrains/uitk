@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 - 2022 Eight Brains Studios, LLC
+// Copyright 2021 - 2023 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -39,6 +39,7 @@ using namespace uitk;
 #include "panels/cursors.cpp"
 #include "panels/dialogs.cpp"
 #include "panels/images.cpp"
+#include "panels/layouts.cpp"
 
 class RootWidget : public Widget
 {
@@ -166,6 +167,7 @@ public:
         root->addPanel("Cursors", new cursor::Panel());
         root->addPanel("Dialogs", new dialogs::Panel());
         root->addPanel("Images", new images::Panel());
+        root->addPanel("Layouts", new layouts::Panel());
         addChild(root);
 
         show(true);

@@ -184,6 +184,14 @@ ComboBox* ComboBox::setSelectedIndex(int index)
     return this;
 }
 
+int ComboBox::selectedValue() const
+{
+    if (mImpl->selectedIndex < 0 || mImpl->selectedIndex >= int(mImpl->items.size())) {
+        return -1;
+    }
+    return mImpl->items[mImpl->selectedIndex].value;
+}
+
 ComboBox* ComboBox::setSelectedValue(int value)
 {
     for (size_t i = 0;  i < mImpl->items.size();  ++i) {

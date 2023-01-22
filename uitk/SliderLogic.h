@@ -46,11 +46,11 @@ public:
 
     /// Sets the upper, lower, and increment values. Increment must be 1 or larger
     /// for integer sliders.
-    void setLimits(int minVal, int maxVal, int inc = 1);
+    SliderLogic* setLimits(int minVal, int maxVal, int inc = 1);
 
     /// Sets the upper, lower, and increment values. Increment of 0
     /// is continuous (no increment).
-    void setLimits(double minVal, double maxVal, double inc = 1.0f);
+    SliderLogic* setLimits(double minVal, double maxVal, double inc = 1.0f);
 
     int intMinLimit() const;
     int intMaxLimit() const;

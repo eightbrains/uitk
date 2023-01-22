@@ -119,22 +119,42 @@ NumberEdit* NumberEdit::setValue(double val)
     return this;
 }
 
-void NumberEdit::setLimits(int minVal, int maxVal, int inc /*= 1*/)
+NumberEdit* NumberEdit::setLimits(int minVal, int maxVal, int inc /*= 1*/)
 {
     setLimits(double(minVal), double(maxVal), double(inc));
     if (!mImpl->userHasSetFormatDigits) {
         mImpl->nFormatDigits = 0;
     }
+    return this;
 }
 
-void NumberEdit::setLimits(double minVal, double maxVal, double inc /*= 1.0f*/)
+NumberEdit* NumberEdit::setLimits(double minVal, double maxVal, double inc /*= 1.0f*/)
 {
     if (mImpl->model.setLimits(minVal, maxVal, inc)) {
         setNeedsDraw();
     }
     if (!mImpl->userHasSetFormatDigits) {
-        mImpl->nFormatDigits = -1;
+        if (inc >= 1.0f) {
+            mImpl->nFormatDigits = -1;
+        } else {
+            // This finds the smallest piece that will change, so inc = 0.01 and 0.21
+            // are equvalent as far as number of digits to display is concerned.
+            double remainder = inc;
+            mImpl->nFormatDigits = 1;
+            while (mImpl->nFormatDigits < 1e6) {
+                auto thisDigit = std::floor(remainder * 10.0);
+                remainder = remainder * 10.0 - thisDigit;
+                // Handle floating point imprecision. We might be just a little over zero
+                // or just a little under one (for example, (double)0.01f = 0.0099999...,
+                // so passing a float value for 'inc' to this function can trigger this)
+                if (remainder < 1e-6 || remainder > 0.999999) {
+                    break;
+                }
+                mImpl->nFormatDigits += 1;
+            }
+        }
     }
+    return this;
 }
 
 int NumberEdit::intMinLimit() const { return mImpl->model.intMinLimit(); }
@@ -173,6 +193,14 @@ Size NumberEdit::preferredSize(const LayoutContext& context) const
     if (std::abs(minVal) > maxVal) {
         longestValue = -longestValue;
     }
+    // "1" may size smaller than other digits, but a max of 1.xxx may display 0.xxx,
+    // which will then get cut off a bit. So if the first digit is one, add one to it
+    // to make it "2", which should size okay.
+    auto firstDigit = longestValue / std::pow(10.0, std::floor(std::log10(longestValue)));
+    if (firstDigit >= 1.0 && firstDigit < 2.0) {
+        longestValue += std::pow(10.0, std::floor(std::log10(longestValue)));
+    }
+
     auto longestText = convertDoubleToString(longestValue, mImpl->nFormatDigits);
     auto textWidth = context.dc.textMetrics(longestText.c_str(), context.theme.params().labelFont).width;
 

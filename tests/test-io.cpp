@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 - 2022 Eight Brains Studios, LLC
+// Copyright 2021 - 2023 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -22,47 +22,11 @@
 
 #include <uitk/uitk.h>
 
+#include "TestCase.h"
+
 #include <string.h>  // for memcpy() (which is, of course, a string function!?)
 
-#include <iostream>
-#include <sstream>
-
 std::string getTempDir();
-
-class TestCase
-{
-public:
-    TestCase(const std::string& name) : mName(name) {}
-    ~TestCase() {}
-
-    virtual std::string run() = 0;  // return "" on success
-
-    bool runTest()
-    {
-        auto err = run();
-        if (err.empty()) {
-            std::cout << "[pass] " << mName << std::endl;
-        } else {
-            std::cout << "[FAIL] " << mName << std::endl;
-            std::cout << "    " << err << std::endl;
-        }
-        return err.empty();
-    }
-
-protected:
-    std::string makeError(const std::string& prefix, uint64_t got, uint64_t expected) const
-    {
-        return prefix + ": got " + std::to_string(got) + ", expected " + std::to_string(expected);
-    }
-
-    std::string makeError(const std::string& prefix, const std::string& got, const std::string& expected) const
-    {
-        return prefix + ": got " + got + ", expected " + expected;
-    }
-
-private:
-    std::string mName;
-};
 
 //-----------------------------------------------------------------------------
 using namespace uitk;

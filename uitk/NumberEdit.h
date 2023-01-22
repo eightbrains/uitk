@@ -45,12 +45,12 @@ public:
 
     /// Sets the upper, lower, and increment values. Increment must be 1 or
     /// larger for integer sliders.
-    void setLimits(int minVal, int maxVal, int inc = 1);
+    NumberEdit* setLimits(int minVal, int maxVal, int inc = 1);
 
     /// Sets the upper, lower, and increment values. Increment of 0
     /// is continuous (no increment). The default limits are 0, 100, 1, which
     /// represents an integer range of [0, 100].
-    void setLimits(double minVal, double maxVal, double inc = 1.0f);
+    NumberEdit* setLimits(double minVal, double maxVal, double inc = 1.0f);
 
     int intMinLimit() const;
     int intMaxLimit() const;

@@ -141,18 +141,19 @@ SliderLogic* SliderLogic::setValue(double val)
     return this;
 }
 
-void SliderLogic::setLimits(int minVal, int maxVal, int inc /*= 1*/)
+SliderLogic* SliderLogic::setLimits(int minVal, int maxVal, int inc /*= 1*/)
 {
-    setLimits(double(minVal), double(maxVal), double(inc));
+    return setLimits(double(minVal), double(maxVal), double(inc));
 }
 
-void SliderLogic::setLimits(double minVal, double maxVal, double inc /*= 1.0*/)
+SliderLogic* SliderLogic::setLimits(double minVal, double maxVal, double inc /*= 1.0*/)
 {
     double oldValue = mImpl->model.doubleValue();
     if (mImpl->model.setLimits(minVal, maxVal, inc)) {
         mImpl->thumb->setFrame(mImpl->calcThumbFrame(bounds()));
         setNeedsDraw();
     }
+    return this;
 }
 
 int SliderLogic::intMinLimit() const { return mImpl->model.intMinLimit(); }

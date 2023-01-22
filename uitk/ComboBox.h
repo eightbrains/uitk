@@ -60,6 +60,7 @@ public:
     /// Returns the selected index or -1 if there is none.
     int selectedIndex() const;
     ComboBox* setSelectedIndex(int index);
+    int selectedValue() const;
     /// Sets the selected index to the item with requested value. (If multiple
     /// items have the value, one of them will be chosen.) If no items have the
     /// value, nothing will be changed.

@@ -21,6 +21,7 @@ set(UITK_PUBLIC_HEADERS
                  IncDecWidget.h
                  IPopupWindow.h
                  Label.h
+                 Layout.h
                  ListView.h
                  Menu.h
                  MenuUITK.h
@@ -78,6 +79,7 @@ set(UITK_SOURCES Application.cpp
                  ImageView.cpp
                  IncDecWidget.cpp
                  Label.cpp
+                 Layout.cpp
                  ListView.cpp
                  Menu.cpp
                  MenubarUITK.cpp
