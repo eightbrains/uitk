@@ -32,7 +32,18 @@ namespace uitk {
 class Layout : public Widget
 {
 public:
-    using Stretch = Widget;
+    class Stretch : public Widget
+    {
+    public:
+        explicit Stretch(Dir dir);
+        ~Stretch();
+        
+        Size preferredSize(const LayoutContext& context) const override;
+
+    private:
+        struct Impl;
+        std::unique_ptr<Impl> mImpl;
+    };
 
     class SpacingEm : public Widget
     {
@@ -162,6 +173,14 @@ class HLayout : public Layout1D
 {
     using Super = Layout1D;
 public:
+    /// Convenience class, so that `new HLayout::Stretch()` works
+    class Stretch : public Layout::Stretch
+    {
+    public:
+        Stretch();
+        ~Stretch();
+    };
+
     HLayout();
     explicit HLayout(const std::vector<Widget*>& children);
 
@@ -173,6 +192,14 @@ class VLayout : public Layout1D
 {
     using Super = Layout1D;
 public:
+    /// Convenience class, so that `new VLayout::Stretch()` works
+    class Stretch : public Layout::Stretch
+    {
+    public:
+        Stretch();
+        ~Stretch();
+    };
+
     VLayout();
     explicit VLayout(const std::vector<Widget*>& children);
 

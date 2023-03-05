@@ -119,6 +119,31 @@ std::vector<PicaPt> calcSizes(Dir dir, const PicaPt& majorAxisSize,
 } // namespace
 
 //-----------------------------------------------------------------------------
+struct Layout::Stretch::Impl
+{
+    Dir dir;
+};
+
+Layout::Stretch::Stretch(Dir dir)
+    : mImpl(new Impl())
+{
+    mImpl->dir = dir;
+}
+
+Layout::Stretch::~Stretch()
+{
+}
+
+Size Layout::Stretch::preferredSize(const LayoutContext& context) const
+{
+    if (mImpl->dir == Dir::kHoriz) {
+        return Size(Widget::kDimGrow, context.dc.onePixel());
+    } else {
+        return Size(context.dc.onePixel(), Widget::kDimGrow);
+    }
+}
+
+//-----------------------------------------------------------------------------
 struct Layout::SpacingEm::Impl
 {
     Dir dir;
@@ -332,6 +357,12 @@ Size Layout1D::preferredSize(const LayoutContext &context) const
         size.height += margins[1] + margins[3] + float(children().size() - 1) * spacing;
     }
 
+    if (borderColor().alpha() >= 0.001f) {
+        auto border = context.dc.ceilToNearestPixel(borderWidth());
+        size.width += 2.0f * border;
+        size.height += 2.0f * border;
+    }
+
     size.width = std::min(size.width, kDimGrow);
     size.height = std::min(size.height, kDimGrow);
     return size;
@@ -433,6 +464,9 @@ void Layout1D::layout(const LayoutContext& context)
 }
 
 //-----------------------------------------------------------------------------
+HLayout::Stretch::Stretch() : Layout::Stretch(Dir::kHoriz) {}
+HLayout::Stretch::~Stretch() {}
+
 HLayout::HLayout()
     : Layout1D(Dir::kHoriz)
 {
@@ -443,11 +477,14 @@ HLayout::HLayout(const std::vector<Widget*>& children)
 {
 
 }
-void HLayout::addStretch() { addChild(new Layout::Stretch()); }
+void HLayout::addStretch() { addChild(new Layout::Stretch(Dir::kHoriz)); }
 
 void HLayout::addSpacingEm(float em /*= 1.0f*/) { addChild(new Layout::SpacingEm(Dir::kHoriz, em)); };
 
 //-----------------------------------------------------------------------------
+VLayout::Stretch::Stretch() : Layout::Stretch(Dir::kVert) {}
+VLayout::Stretch::~Stretch() {}
+
 VLayout::VLayout()
     : Layout1D(Dir::kVert)
 {
@@ -458,7 +495,7 @@ VLayout::VLayout(const std::vector<Widget*>& children)
 {
 }
 
-void VLayout::addStretch() { addChild(new Layout::Stretch()); }
+void VLayout::addStretch() { addChild(new Layout::Stretch(Dir::kVert)); }
 
 void VLayout::addSpacingEm(float em /*= 1.0f*/) { addChild(new Layout::SpacingEm(Dir::kVert, em)); };
 
