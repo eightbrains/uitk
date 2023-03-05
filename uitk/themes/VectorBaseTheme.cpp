@@ -1143,6 +1143,9 @@ void VectorBaseTheme::drawProgressBar(UIContext& ui, const Rect& frame, float va
 void VectorBaseTheme::drawIncDec(UIContext& ui, const Rect& frame,
                                  WidgetState incState, WidgetState decState) const
 {
+    const PicaPt kStrokeWidth(1.0f);
+    const float kHalfWidthMultiplier = 0.35f;
+
     auto incRect = frame;
     incRect.height = 0.5f * frame.height;
     auto decRect = frame;
@@ -1160,21 +1163,29 @@ void VectorBaseTheme::drawIncDec(UIContext& ui, const Rect& frame,
     ui.dc.restore();
 
     ui.dc.save();  // so line style changes get cleaned up
-    ui.dc.setStrokeWidth(PicaPt(1.5));
+
+    ui.dc.setStrokeWidth(kStrokeWidth);
     ui.dc.setStrokeEndCap(kEndCapRound);
     ui.dc.setStrokeJoinStyle(kJoinRound);
-    auto w = 0.125f * frame.height;
-    auto h = 0.2f * frame.height;
+
+    const auto aspect = 0.625f;
+    PicaPt hw;
+    if (frame.height > frame.width) {
+        hw = kHalfWidthMultiplier * (frame.width - 2.0f * kStrokeWidth);
+    } else {
+        auto h = frame.height;
+        hw = kHalfWidthMultiplier * (h * aspect - 2.0f * kStrokeWidth);
+    }
     ui.dc.setStrokeColor(mButtonStyles[int(incState)].fgColor);
     auto top = frame.midY() - 0.2f * frame.height;
-    ui.dc.drawLines({ Point(frame.midX() - w, top),
-                      Point(frame.midX(), top - w),
-                      Point(frame.midX() + w, top) });
+    ui.dc.drawLines({ Point(frame.midX() - hw, top),
+                      Point(frame.midX(), top - hw),
+                      Point(frame.midX() + hw, top) });
     ui.dc.setStrokeColor(mButtonStyles[int(decState)].fgColor);
-    auto bottom = frame.midY() + 0.2f * frame.height + w;
-    ui.dc.drawLines({ Point(frame.midX() - w, bottom - w),
+    auto bottom = frame.midY() + 0.2f * frame.height + hw;
+    ui.dc.drawLines({ Point(frame.midX() - hw, bottom - hw),
                       Point(frame.midX(), bottom),
-                      Point(frame.midX() + w, bottom - w) });
+                      Point(frame.midX() + hw, bottom - hw) });
     ui.dc.restore();
 }
 
