@@ -21,6 +21,7 @@
 //-----------------------------------------------------------------------------
 
 #include <uitk/uitk.h>
+#include <uitk/Events.h>
 
 #include <array>
 #include <random>
@@ -39,6 +40,7 @@ using namespace uitk;
 #include "panels/cursors.cpp"
 #include "panels/dialogs.cpp"
 #include "panels/images.cpp"
+#include "panels/gradients.cpp"
 #include "panels/layouts.cpp"
 
 class RootWidget : public Widget
@@ -165,9 +167,10 @@ public:
         root->addPanel("Text", new text::Panel());
         root->addPanel("Icons", new icons::Panel());
         root->addPanel("Cursors", new cursor::Panel());
+        root->addPanel("Layouts", new layouts::Panel());
         root->addPanel("Dialogs", new dialogs::Panel());
         root->addPanel("Images", new images::Panel());
-        root->addPanel("Layouts", new layouts::Panel());
+        root->addPanel("Gradients", new gradients::Panel());
         addChild(root);
 
         show(true);

@@ -71,6 +71,10 @@ public:
         { return mRealDC.createTextLayout(t, defaultReplacementFont, defaultReplacementColor,
                                           size, alignment, wrap); }
 
+    Gradient& getGradient(const std::vector<Gradient::Stop>& stops) override
+        { return mRealDC.getGradient(stops); }
+    Gradient& getGradient(size_t id) const override { return mRealDC.getGradient(id); }
+
     void beginDraw() override {}
     void endDraw() override {}
 
@@ -138,6 +142,15 @@ public:
             mFramePath.path = path;
         }
     }
+
+    void drawLinearGradientPath(std::shared_ptr<BezierPath> path, Gradient& gradient,
+                                const Point& start, const Point& end) override
+        { drawPath(path, kPaintFill); }
+
+    void drawRadialGradientPath(std::shared_ptr<BezierPath> path, Gradient& gradient,
+                                const Point& center, const PicaPt& startRadius,
+                                const PicaPt& endRadius) override
+        { drawPath(path, kPaintFill); }
 
     void drawText(const char *textUTF8, const Point& topLeft, const Font& font, PaintMode mode) override {}
     void drawText(const TextLayout& layout, const Point& topLeft) override {}
