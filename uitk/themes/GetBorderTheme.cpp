@@ -70,10 +70,8 @@ public:
                 TextWrapping wrap = kWrapWord) const override
         { return mRealDC.createTextLayout(t, defaultReplacementFont, defaultReplacementColor,
                                           size, alignment, wrap); }
-
-    Gradient& getGradient(const std::vector<Gradient::Stop>& stops) override
-        { return mRealDC.getGradient(stops); }
-    Gradient& getGradient(size_t id) const override { return mRealDC.getGradient(id); }
+    Gradient& getGradient(const std::vector<Gradient::Stop>& stops) { return mRealDC.getGradient(stops); }
+    Gradient& getGradient(size_t id) const { return mRealDC.getGradient(id); }
 
     void beginDraw() override {}
     void endDraw() override {}

@@ -25,6 +25,7 @@
 #include "UIContext.h"
 #include "themes/Theme.h"
 
+#include <algorithm>
 #include <numeric>
 
 namespace uitk {
@@ -36,7 +37,7 @@ std::vector<PicaPt> calcSizes(Dir dir, const PicaPt& majorAxisSize,
                               const PicaPt& onePx, const std::vector<PicaPt>& sizes,
                               PicaPt& spacing, FitMajorAxis fit)
 {
-    auto totalSize = majorAxisSize - spacing * float(std::max(0ul, sizes.size() - 1ul));
+    auto totalSize = majorAxisSize - spacing * float(std::max(size_t(0), sizes.size() - size_t(1)));
 
     std::vector<PicaPt> outSizes = sizes;
     std::vector<bool> isStretch(sizes.size(), false);
@@ -608,8 +609,8 @@ Size GridLayout::preferredSize(const LayoutContext &context) const
     for (auto &r : rows) {
         pref.height += r;
     }
-    pref.width += margins[0] + margins[2] + float(std::max(0ul, cols.size() - 1)) * spacing + 2.0f * border;
-    pref.height += margins[1] + margins[3] + float(std::max(0ul, rows.size() - 1)) * spacing + 2.0f * border;
+    pref.width += margins[0] + margins[2] + float(std::max(size_t(0), cols.size() - size_t(1))) * spacing + 2.0f * border;
+    pref.height += margins[1] + margins[3] + float(std::max(size_t(0), rows.size() - size_t(1))) * spacing + 2.0f * border;
     return pref;
 }
 
