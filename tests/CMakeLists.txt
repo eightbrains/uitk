@@ -13,11 +13,11 @@ endif()
 target_link_libraries(test-widgets uitk)
 
 set(TEST_IO_HEADERS TestCase.h)
-set(TEST_IO_SOURCES test-io.cpp TestCase.cpp)
+set(TEST_IO_SOURCES test-io.cpp)
 add_executable(test-io ${TEST_IO_HEADERS} ${TEST_IO_SOURCES})
 target_link_libraries(test-io uitk)
 
 set(TEST_HEADERS TestCase.h)
-set(TEST_SOURCES test.cpp TestCase.cpp)
+set(TEST_SOURCES test.cpp)
 add_executable(test ${TEST_HEADERS} ${TEST_SOURCES})
 target_link_libraries(test uitk)
