@@ -25,6 +25,8 @@
 
 namespace gradients {
 
+enum GradientType { kGradientLinear, kGradientRadial };
+
 struct Direction
 {
     float startRX;
@@ -35,9 +37,16 @@ struct Direction
 
 struct GradientInfo
 {
+    GradientType type;
     std::vector<Gradient::Stop> stops;
     Direction dir;
 };
+
+PicaPt calcDistance(const Point& p1, const Point& p2)
+{
+    auto v = p2 - p1;
+    return PicaPt(std::sqrt((v.x * v.x + v.y * v.y).asFloat()));
+}
 
 class Canvas : public Widget
 {
@@ -70,17 +79,27 @@ public:
         Point end(x + rectSize * mGradient.dir.endRX, y + rectSize * mGradient.dir.endRY);
         auto path = context.dc.createBezierPath();
         path->addRect(Rect(x, y, rectSize, rectSize));
-        context.dc.drawLinearGradientPath(path, gradient, start, end);
+        if (mGradient.type == kGradientLinear) {
+            context.dc.drawLinearGradientPath(path, gradient, start, end);
+        } else {
+            Point center(x + 0.5f * rectSize, y + 0.5f * rectSize);
+            context.dc.drawRadialGradientPath(path, gradient, center,
+                                              calcDistance(center, start), calcDistance(center, end));
+        }
 
         auto radius = 0.5f * rectSize;
         x = context.dc.roundToNearestPixel(bounds().maxX() - 1.2f * 2.0f * radius);
         y = context.dc.roundToNearestPixel(bounds().maxY() - 1.2f * 2.0f * radius);
         start = Point(x + 2.0f * radius * mGradient.dir.startRX, y + 2.0f * radius * mGradient.dir.startRY);
         end = Point(x + 2.0f * radius * mGradient.dir.endRX, y + 2.0f * radius * mGradient.dir.endRY);
-//        path = context.dc.createBezierPath();
-//        path->addRect(Rect(x, y, 2.0f * radius, 2.0f * radius));
         path = createStar(context.dc, 10, radius, Point(x + radius, y + radius));
-        context.dc.drawLinearGradientPath(path, gradient, start, end);
+        if (mGradient.type == kGradientLinear) {
+            context.dc.drawLinearGradientPath(path, gradient, start, end);
+        } else {
+            Point center(x + radius, y + radius);
+            context.dc.drawRadialGradientPath(path, gradient, center,
+                                              calcDistance(center, start), calcDistance(center, end));
+        }
     }
 
 protected:
@@ -135,6 +154,12 @@ public:
         mDirection.startRY = 0.0f;
         mDirection.endRX = 1.0f;
         mDirection.endRY = 1.0f;
+    }
+
+    void setGradientType(GradientType type)
+    {
+        mGradientType = type;
+        setNeedsDraw();
     }
 
     const Direction& direction() const { return mDirection; }
@@ -221,6 +246,20 @@ public:
         context.dc.setStrokeDashes({ PicaPt(2), PicaPt(2) }, PicaPt::kZero);
         context.dc.drawRect(info.rect, kPaintStroke);
 
+        if (mGradientType) {
+            context.dc.setStrokeDashes({ PicaPt(1), PicaPt(1) }, PicaPt::kZero);
+
+            auto center = info.rect.center();
+            auto v = info.start - center;
+            PicaPt radius1(std::sqrt((v.x * v.x + v.y * v.y).asFloat()));
+            v = info.end - center;
+            PicaPt radius2(std::sqrt((v.x * v.x + v.y * v.y).asFloat()));
+            context.dc.drawEllipse(Rect(center.x - radius1, center.y - radius1,
+                                        2.0f * radius1, 2.0f * radius1), kPaintStroke);
+            context.dc.drawEllipse(Rect(center.x - radius2, center.y - radius2,
+                                        2.0f * radius2, 2.0f * radius2), kPaintStroke);
+        }
+
         context.dc.setStrokeDashes({}, PicaPt::kZero);
 
         context.dc.drawLines({ info.start, info.end });
@@ -280,6 +319,7 @@ protected:
     }
 
 private:
+    GradientType mGradientType = kGradientLinear;
     Direction mDirection;
     std::function<void(LinearDirectionEditor*)> mOnChanged;
     DrawInfo mDrawInfo;
@@ -452,6 +492,7 @@ public:
     Panel()
     {
         mModel = {
+            kGradientLinear,
             { { Color::kRed, 0.0f },
               { Color::kYellow, 1.0f }
             },
@@ -464,24 +505,42 @@ public:
         auto *layout = new VLayout({
             new HLayout({
                 mCanvas = new Canvas(),
-                (new VLayout({
-                    mStops = new StopEditor(),
-                    // Functionally this would be better off in StopEditor,
-                    // but that means more hassle because StopEditor could not just
-                    // iterate over its children and assume that they are all stops.
-                    mAddStop = (new Button(Theme::StandardIcon::kAddCircle))
-                                    ->setDrawStyle(Button::DrawStyle::kNoDecoration),
-                    new VLayout::Stretch()
-                }))->setSpacingEm(0.5f),
                 new VLayout({
-                    mDirEdit = new LinearDirectionEditor(),
-                    new VLayout::Stretch()
-                }),
+                    new HLayout({
+                        new HLayout::Stretch(),
+                        mGradientType = (new SegmentedControl())
+                                            ->addItem("Linear")
+                                            ->addItem("Radial")
+                                            ->setAction(SegmentedControl::Action::kSelectOne),
+                        new HLayout::Stretch()
+                    }),
+                    new HLayout({
+                        (new VLayout({
+                            mStops = new StopEditor(),
+                            // Functionally this would be better off in StopEditor,
+                            // but that means more hassle because StopEditor could not just
+                            // iterate over its children and assume that they are all stops.
+                            mAddStop = (new Button(Theme::StandardIcon::kAddCircle))
+                                            ->setDrawStyle(Button::DrawStyle::kNoDecoration),
+                            new VLayout::Stretch()
+                        }))->setSpacingEm(0.5f),
+                        new VLayout({
+                            mDirEdit = new LinearDirectionEditor(),
+                            new VLayout::Stretch()
+                        }),
+                    }),
+                })
             }),
             new VLayout::Stretch()
         });
         layout->setMarginsEm(1.0f);
         addChild(layout);
+
+        mGradientType->setSegmentOn(0, true);
+        mGradientType->setOnClicked([this](int idx) {
+            updateModel();
+            updateDraw();
+        });
 
         mAddStop->setOnClicked([this](Button*) {
             mStops->addStop();
@@ -504,6 +563,7 @@ public:
 
     void updateModel()
     {
+        mModel.type = (mGradientType->isSegmentOn(0) ? kGradientLinear : kGradientRadial);
         mModel.stops = mStops->stops();
         mModel.dir = mDirEdit->direction();
     }
@@ -522,6 +582,7 @@ public:
 private:
     GradientInfo mModel;
     Canvas *mCanvas;  // ref, superclass owns
+    SegmentedControl *mGradientType;
     StopEditor *mStops;  // ref, superclass owns
     Button *mAddStop;  // ref, superclass owns
     LinearDirectionEditor *mDirEdit;
