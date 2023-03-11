@@ -338,20 +338,40 @@ Size Layout1D::preferredSize(const LayoutContext &context) const
     auto spacing = calcSpacing(context.dc, em);
     auto margins = calcMargins(context.dc, em);
 
+    // dir: preferred size is max of all the elements (so if one is kDimGrow, the result is kDimGrow)
+    // transverse: preferred size is the max non-grow size. (This may prove to be insufficient, in
+    // which case we probably need a minimumSize() or something.)
     Size size;
+    PicaPt maxFixedTransverse, maxTransverse;
     if (mImpl->dir == Dir::kHoriz) {
         for (auto *child : children()) {
             auto pref = child->preferredSize(context);
             size.width += pref.width;
-            size.height = std::max(size.height, pref.height);
+            maxTransverse = std::max(maxTransverse, pref.height);
+            if (pref.height < kDimGrow) {
+                maxFixedTransverse = std::max(maxFixedTransverse, pref.height);
+            }
         }
         size.width += margins[0] + margins[2] + float(children().size() - 1) * spacing;
+        if (maxFixedTransverse.asFloat() > 1e-3f) {
+            size.height = maxFixedTransverse;
+        } else {
+            size.height = maxTransverse;
+        }
         size.height += margins[1] + margins[3];
     } else {
         for (auto *child : children()) {
             auto pref = child->preferredSize(context);
-            size.width = std::max(size.width, pref.width);
+            maxTransverse = std::max(maxTransverse, pref.width);
+            if (pref.width < kDimGrow) {
+                maxFixedTransverse = std::max(maxFixedTransverse, pref.width);
+            }
             size.height += pref.height;
+        }
+        if (maxFixedTransverse.asFloat() > 1e-3f) {
+            size.width = maxFixedTransverse;
+        } else {
+            size.width = maxTransverse;
         }
         size.width += margins[0] + margins[2];
         size.height += margins[1] + margins[3] + float(children().size() - 1) * spacing;
