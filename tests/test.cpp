@@ -64,7 +64,20 @@ public:
     Size preferredSize(const LayoutContext &context) const override
     {
         auto onePx = context.dc.onePixel();
-        return Size(mPxPref.width * onePx, mPxPref.height * onePx);
+        // We don't know the size of a pixel in the constructor, so we just pass
+        // kDimGrow.asFloat(), which is 32000 px. But if we need to compare against
+        // kDimGrow, val * onePx will actually be smaller than kDimPx, so check that
+        // and substitute kDimGrow. (Since our sizes in the test cases are about 300 px,
+        // anything large is essentially kDimGrow anyway)
+        auto w = mPxPref.width * onePx;
+        if (mPxPref.width >= kDimGrow.asFloat()) {
+            w = kDimGrow;
+        }
+        auto h = mPxPref.height * onePx;
+        if (mPxPref.height >= kDimGrow.asFloat()) {
+            h = kDimGrow;
+        }
+        return Size(w, h);
     }
 
     void layout(const LayoutContext& context) override
@@ -156,6 +169,9 @@ protected:
     std::vector<SizePx> mSublayoutPxSizes;
     std::vector<SizePx> mExpectedPxSizes;
 
+    enum class SublayoutDir { kSame, kOpposite };
+    SublayoutDir mSublayoutDir = SublayoutDir::kSame;
+
 public:
     LayoutTest(const std::string& name, int align = 0, float spacingPx = 0.f,
                const std::array<float, 4>& marginsPx = { 0.0f, 0.0f, 0.0f, 0.0f })
@@ -185,6 +201,15 @@ public:
 
     virtual std::string runLayout(Dir dir)
     {
+        auto subdir = dir;
+        if (mSublayoutDir == SublayoutDir::kOpposite) {
+            if (dir == Dir::kHoriz) {
+                subdir = Dir::kVert;
+            } else {
+                subdir = Dir::kHoriz;
+            }
+        }
+
         // Setup layout
         TestLayout1D *layout = nullptr;
         if (dir == Dir::kHoriz) {
@@ -197,7 +222,7 @@ public:
                     layout->addChild(new TestWidget(pref));
                 } else {
                     // Sublayout cannot be TestLayout1D, since that overrides preferredSize()
-                    Layout1D *sublayout = new TestSublayout1D(Dir::kHoriz);
+                    Layout1D *sublayout = new TestSublayout1D(subdir);
                     sublayout->setSpacing(PicaPt::kZero);
                     for (auto &subPref : mSublayoutPxSizes) {
                         sublayout->addChild(new TestWidget(subPref));
@@ -215,7 +240,7 @@ public:
                 if (pref.width >= 0) {
                     layout->addChild(new TestWidget(SizePx(pref.height, pref.width)));
                 } else {
-                    Layout1D *sublayout = new TestSublayout1D(Dir::kVert);
+                    Layout1D *sublayout = new TestSublayout1D(subdir);
                     sublayout->setSpacing(PicaPt::kZero);
                     for (auto &subPref : mSublayoutPxSizes) {
                         sublayout->addChild(new TestWidget(SizePx(subPref.height, subPref.width)));
@@ -325,6 +350,10 @@ public:
     std::string layoutDescription(TestLayout1D *layout)
     {
         auto onePx = layout->onePx();
+        auto printChild = [onePx](std::stringstream& s, const char *indent, int idx, Widget *child) {
+            s << indent << "[" << idx << "]: (" << child->frame().x / onePx << ", " << child->frame().y / onePx
+            << ") " << child->frame().width / onePx << " x " << child->frame().height / onePx;
+        };
         std::stringstream s;
         s << "    Layout [" << (layout->dir() == Dir::kHoriz ? "kHoriz" : "kVert") << "], spacing: "
           << mSpacingPx << "px, margins px: {" << mMarginsPx[0] << ", " << mMarginsPx[1] << ", "
@@ -332,8 +361,18 @@ public:
           << " x " << layout->frame().height / onePx << ")" << std::endl;
         int i = 0;
         for (auto *child : layout->children()) {
-            s << "        [" << i++ << "]: (" << child->frame().x / onePx << ", " << child->frame().y / onePx
-              << ") " << child->frame().width / onePx << " x " << child->frame().height / onePx << std::endl;
+            printChild(s, "        ", i++, child);
+            if (auto *sub = dynamic_cast<TestSublayout1D*>(child)) {
+                s << ", layout: " << (sub->dir() == Dir::kHoriz ? "kHoriz" : "kVert");
+            }
+            s << std::endl;
+            if (auto *sub = dynamic_cast<TestSublayout1D*>(child)) {
+                int j = 0;
+                for (auto *subchild : sub->children()) {
+                    printChild(s, "            ", j++, subchild);
+                    s << std::endl;
+                }
+            }
         }
         return s.str();
     }
@@ -522,6 +561,21 @@ public:
                           SizePx(Widget::kDimGrow.asFloat(), 100),
                           SizePx(Widget::kDimGrow.asFloat(), 100) };
         mExpectedPxSizes = { SizePx(96, 100), SizePx(95, 100), SizePx(95, 100) };
+    }
+};
+
+class TransverseFixedLayoutTest : public LayoutTest
+{
+public:
+    TransverseFixedLayoutTest() : LayoutTest("layout (transverse with fixed and grow)", 0)
+    {
+        mSizePx = SizePx(300, 100);
+        mInputPxSizes = { SizePx(Widget::kDimGrow.asFloat(), 100),
+                          SizePx(-1, 100) };
+        mSublayoutDir = SublayoutDir::kOpposite;
+        mSublayoutPxSizes = { SizePx(Widget::kDimGrow.asFloat(), 100),
+                              SizePx(100, 100) };
+        mExpectedPxSizes = { SizePx(200, 100), SizePx(100, 100) };
     }
 };
 
@@ -877,15 +931,16 @@ int main(int argc, char* argv[])
         std::make_shared<NestedGrowLayoutTest>(),
         std::make_shared<NestedGrow2LayoutTest>(),
         std::make_shared<MarginsLayoutTest>(),
-/*        std::make_shared<NoItemsGridTest>(),
+        std::make_shared<TransverseFixedLayoutTest>(),
+        std::make_shared<NoItemsGridTest>(),
         std::make_shared<OneItemGridTest>(),
         std::make_shared<OneItemNonDefaultExpandGridTest>(),
         std::make_shared<ShrinkGridTest>(),
         std::make_shared<FullGridTest>(),
         std::make_shared<SparseGridTest>(),
         std::make_shared<WithLayoutGridTest>(),
-        std::make_shared<MarginsGridTest>()
-        std::make_shared<LeftTopGridTest>(), */
+        std::make_shared<MarginsGridTest>(),
+        std::make_shared<LeftTopGridTest>(),
         std::make_shared<CenterGridTest>(),
         std::make_shared<BottomRightGridTest>(),
     };

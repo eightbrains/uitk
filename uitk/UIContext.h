@@ -43,8 +43,8 @@ struct LayoutContext
     /// in Widget::layout(), which should use Widget::bounds() to retrieve
     /// sizes.
     struct {
-        PicaPt width = PicaPt(10000);
-        PicaPt height = PicaPt(10000);
+        PicaPt width = PicaPt::fromPixels(32000.0f, 72.0f);
+        PicaPt height = PicaPt::fromPixels(32000.0f, 72.0f);
     } constraints;
 
     LayoutContext withWidth(const PicaPt& w) const {
