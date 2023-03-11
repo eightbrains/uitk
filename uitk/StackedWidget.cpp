@@ -29,6 +29,7 @@ namespace uitk {
 struct StackedWidget::Impl
 {
     int index = kNoIndex;
+    PreferredSize preferredSizeAlgo = PreferredSize::kMaxPanelSize;
 };
 
 StackedWidget::StackedWidget()
@@ -40,7 +41,7 @@ StackedWidget::~StackedWidget()
 {
 }
 
-Widget* StackedWidget::addPanel(Widget *w)
+StackedWidget* StackedWidget::addPanel(Widget *w)
 {
     Super::addChild(w);
     if (children().size() == 1) {
@@ -48,15 +49,15 @@ Widget* StackedWidget::addPanel(Widget *w)
     } else {
         w->setVisible(false);
     }
-    return w;
+    return this;
 }
 
-Widget* StackedWidget::removePanel(Widget *w)
+StackedWidget* StackedWidget::removePanel(Widget *w)
 {
     w->setVisible(true);
     Super::removeChild(w);
     setIndexShowing(mImpl->index);
-    return w;
+    return this;
 }
 
 int StackedWidget::indexShowing() const { return mImpl->index; }
@@ -65,6 +66,7 @@ void StackedWidget::setIndexShowing(int index)
 {
     auto &panels = children();
     index = std::min(index, int(panels.size()));
+    mImpl->index = index;
 
     for (size_t i = 0;  i < panels.size();  ++i) {
         auto *p = panels[i];
@@ -76,6 +78,43 @@ void StackedWidget::setIndexShowing(int index)
     }
 
     updateKeyFocusOnVisibilityOrEnabledChange();
+}
+
+Widget* StackedWidget::currentPanel() const
+{
+    auto &panels = children();
+    if (mImpl->index >= 0 && mImpl->index < panels.size()) {
+        return children()[mImpl->index];
+    }
+    return nullptr;
+}
+
+StackedWidget::PreferredSize StackedWidget::preferredSizeCalculation() const
+    { return mImpl->preferredSizeAlgo; }
+
+StackedWidget* StackedWidget::setPreferredizeCalculation(PreferredSize& mode)
+{
+    mImpl->preferredSizeAlgo = mode;
+    setNeedsLayout();
+    return this;
+}
+
+Size StackedWidget::preferredSize(const LayoutContext& context) const
+{
+    Size size;
+    if (mImpl->preferredSizeAlgo == PreferredSize::kMaxPanelSize) {
+        for (auto *p : children()) {
+            auto pref = p->preferredSize(context);
+            size.width = std::max(size.width, pref.width);
+            size.height = std::max(size.height, pref.height);
+        }
+    } else {
+        auto &panels = children();
+        if (mImpl->index >= 0 && mImpl->index < panels.size()) {
+            return panels[mImpl->index]->preferredSize(context);
+        }
+    }
+    return size;
 }
 
 void StackedWidget::layout(const LayoutContext& context)

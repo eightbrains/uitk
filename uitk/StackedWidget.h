@@ -39,13 +39,27 @@ public:
     StackedWidget();
     ~StackedWidget();
 
-    Widget* addPanel(Widget *w);
-    Widget* removePanel(Widget *w);
+    StackedWidget* addPanel(Widget *w);
+    StackedWidget* removePanel(Widget *w);
 
     int indexShowing() const;
     /// Sets the child that is displayed. Set to kNoIndex to display no child.
     void setIndexShowing(int index);
 
+    /// Returns the current child or nullptr if no child is displayed.
+    Widget* currentPanel() const;
+
+    enum class PreferredSize {
+        kCurrentPanel,      /// preferredSize() returns the preferredSize()
+                            /// of the current panel
+        kMaxPanelSize };    /// preferredSize() returns the largest preferredSize()
+                            /// of all the panels. This is useful so that other
+                            /// items in a layout do not shift when the current
+                            /// panel changes. (Default)
+    PreferredSize preferredSizeCalculation() const;
+    StackedWidget* setPreferredizeCalculation(PreferredSize& mode);
+
+    Size preferredSize(const LayoutContext& context) const override;
     void layout(const LayoutContext& context) override;
 
 private:
