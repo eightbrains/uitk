@@ -25,6 +25,9 @@
 
 namespace gradients {
 
+static const float kGradientEditSizeEm = 15.0f;
+static const PicaPt kEditHandleRadius = PicaPt(3.0f);
+
 enum GradientType { kGradientLinear, kGradientRadial };
 
 struct Direction
@@ -33,6 +36,8 @@ struct Direction
     float startRY;
     float endRX;
     float endRY;
+    float centerRX = 0.0f;  // only used for radial gradients
+    float centerRY = 0.0f;
 };
 
 struct GradientInfo
@@ -68,38 +73,54 @@ public:
     {
         Super::draw(context);
 
-        PicaPt size = context.dc.roundToNearestPixel(std::min(bounds().width, bounds().height));
-        PicaPt x = context.dc.roundToNearestPixel(0.5f * (bounds().width - size));
-        PicaPt y = context.dc.roundToNearestPixel(0.5f * (bounds().height - size));
-
         auto &gradient = context.dc.getGradient(mGradient.stops);
 
-        PicaPt rectSize = context.dc.roundToNearestPixel(0.2f * size);
-        Point start(x + rectSize * mGradient.dir.startRX, y + rectSize * mGradient.dir.startRY);
-        Point end(x + rectSize * mGradient.dir.endRX, y + rectSize * mGradient.dir.endRY);
-        auto path = context.dc.createBezierPath();
-        path->addRect(Rect(x, y, rectSize, rectSize));
-        if (mGradient.type == kGradientLinear) {
-            context.dc.drawLinearGradientPath(path, gradient, start, end);
-        } else {
-            Point center(x + 0.5f * rectSize, y + 0.5f * rectSize);
-            context.dc.drawRadialGradientPath(path, gradient, center,
-                                              calcDistance(center, start), calcDistance(center, end));
-        }
+        auto drawPath = [&context, &gradient](std::shared_ptr<BezierPath> path,
+                                              const GradientInfo& config,
+                                              const PicaPt& x, const PicaPt& y, const PicaPt& size) {
+            Point start(x + size * config.dir.startRX, y + size * config.dir.startRY);
+            Point end(x + size * config.dir.endRX, y + size * config.dir.endRY);
+            if (config.type == kGradientLinear) {
+                context.dc.drawLinearGradientPath(path, gradient, start, end);
+            } else {
+                Point center(x + size * config.dir.centerRX, y + size * config.dir.centerRY);
+                context.dc.drawRadialGradientPath(path, gradient, center,
+                                                  calcDistance(center, start), calcDistance(center, end));
+            }
+        };
 
-        auto radius = 0.5f * rectSize;
-        x = context.dc.roundToNearestPixel(bounds().maxX() - 1.2f * 2.0f * radius);
-        y = context.dc.roundToNearestPixel(bounds().maxY() - 1.2f * 2.0f * radius);
-        start = Point(x + 2.0f * radius * mGradient.dir.startRX, y + 2.0f * radius * mGradient.dir.startRY);
-        end = Point(x + 2.0f * radius * mGradient.dir.endRX, y + 2.0f * radius * mGradient.dir.endRY);
+        const PicaPt size = context.dc.roundToNearestPixel(std::min(bounds().width, bounds().height));
+        const PicaPt squareSize = context.dc.roundToNearestPixel(0.3f * size);
+        const PicaPt rectWidth = context.dc.roundToNearestPixel(0.4f * size);
+        const PicaPt rectHeight = context.dc.roundToNearestPixel(0.3f * size);
+
+        PicaPt x = context.dc.roundToNearestPixel(0.05f * size + 0.5f * (rectWidth - squareSize));
+        PicaPt y = context.dc.roundToNearestPixel(0.05f * size);
+        auto path = context.dc.createBezierPath();
+        path->addRect(Rect(x, y, squareSize, squareSize));
+        drawPath(path, mGradient, x, y, squareSize);
+
+        x = context.dc.roundToNearestPixel(0.05f * size);
+        y = context.dc.roundToNearestPixel(0.65f * size);
+        path = context.dc.createBezierPath();
+        path->addRect(Rect(x, y, rectWidth, rectHeight));
+        PicaPt gradientSize = std::min(rectWidth, rectHeight);
+        drawPath(path, mGradient,
+                 x + 0.5f * (rectWidth - gradientSize),
+                 y + 0.5f * (rectHeight - gradientSize),
+                 gradientSize);
+
+        x = context.dc.roundToNearestPixel(bounds().maxX() - 0.05f * size - squareSize);
+        y = context.dc.roundToNearestPixel(0.05f * size);
+        path = context.dc.createBezierPath();
+        path->addEllipse(Rect(x, y, squareSize, squareSize));
+        drawPath(path, mGradient, x, y, squareSize);
+
+        auto radius = 0.5f * squareSize;
+        x = context.dc.roundToNearestPixel(bounds().maxX() - 0.05f * size - squareSize);
+        y = context.dc.roundToNearestPixel(bounds().maxY() - 0.05f * size - squareSize);
         path = createStar(context.dc, 10, radius, Point(x + radius, y + radius));
-        if (mGradient.type == kGradientLinear) {
-            context.dc.drawLinearGradientPath(path, gradient, start, end);
-        } else {
-            Point center(x + radius, y + radius);
-            context.dc.drawRadialGradientPath(path, gradient, center,
-                                              calcDistance(center, start), calcDistance(center, end));
-        }
+        drawPath(path, mGradient, x, y, squareSize);
     }
 
 protected:
@@ -144,32 +165,24 @@ private:
     GradientInfo mGradient;
 };
 
-class LinearDirectionEditor : public Widget
+class DirectionEditor : public Widget
 {
     using Super = Widget;
 public:
-    LinearDirectionEditor()
+    explicit DirectionEditor(GradientType t, const Direction& d)
+        : mDirection(d)
     {
-        mDirection.startRX = 0.0f;
-        mDirection.startRY = 0.0f;
-        mDirection.endRX = 1.0f;
-        mDirection.endRY = 1.0f;
-    }
-
-    void setGradientType(GradientType type)
-    {
-        mGradientType = type;
-        setNeedsDraw();
+        mGradientType = t;
     }
 
     const Direction& direction() const { return mDirection; }
-    LinearDirectionEditor* setDirection(const Direction& d)
+    DirectionEditor* setDirection(const Direction& d)
     {
         mDirection = d;
         return this;
     }
 
-    LinearDirectionEditor* setOnChanged(std::function<void(LinearDirectionEditor*)> onChanged)
+    DirectionEditor* setOnChanged(std::function<void(DirectionEditor*)> onChanged)
     {
         mOnChanged = onChanged;
         return this;
@@ -182,17 +195,26 @@ public:
 
         auto d1 = e.pos - mDrawInfo.start;
         auto d2 = e.pos - mDrawInfo.end;
-        if (d1.x * d1.x + d1.y * d1.y <= kRadius * kRadius) {
+        auto d3 = e.pos - mDrawInfo.center;
+        auto radius2 = kEditHandleRadius * kEditHandleRadius;
+        if (d1.x * d1.x + d1.y * d1.y <= radius2) {
             mHighlightId = kStartId;
             if (e.type == MouseEvent::Type::kButtonDown && e.button.button == MouseButton::kLeft) {
                 mGrabId = kStartId;
             } else if (e.type != MouseEvent::Type::kDrag) {
                 mGrabId = kNoneId;
             }
-        } else if (d2.x * d2.x + d2.y * d2.y <= kRadius * kRadius) {
+        } else if (d2.x * d2.x + d2.y * d2.y <= radius2) {
             mHighlightId = kEndId;
             if (e.type == MouseEvent::Type::kButtonDown && e.button.button == MouseButton::kLeft) {
                 mGrabId = kEndId;
+            } else if (e.type != MouseEvent::Type::kDrag) {
+                mGrabId = kNoneId;
+            }
+        } else if (mGradientType == kGradientRadial && d3.x * d3.x + d3.y * d3.y <= radius2) {
+            mHighlightId = kCenterId;
+            if (e.type == MouseEvent::Type::kButtonDown && e.button.button == MouseButton::kLeft) {
+                mGrabId = kCenterId;
             } else if (e.type != MouseEvent::Type::kDrag) {
                 mGrabId = kNoneId;
             }
@@ -202,13 +224,7 @@ public:
         }
 
         if (e.type == MouseEvent::Type::kDrag) {
-            if (mGrabId == kStartId) {
-                mDirection.startRX = (e.pos.x - mDrawInfo.rect.x) / mDrawInfo.rect.width;
-                mDirection.startRY = (e.pos.y - mDrawInfo.rect.x) / mDrawInfo.rect.height;
-            } else if (mGrabId == kEndId) {
-                mDirection.endRX = (e.pos.x - mDrawInfo.rect.x) / mDrawInfo.rect.width;
-                mDirection.endRY = (e.pos.y - mDrawInfo.rect.x) / mDrawInfo.rect.height;
-            }
+            onMouseMoved(mGrabId, e.pos);
             if (mOnChanged) { mOnChanged(this); }
             setNeedsDraw();
         }
@@ -223,19 +239,29 @@ public:
     Size preferredSize(const LayoutContext &context) const override
     {
         auto em = context.theme.params().labelFont.pointSize();
-        return Size(10.0f * em, 10.0f * em);
+        return Size(kGradientEditSizeEm * em, kGradientEditSizeEm * em);
     }
 
-    void draw(UIContext& context) override
+protected:
+    enum GrabId { kNoneId = 0, kStartId = 1, kEndId = 2, kCenterId = 3 };
+
+    struct DrawInfo {
+        Rect rect;
+        Point start;
+        Point end;
+        Point toEndUnit;
+        Point center;  // only used in radial mode
+    };
+    DrawInfo mDrawInfo;
+    Direction mDirection;
+
+    virtual void onMouseMoved(GrabId id, const Point& pos) = 0;
+
+    void drawCommon(UIContext& context, const DrawInfo& info)
     {
         const float kArrowHalfWidth = 3.5f;
 
-        Super::draw(context);
-
         auto borderWidth = PicaPt::fromStandardPixels(1);
-        mDrawInfo = calcDrawInfo(context.dc);
-        auto &info = mDrawInfo;
-
         auto fg = Color(context.theme.params().textColor, 1.0f);
 
         context.dc.setStrokeColor(Color(0.5f, 0.5f, 0.5f));
@@ -246,25 +272,11 @@ public:
         context.dc.setStrokeDashes({ PicaPt(2), PicaPt(2) }, PicaPt::kZero);
         context.dc.drawRect(info.rect, kPaintStroke);
 
-        if (mGradientType) {
-            context.dc.setStrokeDashes({ PicaPt(1), PicaPt(1) }, PicaPt::kZero);
-
-            auto center = info.rect.center();
-            auto v = info.start - center;
-            PicaPt radius1(std::sqrt((v.x * v.x + v.y * v.y).asFloat()));
-            v = info.end - center;
-            PicaPt radius2(std::sqrt((v.x * v.x + v.y * v.y).asFloat()));
-            context.dc.drawEllipse(Rect(center.x - radius1, center.y - radius1,
-                                        2.0f * radius1, 2.0f * radius1), kPaintStroke);
-            context.dc.drawEllipse(Rect(center.x - radius2, center.y - radius2,
-                                        2.0f * radius2, 2.0f * radius2), kPaintStroke);
-        }
-
         context.dc.setStrokeDashes({}, PicaPt::kZero);
 
         context.dc.drawLines({ info.start, info.end });
         auto arrowhead = context.dc.createBezierPath();
-        arrowhead->moveTo(info.end - kRadius.asFloat() * info.toEndUnit);
+        arrowhead->moveTo(info.end - kEditHandleRadius.asFloat() * info.toEndUnit);
         arrowhead->lineTo(info.end - 3.0f * kArrowHalfWidth * info.toEndUnit - kArrowHalfWidth * Point(info.toEndUnit.y, -info.toEndUnit.x));
         arrowhead->lineTo(info.end - 3.0f * kArrowHalfWidth * info.toEndUnit - kArrowHalfWidth * Point(-info.toEndUnit.y, info.toEndUnit.x));
         arrowhead->close();
@@ -284,23 +296,19 @@ public:
             }
         };
 
+        if (mGradientType == kGradientRadial) {
+            setColor(kCenterId);
+            context.dc.drawEllipse(Rect(info.center.x - kEditHandleRadius, info.center.y - kEditHandleRadius,
+                                        2.0f * kEditHandleRadius, 2.0f * kEditHandleRadius),
+                                   kPaintStrokeAndFill);
+        }
         setColor(kStartId);
-        context.dc.drawEllipse(Rect(info.start.x - kRadius, info.start.y - kRadius,
-                                    2.0f * kRadius, 2.0f * kRadius), kPaintStrokeAndFill);
+        context.dc.drawEllipse(Rect(info.start.x - kEditHandleRadius, info.start.y - kEditHandleRadius,
+                                    2.0f * kEditHandleRadius, 2.0f * kEditHandleRadius), kPaintStrokeAndFill);
         setColor(kEndId);
-        context.dc.drawEllipse(Rect(info.end.x - kRadius, info.end.y - kRadius,
-                                    2.0f * kRadius, 2.0f * kRadius), kPaintStrokeAndFill);
+        context.dc.drawEllipse(Rect(info.end.x - kEditHandleRadius, info.end.y - kEditHandleRadius,
+                                    2.0f * kEditHandleRadius, 2.0f * kEditHandleRadius), kPaintStrokeAndFill);
     }
-
-protected:
-    const PicaPt kRadius = PicaPt(3.0f);
-
-    struct DrawInfo {
-        Rect rect;
-        Point start;
-        Point end;
-        Point toEndUnit;
-    };
 
     DrawInfo calcDrawInfo(const DrawContext& dc)
     {
@@ -309,24 +317,131 @@ protected:
         auto r = bounds().insetted(inset, inset);
         Point start(r.x + mDirection.startRX * r.width, r.y + mDirection.startRY * r.height);
         Point end(r.x + mDirection.endRX * r.width, r.y + mDirection.endRY * r.height);
+        Point center(r.x + mDirection.centerRX * r.width, r.y + mDirection.centerRY * r.height);
 
         auto toEnd = end - start;
         float distPica = (toEnd.x * toEnd.x + toEnd.y * toEnd.y).asFloat();
         distPica = std::sqrt(distPica);
         Point dir(toEnd.x / distPica, toEnd.y / distPica);
 
-        return { r, start, end, dir };
+        return { r, start, end, dir, center };
     }
 
 private:
     GradientType mGradientType = kGradientLinear;
-    Direction mDirection;
-    std::function<void(LinearDirectionEditor*)> mOnChanged;
-    DrawInfo mDrawInfo;
+    std::function<void(DirectionEditor*)> mOnChanged;
 
-    enum GrabId { kNoneId = 0, kStartId = 1, kEndId = 2 };
     GrabId mHighlightId = kNoneId;
     GrabId mGrabId = kNoneId;
+};
+
+class LinearEditor : public DirectionEditor
+{
+    using Super = Widget;
+public:
+    LinearEditor() : DirectionEditor(kGradientLinear,
+                                     { 0.0f, 0.0f,
+                                       1.0f, 1.0f,
+                                       0.0f, 0.0f }) // center; unused
+    {
+    }
+
+    void onMouseMoved(GrabId id, const Point& pos) override
+    {
+        if (id == kStartId) {
+            mDirection.startRX = (pos.x - mDrawInfo.rect.x) / mDrawInfo.rect.width;
+            mDirection.startRY = (pos.y - mDrawInfo.rect.y) / mDrawInfo.rect.height;
+        } else if (id == kEndId) {
+            mDirection.endRX = (pos.x - mDrawInfo.rect.x) / mDrawInfo.rect.width;
+            mDirection.endRY = (pos.y - mDrawInfo.rect.y) / mDrawInfo.rect.height;
+        }
+    }
+
+    void draw(UIContext& context) override
+    {
+        Super::draw(context);
+
+        mDrawInfo = calcDrawInfo(context.dc);
+        auto &info = mDrawInfo;
+
+        drawCommon(context, info);
+    }
+};
+
+class RadialEditor : public DirectionEditor
+{
+    using Super = Widget;
+public:
+    RadialEditor() : DirectionEditor(kGradientRadial,
+                                     { 0.55f, 0.55f,  // start
+                                       1.0f, 1.0f,    // end
+                                       0.5f, 0.5f })  // center
+    {}
+
+    void onMouseMoved(GrabId id, const Point& pos) override
+    {
+        if (id == kCenterId) {
+            auto centerRX = (pos.x - mDrawInfo.rect.x) / mDrawInfo.rect.width;
+            auto centerRY = (pos.y - mDrawInfo.rect.y) / mDrawInfo.rect.height;
+            auto dx = centerRX - mDirection.centerRX;
+            auto dy = centerRY - mDirection.centerRY;
+            mDirection.centerRX = centerRX;
+            mDirection.centerRY = centerRY;
+            mDirection.startRX += dx;
+            mDirection.startRY += dy;
+            mDirection.endRX += dx;
+            mDirection.endRY += dy;
+        } else {
+            auto dx = std::max(mDirection.centerRX, (pos.x - mDrawInfo.rect.x) / mDrawInfo.rect.width) -
+                      mDirection.centerRX;
+            auto dy = std::max(mDirection.centerRY, (pos.y - mDrawInfo.rect.y) / mDrawInfo.rect.height) -
+                      mDirection.centerRY;
+            // Take the max distance, it feels weird to have only one direction change the position
+            auto delta = std::max(dx, dy);
+            if (id == kStartId) {
+                mDirection.startRX = mDirection.centerRX + delta;
+                mDirection.startRY = mDirection.centerRY + delta;
+            } else {
+                mDirection.endRX = mDirection.centerRX + delta;
+                mDirection.endRY = mDirection.centerRY + delta;
+            }
+        }
+    }
+
+    void draw(UIContext& context) override
+    {
+        Super::draw(context);
+
+        mDrawInfo = calcDrawInfo(context.dc);
+        auto &info = mDrawInfo;
+
+        auto lineWidth = PicaPt::fromStandardPixels(1);
+        auto fg = Color(context.theme.params().textColor, 1.0f);
+
+        context.dc.save();
+        context.dc.clipToRect(bounds());
+        context.dc.setStrokeColor(fg);
+        context.dc.setStrokeWidth(lineWidth);
+        context.dc.setStrokeDashes({ PicaPt(4), PicaPt(2), PicaPt(2), PicaPt(2) }, PicaPt::kZero);
+        context.dc.drawLines({ Point(bounds().x, info.center.y), Point(bounds().maxX(), info.center.y) });
+        context.dc.drawLines({ Point(info.center.x, bounds().y), Point(info.center.x, bounds().maxY()) });
+
+        context.dc.setStrokeDashes({ PicaPt(1), PicaPt(1) }, PicaPt::kZero);
+
+        auto v = info.start - info.center;
+        PicaPt radius1(std::sqrt((v.x * v.x + v.y * v.y).asFloat()));
+        v = info.end - info.center;
+        PicaPt radius2(std::sqrt((v.x * v.x + v.y * v.y).asFloat()));
+        context.dc.drawEllipse(Rect(info.center.x - radius1, info.center.y - radius1,
+                                    2.0f * radius1, 2.0f * radius1), kPaintStroke);
+        context.dc.drawEllipse(Rect(info.center.x - radius2, info.center.y - radius2,
+                                    2.0f * radius2, 2.0f * radius2), kPaintStroke);
+
+        context.dc.setStrokeDashes({}, PicaPt::kZero);
+        context.dc.restore();
+
+        drawCommon(context, info);
+    }
 };
 
 class OneStopEdit : public HLayout
@@ -493,14 +608,20 @@ public:
     {
         mModel = {
             kGradientLinear,
-            { { Color::kRed, 0.0f },
-              { Color::kYellow, 1.0f }
+            { { Color(0.6f, 0.0f, 0.4f), 0.00f },
+              { Color::kRed,             0.01f },
+              { Color::kYellow,          0.99f },
+              { Color(0.5f, 1.0f, 0.0f), 1.00f }
             },
             {
                 0.0f, 0.0f,
                 1.0f, 1.0f
             }
         };
+
+        Button *addStop;
+        LinearEditor *linear;
+        RadialEditor *radial;
 
         auto *layout = new VLayout({
             new HLayout({
@@ -515,17 +636,22 @@ public:
                         new HLayout::Stretch()
                     }),
                     new HLayout({
-                        (new VLayout({
-                            mStops = new StopEditor(),
+                        new VLayout({
+                            mStops = (new StopEditor())->setStops(mModel.stops),
                             // Functionally this would be better off in StopEditor,
                             // but that means more hassle because StopEditor could not just
                             // iterate over its children and assume that they are all stops.
-                            mAddStop = (new Button(Theme::StandardIcon::kAddCircle))
-                                            ->setDrawStyle(Button::DrawStyle::kNoDecoration),
+                            new HLayout({
+                                new HLayout::Stretch(),
+                                addStop = new Button("+ Stop"),
+                                new HLayout::Stretch()
+                            }),
                             new VLayout::Stretch()
-                        }))->setSpacingEm(0.5f),
+                        }),
                         new VLayout({
-                            mDirEdit = new LinearDirectionEditor(),
+                            mDirEditStack = (new StackedWidget())
+                                                ->addPanel(linear = new LinearEditor())
+                                                ->addPanel(radial = new RadialEditor()),
                             new VLayout::Stretch()
                         }),
                     }),
@@ -538,11 +664,12 @@ public:
 
         mGradientType->setSegmentOn(0, true);
         mGradientType->setOnClicked([this](int idx) {
+            mDirEditStack->setIndexShowing(idx);
             updateModel();
             updateDraw();
         });
 
-        mAddStop->setOnClicked([this](Button*) {
+        addStop->setOnClicked([this](Button*) {
             mStops->addStop();
             updateModel();
             updateDraw();
@@ -553,7 +680,12 @@ public:
             updateDraw();
         });
 
-        mDirEdit->setOnChanged([this](LinearDirectionEditor *lde) {
+        linear->setOnChanged([this](DirectionEditor *lde) {
+            updateModel();
+            updateDraw();
+        });
+
+        radial->setOnChanged([this](DirectionEditor *lde) {
             updateModel();
             updateDraw();
         });
@@ -565,7 +697,7 @@ public:
     {
         mModel.type = (mGradientType->isSegmentOn(0) ? kGradientLinear : kGradientRadial);
         mModel.stops = mStops->stops();
-        mModel.dir = mDirEdit->direction();
+        mModel.dir = ((DirectionEditor*)mDirEditStack->currentPanel())->direction();
     }
 
     void updateDraw()
@@ -582,10 +714,9 @@ public:
 private:
     GradientInfo mModel;
     Canvas *mCanvas;  // ref, superclass owns
-    SegmentedControl *mGradientType;
+    SegmentedControl *mGradientType;  // ref, superclass owns
     StopEditor *mStops;  // ref, superclass owns
-    Button *mAddStop;  // ref, superclass owns
-    LinearDirectionEditor *mDirEdit;
+    StackedWidget *mDirEditStack;  // ref, superclass owns
 };
 
 } // namespace gradients
