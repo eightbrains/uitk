@@ -60,7 +60,12 @@ double NumericModel::doubleValue() const { return mImpl->value; }
 
 NumericModel* NumericModel::setValue(double val)
 {
-    val = mImpl->increment * std::floor(val / mImpl->increment);
+    // Use round(), not floor(), this seems to work better.
+    // In particular, 0.01 with an increment of 0.01 gets floor()ed
+    // down to 0.0, but 0.01 is not representable exactly, so it is 0.1 - epsilon,
+    // while might have a couple conversions to/from double/float, so
+    // it is not one increment's worth. This is bad.
+    val = mImpl->increment * std::round(val / mImpl->increment);
     val = std::min(mImpl->maxValue, std::max(mImpl->minValue, val));
     mImpl->value = val;
     return this;
