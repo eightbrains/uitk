@@ -514,6 +514,11 @@ Window::~Window()
     Application::instance().removeWindow(this);
     updateWindowList();
     mImpl->cancelPopup();
+    // clear out refs that are sometimes referenced, in case deleting code
+    // refers to them after they have been deleted.
+    mImpl->grabbedWidget = nullptr;
+    mImpl->focusedWidget = nullptr;
+    mImpl->tooltipWidget = nullptr;
     mImpl->theme.reset();
     mImpl->window.reset();
     mImpl->menubarWidget.reset();
