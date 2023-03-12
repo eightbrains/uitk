@@ -319,10 +319,15 @@ protected:
         Point end(r.x + mDirection.endRX * r.width, r.y + mDirection.endRY * r.height);
         Point center(r.x + mDirection.centerRX * r.width, r.y + mDirection.centerRY * r.height);
 
+        Point dir;
         auto toEnd = end - start;
         float distPica = (toEnd.x * toEnd.x + toEnd.y * toEnd.y).asFloat();
-        distPica = std::sqrt(distPica);
-        Point dir(toEnd.x / distPica, toEnd.y / distPica);
+        if (distPica > 1e-3f) {
+            distPica = std::sqrt(distPica);
+            dir = Point(toEnd.x / distPica, toEnd.y / distPica);
+        } else {
+            dir = Point::kZero;
+        }
 
         return { r, start, end, dir, center };
     }
