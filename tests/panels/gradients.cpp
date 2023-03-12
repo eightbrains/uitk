@@ -402,8 +402,10 @@ public:
                 mDirection.startRX = mDirection.centerRX + delta;
                 mDirection.startRY = mDirection.centerRY + delta;
             } else {
-                mDirection.endRX = mDirection.centerRX + delta;
-                mDirection.endRY = mDirection.centerRY + delta;
+                auto deltaFromStart = delta - (mDirection.startRX - mDirection.centerRX);
+                deltaFromStart = std::max(0.0f, deltaFromStart);
+                mDirection.endRX = mDirection.startRX + deltaFromStart;
+                mDirection.endRY = mDirection.startRY + deltaFromStart;
             }
         }
     }
@@ -472,7 +474,7 @@ public:
     const Color& color() const { return mColor->color(); }
     OneStopEdit* setColor(const Color& c) { mColor->setColor(c); return this; }
 
-    float location() const { return mLocation->doubleValue(); }
+    float location() const { return float(mLocation->doubleValue()); }
     OneStopEdit* setLocation(float v) { mLocation->setValue(double(v)); return this; }
 
     OneStopEdit* setCanRemove(bool can)
