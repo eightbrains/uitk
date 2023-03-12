@@ -224,12 +224,13 @@ Win32Window::Win32Window(IWindowCallbacks& callbacks,
         wcex.hInstance     = HINST_THISCOMPONENT;
         wcex.hbrBackground = NULL;
         wcex.lpszMenuName  = NULL;
+        wcex.hIcon         = NULL;
         // If we set a cursor, Windows will reset the cursor back to
         // this every time the mouse moves, which is annoying if you
         // want a different cursor. On the other hand, you need the
         // same code handling the WM_SETCURSOR message anyway, otherwise
         // the cursor will remain the resize cursor when the mouse moves
-        // over the border and into the client area. I does not seem to
+        // over the border and into the client area. It does not seem to
         // reduce the number of times the message is called, but one can
         // hope, anyway. (If we did not want to support changing cursors,
         // we should do wcex.hCursor = LoadCursor(NULL, IDI_APPLICATION)
@@ -391,6 +392,7 @@ void Win32Window::raiseToTop() const
 
 void Win32Window::setTitle(const std::string& title)
 {
+    // (Note: if only one character displays, the wndproc is not using the W version)
     auto wtitle = win32UnicodeFromUTF8(title);
     SetWindowTextW(mImpl->hwnd, wtitle.c_str());
     mImpl->title = title;
@@ -904,7 +906,7 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
                 w->updateCursor();
                 return TRUE;  // halt further processing of the cursor change request
             }
-            return DefWindowProc(hwnd, message, wParam, lParam);
+            return DefWindowProcW(hwnd, message, wParam, lParam);
         case WM_MOUSEMOVE:
             w->onMouse(makeMouseEvent(MouseEvent::Type::kMove,
                                       MouseButton::kNone, 0, wParam),
@@ -1077,10 +1079,10 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
         }
         case WM_IME_SETCONTEXT:
             lParam = lParam & (~ISC_SHOWUICOMPOSITIONWINDOW);  // we show the composition, so remove this
-            return DefWindowProc(hwnd, message, wParam, lParam);
+            return DefWindowProcW(hwnd, message, wParam, lParam);
         case WM_IME_STARTCOMPOSITION:
             w->showIMEWindow();
-            return DefWindowProc(hwnd, message, wParam, lParam);
+            return DefWindowProcW(hwnd, message, wParam, lParam);
         case WM_IME_COMPOSITION:
             if (lParam & GCS_RESULTSTR) {  // apply conversion
                 w->applyIMEText();
@@ -1098,7 +1100,7 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
         case WM_IME_CONTROL:
         case WM_IME_NOTIFY:
         case WM_IME_CHAR:
-            return DefWindowProc(hwnd, message, wParam, lParam);
+            return DefWindowProcW(hwnd, message, wParam, lParam);
         case WM_ENTERMENULOOP:
             w->onMenuWillShow();
             return 0;
@@ -1116,14 +1118,16 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
                 return 0;  // return 0: handled
             }
             // This is a control message. Not sure if we need to pass to
-            // DefWindowProc, but just to be safe...
-            return DefWindowProc(hwnd, message, wParam, lParam);
+            // DefWindowProcW, but just to be safe...
+            return DefWindowProcW(hwnd, message, wParam, lParam);
         }
         case WM_DWMCOLORIZATIONCOLORCHANGED:
             Application::instance().onSystemThemeChanged();
             return 0;
         default:
-            return DefWindowProc(hwnd, message, wParam, lParam);
+            // Note: need to use the W version, otherwise everything seems to work
+            //       correctly except that the window title is only one character.
+            return DefWindowProcW(hwnd, message, wParam, lParam);
     }
 }
 
