@@ -167,22 +167,22 @@ public:
         });
 
         spacing->setOnValueChanged([this, spacingNum](SliderLogic *slider) {
-            mSpacingEm = slider->doubleValue();
+            mSpacingEm = float(slider->doubleValue());
             spacingNum->setValue(mSpacingEm);
             updateLayoutConfig();
         });
         spacingNum->setOnValueChanged([this, spacing](NumberEdit *num) {
-            mSpacingEm = num->doubleValue();
+            mSpacingEm = float(num->doubleValue());
             spacing->setValue(mSpacingEm);
             updateLayoutConfig();
         });
         margin->setOnValueChanged([this, marginNum](SliderLogic *slider) {
-            mMarginEm = slider->doubleValue();
+            mMarginEm = float(slider->doubleValue());
             marginNum->setValue(mMarginEm);
             updateLayoutConfig();
         });
         marginNum->setOnValueChanged([this, margin](NumberEdit *num) {
-            mMarginEm = num->doubleValue();
+            mMarginEm = float(num->doubleValue());
             margin->setValue(mMarginEm);
             updateLayoutConfig();
         });

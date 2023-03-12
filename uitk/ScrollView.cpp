@@ -284,7 +284,7 @@ Widget::EventResult ScrollView::mouse(const MouseEvent& e)
             if (mImpl->hideScrollbarsTimer == Application::kInvalidScheduledId) {
                 if (auto *w = window()) {
                     mImpl->hideScrollbarsTimer = Application::instance()
-                                                       .scheduleLater(w, 0.1,
+                                                       .scheduleLater(w, 0.1f,
                                                                       Application::ScheduleMode::kRepeating,
                                                                       [this](Application::ScheduledId id) {
                         assert(mImpl->hideScrollbarsTimer == id);

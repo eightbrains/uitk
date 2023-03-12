@@ -580,7 +580,7 @@ protected:
             });
             auto idx = children().size();
             edit->setOnRequestRemove([this, idx /* copy */](OneStopEdit *e) {
-                removeStop(idx);
+                removeStop(int(idx));
             });
             addChild(edit);
         }

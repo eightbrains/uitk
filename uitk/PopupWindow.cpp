@@ -58,7 +58,7 @@ void PopupWindow::showPopup(Window *parent, int osX, int osY)
     if (!Application::instance().isOriginInUpperLeft()) {
         osY -= int(std::round(osRect.height));
     }
-    this->setOSFrame(osX, osY, int(std::round(osRect.width)), int(std::round(osRect.height)));
+    this->setOSFrame(float(osX), float(osY), std::round(osRect.width), std::round(osRect.height));
     mImpl->parent->setPopupWindow(this);
     this->show(true);
 }

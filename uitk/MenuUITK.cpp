@@ -1177,8 +1177,8 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord,
     float yDir = (Application::instance().isOriginInUpperLeft() ? 1.0f : -1.0f);
     auto osUL = w->convertWindowToOSPoint(upperLeftWindowCoord);
 #if __APPLE__ || defined(_WIN32) || defined(_WIN64)
-    osUL.x = int(std::round(osUL.x));
-    osUL.y = int(std::round(osUL.y));
+    osUL.x = std::round(osUL.x);
+    osUL.y = std::round(osUL.y);
 #else
     // I'm not sure why X11 needs to be truncated and macOS/Win32 do not
     osUL.x = int(osUL.x);
