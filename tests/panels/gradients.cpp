@@ -91,7 +91,7 @@ public:
 
         const PicaPt size = context.dc.roundToNearestPixel(std::min(bounds().width, bounds().height));
         const PicaPt squareSize = context.dc.roundToNearestPixel(0.3f * size);
-        const PicaPt rectWidth = context.dc.roundToNearestPixel(0.4f * size);
+        const PicaPt rectWidth = context.dc.roundToNearestPixel(0.5f * size);
         const PicaPt rectHeight = context.dc.roundToNearestPixel(0.3f * size);
 
         PicaPt x = context.dc.roundToNearestPixel(0.05f * size + 0.5f * (rectWidth - squareSize));
@@ -399,6 +399,8 @@ public:
             // Take the max distance, it feels weird to have only one direction change the position
             auto delta = std::max(dx, dy);
             if (id == kStartId) {
+                auto endDelta = (mDirection.endRX - mDirection.centerRX);
+                delta = std::min(delta, endDelta);
                 mDirection.startRX = mDirection.centerRX + delta;
                 mDirection.startRY = mDirection.centerRY + delta;
             } else {
