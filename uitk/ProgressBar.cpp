@@ -50,6 +50,15 @@ ProgressBar* ProgressBar::setValue(float percent)
     return this;
 }
 
+AccessibilityInfo ProgressBar::accessibilityInfo()
+{
+    auto info = Super::accessibilityInfo();
+    info.type = AccessibilityInfo::Type::kStatic;
+    info.text = "Progress bar";
+    info.value = "Progress: " + std::to_string(mImpl->value) + "%";
+    return info;
+}
+
 Size ProgressBar::preferredSize(const LayoutContext& context) const
 {
     return Size(kDimGrow, context.theme.calcPreferredProgressBarSize(context.dc).height);

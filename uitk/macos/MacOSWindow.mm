@@ -28,17 +28,23 @@
 
 #include "MacOSApplication.h"
 
+#include "../Accessibility.h"
 #include "../Application.h"
 #include "../Cursor.h"
 #include "../Events.h"
 #include "../OSCursor.h"
 #include "../TextEditorLogic.h"
+#include "../Widget.h"
 #include "../private/Utils.h"
 #include <nativedraw.h>
 
 #import <Cocoa/Cocoa.h>
 
+//#import "MacOSAccessibleElement.h"
+
 #include <unordered_map>
+
+#include <iostream> // debugging; remove
 
 namespace {
 
@@ -114,13 +120,84 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 }  // namespace
 
 //-----------------------------------------------------------------------------
+@interface AccessibilityElement : NSAccessibilityElement<NSAccessibilityButton,
+                                                         NSAccessibilityStepper,
+                                                         NSAccessibilitySlider>
+@property uitk::AccessibilityInfo info;
+@end
+
+@implementation AccessibilityElement
+/*- (NSArray*)accessibilitySelectedChildren
+{
+    std::cout << "[debug] accessibilityChildren" << std::endl;
+    return [super accessibilitySelectedChildren];
+}
+
+- (void)setAccessibilityFocused:(BOOL)focused
+{
+    std::cout << "[debug] setAccessibilityFocused" << std::endl;
+    return [super setAccessibilityFocused:focused];
+}
+
+- (void)setAccessibilitySelected:(BOOL)selected
+{
+    std::cout << "[debug] setAccessibilitySelected" << std::endl;
+    return [super setAccessibilitySelected:selected];
+}
+*/
+- (id)accessibilityTopLevelUIElement
+{
+    // This seems to get called once (or twice) when a new element is selected
+    if (self.info.widget) {
+        if (auto *win = self.info.widget->window()) {
+            win->setFocusWidget(self.info.widget);
+        }
+    }
+    return [super accessibilityTopLevelUIElement];
+}
+
+// ---- NSAccessibilityButton ---
+- (BOOL)accessibilityPerformPress
+{
+    if (self.info.pressButton) {
+        self.info.pressButton();
+        return YES;
+    }
+    return NO;
+}
+// ----
+
+// ---- NSAccessibilityStepper, NSAccessibilitySlider ----
+- (BOOL)accessibilityPerformIncrement
+{
+    if (self.info.incrementNumeric) {
+        self.info.incrementNumeric();
+        return YES;
+    }
+    return NO;
+}
+
+- (BOOL)accessibilityPerformDecrement
+{
+    if (self.info.decrementNumeric) {
+        self.info.decrementNumeric();
+        return YES;
+    }
+    return NO;
+}
+//---
+
+@end
+
+//-----------------------------------------------------------------------------
 @interface ContentView : NSView<NSTextInputClient>
 @end
 
 @interface ContentView ()
 {
-    bool mAppearanceChanged;
     std::vector<std::function<void()>> mDeferredCalls;
+    bool mAppearanceChanged;
+    bool mHasUsedAccessibility;
 }
 @property uitk::IWindowCallbacks *callbacks;  // ObjC does not accept reference
 @property bool inEvent;
@@ -128,17 +205,27 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 @property float hiresDPI;
 @property uitk::TextEditorLogic* textEditor;
 @property uitk::Rect textEditorFrame;
+@property bool needsAccessibilityUpdate;
 @end
 
 @implementation ContentView
 - (id)initWithCallbacks:(uitk::IWindowCallbacks*)cb {
     if (self = [super init]) {
         mAppearanceChanged = false;
+        mHasUsedAccessibility = false;
         self.callbacks = cb;
         self.inEvent = false;
+        self.accessibilityElement = YES;
+        self.accessibilityRole = NSAccessibilityGroupRole;
+        self.accessibilityLabel = @"Root element";
+        [self updateAccessibilityFrame];
+        self.needsAccessibilityUpdate = true;
+
     }
     return self;
 }
+
+- (BOOL)acceptsFirstResponder { return YES; }  // debugging; remove
 
 - (void)updateDPI
 {
@@ -178,17 +265,165 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     return uitk::DrawContext::fromCoreGraphics(cgContext, width, height, self.dpi);
 }
 
++ (void)updateAccessibleElements:(const std::vector<uitk::AccessibilityInfo>&)children
+                             for:(NSAccessibilityElement*)parent
+                        topLevel:(ContentView*)topLevel
+                   frameWinCoord:(const uitk::Rect&)frameWinCoord
+                        ulOffset:(NSPoint)ulOffset
+                       nsWinTopY:(CGFloat)nsWinTopY
+                             dpi:(float)dpi
+{
+    // Note that rectangles on Apple go from the lower left up towards the top of the screen
+
+    auto parentFrame = NSMakeRect(frameWinCoord.x.toPixels(dpi) + ulOffset.x,
+                                  nsWinTopY - frameWinCoord.y.toPixels(dpi) - frameWinCoord.height.toPixels(dpi),
+                                  frameWinCoord.width.toPixels(dpi),
+                                  frameWinCoord.height.toPixels(dpi));
+    parent.accessibilityElement = YES;
+    parent.accessibilityRole = NSAccessibilityGroupRole;
+    parent.accessibilityFrame = parentFrame;
+    if (parent == (NSAccessibilityElement*)topLevel) {  // NSView isa NSAccessibilityElement
+        parent.accessibilityLabel = @"Root element";
+    } else {
+        parent.accessibilityLabel = @"Group";
+    }
+
+    if (!children.empty()) {
+        NSMutableArray *nselements = [[NSMutableArray alloc] initWithCapacity: children.size()];
+        for (auto &e : children) {
+            assert(e.type != uitk::AccessibilityInfo::Type::kNone);
+            auto nsframe = NSMakeRect(e.frameWinCoord.x.toPixels(dpi) + ulOffset.x,
+                                      nsWinTopY - e.frameWinCoord.y.toPixels(dpi) - e.frameWinCoord.height.toPixels(dpi),
+                                      e.frameWinCoord.width.toPixels(dpi),
+                                      e.frameWinCoord.height.toPixels(dpi));
+            NSString *label = [NSString stringWithUTF8String:e.text.c_str()];
+//            NSAccessibilityElement *ae =
+//                [NSAccessibilityElement accessibilityElementWithRole:NSAccessibilityStaticTextRole
+//                                        frame:nsframe label:label parent:parent];
+            AccessibilityElement *ae = [[AccessibilityElement alloc] init];
+            ae.accessibilityRole = NSAccessibilityStaticTextRole;
+            ae.accessibilityFrame = nsframe;
+            ae.accessibilityLabel = label;
+            ae.accessibilityParent = parent;
+            ae.accessibilityEnabled = e.widget->enabled() ? YES : NO;
+            ae.accessibilityTopLevelUIElement = topLevel;
+            ae.info = e;
+            if (e.type == uitk::AccessibilityInfo::Type::kContainer) {
+                [ContentView updateAccessibleElements:e.children
+                                                  for:ae
+                                             topLevel:topLevel
+                                        frameWinCoord:e.frameWinCoord
+                                             ulOffset:ulOffset
+                                          nsWinTopY:nsWinTopY
+                                                  dpi:dpi];
+            } else if (e.type == uitk::AccessibilityInfo::Type::kCheckbox) {  // must come before kButton
+                ae.accessibilityRole = NSAccessibilityCheckBoxRole;
+            } else if (e.type == uitk::AccessibilityInfo::Type::kButton) {
+                ae.accessibilityRole = NSAccessibilityButtonRole;
+            } else if (e.type == uitk::AccessibilityInfo::Type::kSlider) {
+                ae.accessibilityRole = NSAccessibilitySliderRole;
+            }
+
+            if (std::holds_alternative<bool>(e.value)) {
+                ae.accessibilityValue = std::get<bool>(e.value) ? @YES : @NO;
+            } else if (std::holds_alternative<int>(e.value)) {
+                ae.accessibilityValue = @(std::get<int>(e.value));
+            } else if (std::holds_alternative<double>(e.value)) {
+                ae.accessibilityValue = @(std::get<double>(e.value));
+            } else if (std::holds_alternative<std::string>(e.value)) {
+                ae.accessibilityValue = [NSString stringWithUTF8String:std::get<std::string>(e.value).c_str()];
+            }
+
+            [nselements addObject:ae];
+        }
+        parent.accessibilityChildren = nselements;
+    } else {
+        parent.accessibilityChildren = nil;
+    }
+}
+
+- (void)updateAccessibleElements:(const std::vector<uitk::AccessibilityInfo>&)elements
+{
+    if (self.window == nil) {
+        return;
+    }
+    auto llScreen = [self.window convertPointToScreen:self.frame.origin];
+    auto ulScreen = [self.window convertPointToScreen:NSMakePoint(self.frame.origin.x, self.frame.origin.y + self.frame.size.height)];
+//    // The function expects frameWinCoord in UITK coordinates (that is, +y is down), but
+//    // self.frame is in macOS coords (+y is up)
+//    auto selfRect = uitk::Rect::fromPixels(0, self.frame.size.height, self.frame.size.width, self.frame.size.height, self.dpi);
+    auto selfRect = uitk::Rect::fromPixels(0, 0, self.frame.size.width, self.frame.size.height, self.dpi);
+    [ContentView updateAccessibleElements:elements
+                                      for:(NSAccessibilityElement*)self
+                                 topLevel:self
+                            frameWinCoord:selfRect
+                                 ulOffset:llScreen
+                                nsWinTopY:ulScreen.y
+                                      dpi:self.dpi];
+}
+
+- (void)updateAccessibilityFrame
+{
+    auto llScreen = [self.window convertPointToScreen:self.frame.origin];
+    auto urScreen = [self.window convertPointToScreen:NSMakePoint(NSMaxX(self.frame), NSMaxY(self.frame))];
+    self.needsAccessibilityUpdate |= (self.accessibilityFrame.origin.x != llScreen.x ||
+                                      self.accessibilityFrame.origin.y != llScreen.y);
+    self.accessibilityFrame = NSMakeRect(llScreen.x, llScreen.y,
+                                         urScreen.x - llScreen.x, urScreen.y - llScreen.y);
+
+    // debugging
+    if (llScreen.x != 0.0f || llScreen.y != 0.0f) {
+        mHasUsedAccessibility = true;
+    }
+}
+
+/*- (BOOL)isAccessibilityElement
+{
+    std::cout << "[debug] isAccessibilityElement" << std::endl;
+    return [super isAccessibilityElement];
+}
+
+- (NSRect)accessibilityFrame
+{
+    std::cout << "[debug] accessibilityFrame" << std::endl;
+    return [super accessibilityFrame];
+}
+
+- (NSString*)accessibilityValue
+{
+    std::cout << "[debug] accessibilityValue" << std::endl;
+    return [super accessibilityValue];
+}
+*/
+- (NSArray*)accessibilityChildren
+{
+//    std::cout << "[debug] accessibilityChildren" << std::endl;
+    if (self.needsAccessibilityUpdate) {
+        self.callbacks->onUpdateAccessibility();
+        self.needsAccessibilityUpdate = false;
+    }
+    return [super accessibilityChildren];
+}
+
+/*- (NSArray*)accessibilitySelectedChildren
+{
+    std::cout << "[debug] accessibilityChildren" << std::endl;
+    return [super accessibilitySelectedChildren];
+}*/
+
 /*- (void)setFrame:(NSRect)frame
 {
     [super setFrame:frame];
     self.callbacks->onLayout();
 }
 */
+
 - (void)setFrameSize:(NSSize)newSize
 {
     [super setFrameSize:newSize];
     auto dc = [self createContext];
     self.callbacks->onResize(*dc);
+    [self updateAccessibilityFrame];
 }
 
 - (void)layout
@@ -209,6 +444,11 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     dc->beginDraw();
     self.callbacks->onDraw(*dc);
     dc->endDraw();
+
+    if (self.needsAccessibilityUpdate && mHasUsedAccessibility) {
+        self.callbacks->onUpdateAccessibility();
+        self.needsAccessibilityUpdate = false;
+    }
 }
 
 - (void)mouseMoved:(NSEvent *)e
@@ -289,6 +529,7 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     }
 
     [self doOnMouse:me];
+    self.needsAccessibilityUpdate = true;
 }
 
 - (void)mouseUp:(NSEvent *)e
@@ -296,6 +537,7 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     // (Docs say not to call super for this method)
 
     [self otherMouseUp:e];
+    self.needsAccessibilityUpdate = true;
 }
 
 - (void)rightMouseUp:(NSEvent *)e
@@ -372,6 +614,7 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 - (void)keyDown:(NSEvent *)e
 {
     [self doOnKey:uitk::KeyEvent::Type::kKeyDown event:e];
+    self.needsAccessibilityUpdate = true;
 }
 
 - (void)keyUp:(NSEvent *)e
@@ -624,6 +867,12 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
         self.callbacks = cb;
     }
     return self;
+}
+
+- (void)windowDidMove:(NSNotification *)notification
+{
+    ContentView *cv = (ContentView*)self.window.contentView;
+    [cv updateAccessibilityFrame];
 }
 
 - (void)windowDidChangeScreen:(NSNotification *)notification
@@ -947,6 +1196,11 @@ void MacOSWindow::setTextEditing(TextEditorLogic *te, const Rect& frame)
 {
     mImpl->contentView.textEditor = te;
     mImpl->contentView.textEditorFrame = frame;
+}
+
+void MacOSWindow::setAccessibleElements(const std::vector<AccessibilityInfo>& elements)
+{
+    [mImpl->contentView updateAccessibleElements:elements];
 }
 
 }  // namespace uitk

@@ -67,9 +67,19 @@ public:
     /// The default value is 0.
     NumberEdit* setDecimalDigits(int nDigits);
 
+    /// Increments the control as if the user did it (that is, the on value
+    /// changed callback is called);
+    void performIncrement();
+
+    /// Deccrements the control as if the user did it (that is, the on value
+    /// changed callback is called);
+    void performDecrement();
+    
     /// Called when value changes due to mouse movement; is not called
     /// as a result of setValue() or setLimits().
     NumberEdit* setOnValueChanged(std::function<void(NumberEdit*)> onChanged);
+
+    AccessibilityInfo accessibilityInfo() override;
 
     Size preferredSize(const LayoutContext& context) const override;
     void layout(const LayoutContext& context) override;

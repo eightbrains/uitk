@@ -1,6 +1,7 @@
 set(ND_NAMESPACE "uitk")
 
 set(UITK_PUBLIC_HEADERS
+                 Accessibility.h
                  Application.h
                  Button.h
                  CellWidget.h

@@ -281,6 +281,7 @@ public:
     void onMenuWillShow() override;
     void onMenuActivated(MenuId id) override;
     void onThemeChanged() override;
+    void onUpdateAccessibility() override;
     bool onWindowShouldClose() override;
     void onWindowWillClose() override;
 

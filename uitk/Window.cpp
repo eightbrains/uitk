@@ -300,6 +300,24 @@ void updateStandardItem(Window &w, MenuItem *item, MenuId activeWindowId)
     }
 }
 
+void getAccessibleChildren(uitk::Widget *w, std::vector<uitk::AccessibilityInfo> *accessibleChildren)
+{
+    for (auto *child : w->children()) {
+        if (!child->visible()) {
+            continue;
+        }
+        auto info = child->accessibilityInfo();
+        if (info.type == AccessibilityInfo::Type::kNone) {
+            getAccessibleChildren(child, accessibleChildren);
+        } else if (info.type == AccessibilityInfo::Type::kContainer) {
+            getAccessibleChildren(child, &info.children);
+            accessibleChildren->push_back(info);
+        } else {
+            accessibleChildren->push_back(info);
+        }
+    }
+}
+
 bool widgetCanAcceptKeyFocus(Widget *w, Application::KeyFocusCandidates candidates)
 {
     if (candidates == Application::KeyFocusCandidates::kAll) {
@@ -1504,6 +1522,14 @@ void Window::onMenuActivated(MenuId id)
 void Window::onThemeChanged()
 {
     mImpl->rootWidget->themeChanged();
+}
+
+void Window::onUpdateAccessibility()
+{
+    // TODO: update accessibility when a widget is removed
+    std::vector<AccessibilityInfo> accessibleElements;
+    getAccessibleChildren(mImpl->rootWidget.get(), &accessibleElements);
+    mImpl->window->setAccessibleElements(accessibleElements);
 }
 
 bool Window::onWindowShouldClose()

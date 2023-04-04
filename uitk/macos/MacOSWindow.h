@@ -75,7 +75,9 @@ public:
     IWindowCallbacks& callbacks() override;
     void callWithLayoutContext(std::function<void(const DrawContext&)> f) override;
 
-    virtual void setTextEditing(TextEditorLogic *te, const Rect& frame) override;
+    void setTextEditing(TextEditorLogic *te, const Rect& frame) override;
+
+    void setAccessibleElements(const std::vector<AccessibilityInfo>& elements) override;
 
 public:
     struct Impl;

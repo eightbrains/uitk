@@ -23,6 +23,7 @@
 #ifndef UITK_WIDGET_H
 #define UITK_WIDGET_H
 
+#include "Accessibility.h"
 #include "CutPasteable.h"
 #include "themes/Theme.h"
 
@@ -130,6 +131,11 @@ public:
     /// do not need to consider if the widget is disabled or hidden.
     virtual bool acceptsKeyFocus() const;
 
+    /// Returns the accesibility information for the widget.
+    /// Does not modify the object, but is non-const because further actions
+    /// using the AccessibilityInfo object may modify the object.
+    virtual AccessibilityInfo accessibilityInfo();
+    
     /// Objects that support cut and paste should override this and
     /// return this interface. This is used by the copy/cut/paste menu items.
     /// The base class action returns nullptr, which disables the items.

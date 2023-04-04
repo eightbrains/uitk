@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -20,34 +20,47 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_PROGRESS_BAR_H
-#define UITK_PROGRESS_BAR_H
+#ifndef UITK_ACCESSIBILITY_H
+#define UITK_ACCESSIBILITY_H
 
-#include "Widget.h"
+#include <nativedraw.h>
 
-namespace uitk {
+#include <string>
+#include <variant>
+#include <vector>
 
-class ProgressBar : public Widget {
-    using Super = Widget;
-public:
-    ProgressBar();
-    ~ProgressBar();
+namespace uitk
+{
 
-    float value() const;
-    /// Value ranges from 0 - 100.
-    ProgressBar* setValue(float percent);
+class Widget;
 
-    AccessibilityInfo accessibilityInfo() override;
 
-    Size preferredSize(const LayoutContext& context) const override;
+struct AccessibilityInfo
+{
+    enum class Type {
+        kNone = 0,
+        kStatic,
+        kContainer,
+        kButton,
+        kCheckbox,
+        kSlider
+    };
 
-    void draw(UIContext& context) override;
+    Type type;
+    Widget *widget = nullptr;
+    Rect frameWinCoord;  // frame is in window coordinates
+    std::string text;
 
-private:
-    struct Impl;
-    std::unique_ptr<Impl> mImpl;
+    std::variant<std::monostate, bool, int, double, std::string> value = std::monostate{};  // initialize to empty
+
+    std::function<void()> pressButton;
+    std::function<void()> incrementNumeric;
+    std::function<void()> decrementNumeric;
+
+    // Everything below here is not filled out accessibilityInfo
+    std::vector<AccessibilityInfo> children;
 };
 
 }  // namespace uitk
-#endif // UITK_PROGRESS_BAR_H
 
+#endif // UITK_ACCESSIBILITY_H

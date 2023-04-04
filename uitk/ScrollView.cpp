@@ -219,6 +219,14 @@ Point ScrollView::scrollPosition() const
     return Point(-b.x, -b.y);
 }
 
+AccessibilityInfo ScrollView::accessibilityInfo()
+{
+    auto info = Super::accessibilityInfo();
+    info.type = AccessibilityInfo::Type::kContainer;
+    info.text = "Scrollable container";
+    return info;
+}
+
 Size ScrollView::preferredSize(const LayoutContext& context) const
 {
     return Size(kDimGrow, kDimGrow);

@@ -168,6 +168,30 @@ double SliderLogic::doubleMaxLimit() const { return mImpl->model.doubleMaxLimit(
 
 double SliderLogic::doubleIncrement() const { return mImpl->model.doubleIncrement(); }
 
+void SliderLogic::performIncrement()
+{
+    if (double(int(mImpl->model.doubleIncrement())) == mImpl->model.doubleIncrement()) {
+        setValue(intValue() + intIncrement());
+    } else {
+        setValue(doubleValue() + doubleIncrement());
+    }
+    if (mImpl->onValueChanged) {
+        mImpl->onValueChanged(this);
+    }
+}
+
+void SliderLogic::performDecrement()
+{
+    if (double(int(mImpl->model.doubleIncrement())) == mImpl->model.doubleIncrement()) {
+        setValue(intValue() - intIncrement());
+    } else {
+        setValue(doubleValue() - doubleIncrement());
+    }
+    if (mImpl->onValueChanged) {
+        mImpl->onValueChanged(this);
+    }
+}
+
 SliderLogic* SliderLogic::setOnValueChanged(std::function<void(SliderLogic*)> onChanged)
 {
     mImpl->onValueChanged = onChanged;
@@ -175,6 +199,20 @@ SliderLogic* SliderLogic::setOnValueChanged(std::function<void(SliderLogic*)> on
 }
 
 bool SliderLogic::acceptsKeyFocus() const { return true; }
+
+AccessibilityInfo SliderLogic::accessibilityInfo()
+{
+    auto info = Super::accessibilityInfo();
+    info.type = AccessibilityInfo::Type::kSlider;
+    if (double(int(mImpl->model.doubleIncrement())) == mImpl->model.doubleIncrement()) {
+        info.value = mImpl->model.intValue();
+    } else {
+        info.value = mImpl->model.doubleValue();
+    }
+    info.incrementNumeric = [this]() { performIncrement(); };
+    info.decrementNumeric = [this]() { performDecrement(); };
+    return info;
+}
 
 Size SliderLogic::preferredSize(const LayoutContext& context) const
 {

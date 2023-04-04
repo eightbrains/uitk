@@ -344,7 +344,7 @@ Point Widget::convertToWindowFromLocal(const Point& localPt) const
         windowPt += win->contentRect().upperLeft();
     }
     const Widget *w = this;
-    while (w->mImpl->parent) {
+    while (w && w->mImpl->parent) {
         windowPt += w->frame().upperLeft();
         w = w->mImpl->parent;
     }
@@ -390,6 +390,23 @@ void Widget::setShowFocusRingOnParent(bool show)
 bool Widget::showFocusRingOnParent() const { return mImpl->showFocusRingOnParent; }
 
 bool Widget::acceptsKeyFocus() const { return false; }
+
+AccessibilityInfo Widget::accessibilityInfo()
+{
+    if (mImpl->visible) {
+        auto r = frame();
+        r.x = PicaPt::kZero;
+        r.y = PicaPt::kZero;
+        return {
+            AccessibilityInfo::Type::kNone,
+            this,
+            // Q: why calculate the frame even though we are invisible to the accessibility?
+            // A: so that derived classes can just Super and not have to copy the calculation.
+            r.translated(convertToWindowFromLocal(Point::kZero))
+        };
+    }
+    return { AccessibilityInfo::Type::kNone, nullptr, Rect::kZero };
+}
 
 CutPasteable* Widget::asCutPasteable() { return nullptr; }
 
