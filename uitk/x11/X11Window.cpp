@@ -775,6 +775,11 @@ void X11Window::setTextEditing(TextEditorLogic *te, const Rect& frame)
     mImpl->textRect = frame;
 }
 
+void X11Window::setAccessibleElements(const std::vector<AccessibilityInfo>& elements)
+{
+    // unsupported at this time
+}
+
 void X11Window::onResize()
 {
     mImpl->updateDrawContext();
