@@ -25,6 +25,7 @@
 
 #include <nativedraw.h>
 
+#include <functional>
 #include <string>
 #include <variant>
 #include <vector>

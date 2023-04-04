@@ -81,6 +81,8 @@ public:
     // frame is in window coordinates
     void setTextEditing(TextEditorLogic* te, const Rect& frame) override;
 
+    void setAccessibleElements(const std::vector<AccessibilityInfo>& elements) override;
+
     // Since each window has its own copy of the menus, if the structure
     // of the menus changes, it needs to be reloaded.
     void setNeedsUpdateMenubar();
