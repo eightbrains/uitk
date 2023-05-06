@@ -605,4 +605,80 @@ void ListView::draw(UIContext& context)
     Super::draw(context);
 }
 
+AccessibilityInfo ListView::accessibilityInfo()
+{
+    std::function<std::string(const AccessibilityInfo&)> findRowLabelText;
+    findRowLabelText = [&findRowLabelText](const AccessibilityInfo& info) -> std::string {
+        for (auto c : info.children) {
+            if (c.type == AccessibilityInfo::Type::kLabel) {
+                return c.text;
+            } else if (!c.children.empty()) {
+                auto text = findRowLabelText(c);
+                if (!text.empty()) {
+                    return text;
+                }
+            }
+        }
+        return "";
+    };
+
+    auto info = Super::accessibilityInfo();
+    info.type = AccessibilityInfo::Type::kList;
+    info.text = "List";  // user should probably call setAccessibilityText() with something better
+
+    // Normally the top-level caller handles children, but we do it here so that
+    // we can set the text value to the actual label if it is a group.
+    // Note that we do not need to populate the whole tree of children, the top-level
+    // caller will do that
+    auto &childs = mImpl->content->children();
+    for (size_t i = 0;  i < childs.size();  ++i) {
+        auto *child = childs[i];
+        if (!child->visible()) {
+            continue;
+        }
+        auto childInfo = child->accessibilityInfo();
+        childInfo.indexInParent = i;
+        // We want the row accessibility object to have a useful text, so if
+        // there isn't one, go find the most likely text in the widget tree
+        if (childInfo.text.empty() && !childInfo.children.empty()) {
+            childInfo.text = findRowLabelText(childInfo);
+        }
+        // If the child is type of kNone, we have a Widget being used as a
+        // container, so change the type to kContainer, so that we have an
+        // actual row object (instead of its children getting added in like normal).
+        if (childInfo.type == AccessibilityInfo::Type::kNone) {
+            childInfo.type = AccessibilityInfo::Type::kContainer;
+        }
+        switch (mImpl->selectionMode) {
+            case SelectionMode::kNoItems:
+                break;
+            case SelectionMode::kSingleItem:
+                childInfo.performLeftClick = [this, i]() {
+                    setSelectedIndex(i);
+                    if (mImpl->onChanged) {
+                        mImpl->onChanged(this);
+                    }
+                };
+                break;
+            case SelectionMode::kMultipleItems:
+                childInfo.performLeftClick = [this, i]() {
+                    bool isSelected = false;
+                    if (mImpl->selectedIndices.find(i) != mImpl->selectedIndices.end()) {
+                        mImpl->selectedIndices.erase(i);
+                    } else {
+                        mImpl->selectedIndices.insert(i);
+                    }
+                    setNeedsDraw();
+                    if (mImpl->onChanged) {
+                        mImpl->onChanged(this);
+                    }
+                };
+                break;
+        }
+        info.children.emplace_back(childInfo);
+    }
+
+    return info;
+}
+
 }  // namespace uitk

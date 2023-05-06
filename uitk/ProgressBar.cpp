@@ -25,6 +25,8 @@
 #include "UIContext.h"
 #include "themes/Theme.h"
 
+#include <stdio.h>
+
 namespace uitk {
 
 struct ProgressBar::Impl
@@ -53,9 +55,14 @@ ProgressBar* ProgressBar::setValue(float percent)
 AccessibilityInfo ProgressBar::accessibilityInfo()
 {
     auto info = Super::accessibilityInfo();
-    info.type = AccessibilityInfo::Type::kStatic;
+    info.type = AccessibilityInfo::Type::kLabel;
     info.text = "Progress bar";
-    info.value = "Progress: " + std::to_string(mImpl->value) + "%";
+    // std::to_string() produces unweildy and hard-to-listen-to results when the
+    // value is not exactly representable, but there is no way to set the precision,
+    // so we use snprintf().
+    char valueStr[64];
+    snprintf(valueStr, sizeof(valueStr), "Progress: %.1f%%", mImpl->value);
+    info.value = std::string(valueStr);
     return info;
 }
 

@@ -76,6 +76,20 @@ public:
     /// tooltip, override onTooltip() and hasTooltip() if necessary.
     Widget* setTooltip(const std::string& tooltip);
 
+    const std::string& accessibilityText() const;
+    /// Sets the text for the widget. This is generally not needed for
+    /// individual widgets, which generally use their text. However,
+    /// lists and other grouped elements benefit from accessibility
+    /// otherwise they group may be ignored and the elements placed
+    /// in the parent's space. A special case are widgets like
+    /// SegmentedControl, which have (or emulate) child widgets, but
+    /// for which it is sometimes better to have the items in a group
+    /// and sometimes better to have them as siblings of the. However,
+    /// it is still generally better easier to navigate if the group
+    /// is labeled: "font settings" is a lot easier to navigate (and skip
+    /// if you are not interested) than { "bold", "italic", "underline" }.
+    Widget* setAccessibilityText(const std::string& text);
+
     const Color& backgroundColor() const;
     Widget* setBackgroundColor(const Color& bg);
 

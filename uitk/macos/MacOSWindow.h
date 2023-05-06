@@ -77,6 +77,7 @@ public:
 
     void setTextEditing(TextEditorLogic *te, const Rect& frame) override;
 
+    virtual void setNeedsAccessibilityUpdate() override;
     void setAccessibleElements(const std::vector<AccessibilityInfo>& elements) override;
 
 public:

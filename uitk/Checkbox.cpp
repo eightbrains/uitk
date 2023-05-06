@@ -54,7 +54,6 @@ AccessibilityInfo Checkbox::accessibilityInfo()
     auto info = Super::accessibilityInfo();
     info.type = AccessibilityInfo::Type::kCheckbox;
     info.value = isOn();
-    info.pressButton = [this]() { performClick(); };
     return info;
 }
 

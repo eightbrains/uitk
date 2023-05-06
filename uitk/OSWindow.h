@@ -142,6 +142,7 @@ public:
     // Frame is in window coordinates
     virtual void setTextEditing(TextEditorLogic *te, const Rect& frame) = 0;
 
+    virtual void setNeedsAccessibilityUpdate() = 0;
     virtual void setAccessibleElements(const std::vector<AccessibilityInfo>& elements) = 0;
 };
 

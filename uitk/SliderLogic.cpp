@@ -27,6 +27,8 @@
 #include "UIContext.h"
 #include "Window.h"
 
+#include <stdio.h>
+
 namespace uitk {
 
 namespace {
@@ -207,10 +209,17 @@ AccessibilityInfo SliderLogic::accessibilityInfo()
     if (double(int(mImpl->model.doubleIncrement())) == mImpl->model.doubleIncrement()) {
         info.value = mImpl->model.intValue();
     } else {
-        info.value = mImpl->model.doubleValue();
+        // If we just set a floating point value, it turns out that macOS likes to round
+        // it up, which results in an incorrect value.
+        char fmtStr[] = "%.1f";
+        int digits = int(std::ceil(-std::log10(mImpl->model.doubleIncrement())));
+        fmtStr[2] = "0123456789"[std::min(6, digits)];
+        char valueStr[64];
+        snprintf(valueStr, sizeof(valueStr), fmtStr, mImpl->model.doubleValue());
+        info.value = std::string(valueStr);
     }
-    info.incrementNumeric = [this]() { performIncrement(); };
-    info.decrementNumeric = [this]() { performDecrement(); };
+    info.performIncrementNumeric = [this]() { performIncrement(); };
+    info.performDecrementNumeric = [this]() { performDecrement(); };
     return info;
 }
 

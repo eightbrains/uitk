@@ -232,7 +232,7 @@ Widget* Label::setFrame(const Rect& frame)
 AccessibilityInfo Label::accessibilityInfo()
 {
     auto info = Super::accessibilityInfo();
-    info.type = AccessibilityInfo::Type::kStatic;
+    info.type = AccessibilityInfo::Type::kLabel;
     info.text = mImpl->text.text();
     return info;
 }

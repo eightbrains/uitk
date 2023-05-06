@@ -20,56 +20,36 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#include "PopupWindow.h"
+#import <AppKit/AppKit.h>
+#import <Cocoa/Cocoa.h>
 
-#include "Application.h"
+#include <map>
 
-namespace uitk {
-
-struct PopupWindow::Impl
+enum class VoiceOverState
 {
-    Window *parent = nullptr;  // we do not own this
-    std::function<void()> onDone;
+    kNone = 0,
+    kIterating,
+    kUserAction
 };
 
-PopupWindow::PopupWindow(const PicaPt& w, const PicaPt& h, const std::string& title /*= ""*/)
-    : Window(title, w, h, Window::Flags::Value(Window::Flags::kPopup))
-    , mImpl(new Impl())
-{
-    this->setOnWindowWillClose([this](Window &) {
-        this->deleteLater();
-    });
-}
+@protocol RootAccessibilityElement
+@required
+@property NSAccessibilityElement* currentlyActiveElement;
+@end
 
-void PopupWindow::cancel()
-{
-    if (mImpl->parent) {
-        mImpl->parent->setPopupWindow(nullptr);
-    }
-    this->close();
-}
+@interface AccessibilityElement : NSAccessibilityElement
+@property uitk::AccessibilityInfo info;
 
-Window* PopupWindow::window() { return this; }
-
-void PopupWindow::showPopup(Window *parent, int osX, int osY)
-{
-    mImpl->parent = parent;
-    auto osRect = this->osFrame();
-    if (!Application::instance().isOriginInUpperLeft()) {
-        osY -= int(std::round(osRect.height));
-    }
-    this->setOSFrame(osX, osY, int(std::round(osRect.width)), int(std::round(osRect.height)));
-    mImpl->parent->setPopupWindow(this);
-    this->show(true);
-}
-
-void PopupWindow::onKey(const KeyEvent& e)
-{
-    if (e.type == KeyEvent::Type::kKeyDown && e.keymods == 0 && e.key == Key::kEscape) {
-        cancel();
-    } else {
-        Super::onKey(e);
-    }
-}
-
-} // namespace uitk
++ (AccessibilityElement*)updateAccessibleElements:(const std::vector<uitk::AccessibilityInfo>&)children
+                                              for:(NSAccessibilityElement*)parent
+                                         topLevel:(NSAccessibilityElement*)topLevel
+                                    frameWinCoord:(const uitk::Rect&)frameWinCoord
+                                         ulOffset:(NSPoint)ulOffset
+                                        nsWinTopY:(CGFloat)nsWinTopY
+                                              dpi:(float)dpi
+                           returnElementForWidget:(uitk::Widget*)widget
+                                            cache:(std::map<uitk::AccessibilityInfo::UID,
+                                                            AccessibilityElement*>&)cache;
+- (id)init;
+- (NSArray*)accessibilityChildrenPure;
+@end

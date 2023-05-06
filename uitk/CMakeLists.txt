@@ -66,7 +66,8 @@ set(UITK_PUBLIC_HEADERS
 set(UITK_HEADERS ${UITK_PUBLIC_HEADERS}
                  private/MenuIterator.h
                  private/Utils.h)
-set(UITK_SOURCES Application.cpp
+set(UITK_SOURCES Accessibility.cpp
+                 Application.cpp
                  Button.cpp
                  Checkbox.cpp
                  ColorEdit.cpp
@@ -131,14 +132,16 @@ set_target_properties(nativedraw PROPERTIES IMPORTED_LOCATION "${LIBNATIVEDRAW_P
 list(APPEND UITK_LIBS nativedraw)
 
 if (APPLE)
-    list(APPEND UITK_HEADERS macos/MacOSApplication.h
+    list(APPEND UITK_HEADERS macos/MacOSAccessibility.h
+                             macos/MacOSApplication.h
                              macos/MacOSClipboard.h
                              macos/MacOSCursor.h
                              macos/MacOSDialog.h
                              macos/MacOSMenu.h
                              macos/MacOSMenubar.h
                              macos/MacOSWindow.h)
-    list(APPEND UITK_SOURCES macos/MacOSApplication.mm
+    list(APPEND UITK_SOURCES macos/MacOSAccessibility.mm
+                             macos/MacOSApplication.mm
                              macos/MacOSClipboard.mm
                              macos/MacOSCursor.mm
                              macos/MacOSDialog.mm

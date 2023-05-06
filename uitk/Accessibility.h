@@ -27,6 +27,7 @@
 
 #include <functional>
 #include <string>
+#include <unordered_set>
 #include <variant>
 #include <vector>
 
@@ -35,31 +36,64 @@ namespace uitk
 
 class Widget;
 
-
 struct AccessibilityInfo
 {
     enum class Type {
         kNone = 0,
-        kStatic,
+
         kContainer,
+        kRadioGroup,
+        kList,
+
+        kLabel,
+        kMenuItem,  /// menu item, or any item drawn by the widget but which acts as a separate child
         kButton,
         kCheckbox,
-        kSlider
+        kRadioButton,
+        kIncDec,
+        kSlider,
+        kCombobox,
+        kTextEdit,
+        kPassword,  /// password or any text that should not be displayed/spoken
     };
 
     Type type;
     Widget *widget = nullptr;
-    Rect frameWinCoord;  // frame is in window coordinates
+    Rect frameWinCoord;  /// frame is in window coordinates
     std::string text;
+    std::string placeholderText;
 
-    std::variant<std::monostate, bool, int, double, std::string> value = std::monostate{};  // initialize to empty
+    std::variant<std::monostate, bool, int, double, std::string> value = std::monostate{};  // initializes to empty
+    int indexInParent = -1;
 
-    std::function<void()> pressButton;
-    std::function<void()> incrementNumeric;
-    std::function<void()> decrementNumeric;
+    std::function<void()> performLeftClick;
+    std::function<void()> performIncrementNumeric;
+    std::function<void()> performDecrementNumeric;
+    std::function<void()> performSelectAll;
 
-    // Everything below here is not filled out accessibilityInfo
+    // --- Everything here is not filled out in accessibilityInfo()
     std::vector<AccessibilityInfo> children;
+    bool isVisibleToUser = true;  // set false if visible() is false by widget or any parent
+    // ---
+
+public:
+    using UID = std::pair<Widget*, int>;
+    
+    /// Returns a unique ID suitable for identifying an AccessibilityElement again
+    /// when it is recreated. Note that some widgets may have pieces with separate
+    /// accessibility elements but the same widget point because the widget draws
+    /// them directly. In this case, the widget should set indexInParent.
+    /// (Setting indexInParent is fine even if they subwidgets are actual widgets.)
+    UID uniqueId() const;
+
+    /// Returns a string representing this object which can be useful for debugging,
+    /// since trees are annoying to examine in a debugger. Also it gives clarity into
+    /// what the structure actually is, compared to how the OS decides to interpret it.
+    /// It may be useful to call this function from the debugger rather than the
+    /// in the program. Note that children are not populated until the top-level
+    /// call finishes, so calling this in Widget::accessibilityInfo() may not produce
+    /// the expected results.
+    std::string debugDescription(const std::string& indent = "") const;
 };
 
 }  // namespace uitk

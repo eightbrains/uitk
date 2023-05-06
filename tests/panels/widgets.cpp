@@ -89,6 +89,7 @@ public:
         addChild(mLabel);
 
         mHoriz = new SegmentedControl({ "L", "C", "R" });
+        mHoriz->setAccessibilityText("Horizontal alignment");
         mHoriz->setTooltip(0, "Align::kLeft");
         mHoriz->setTooltip(1, "Align::kCenter");
         mHoriz->setTooltip(2, "Align::kRight");
@@ -106,6 +107,7 @@ public:
         addChild(mHoriz);
 
         mVert = new SegmentedControl({"T", "C", "B"});
+        mVert->setAccessibilityText("Vertical alignment");
         mVert->setTooltip(0, "Align::kTop");
         mVert->setTooltip(1, "Align::kCenter");
         mVert->setTooltip(2, "Align::kBottom");
@@ -323,10 +325,12 @@ public:
 
         mSelectOne = new SegmentedControl({"Left", "Center", "Right"});
         mSelectOne->setAction(SegmentedControl::Action::kSelectOne);
+        mSelectOne->setAccessibilityText("SegmentedControl (select one, text)");
         addChild(mSelectOne);
 
         mSelectMany = new SegmentedControl({"B", "I", "U"});
         mSelectMany->setAction(SegmentedControl::Action::kSelectMultiple);
+        mSelectMany->setAccessibilityText("SegmentedControl (select multiple, text)");
         addChild(mSelectMany);
 
         mIconAndText = new SegmentedControl();
@@ -334,6 +338,7 @@ public:
         mIconAndText->addItem(Theme::StandardIcon::kAlignCenter, "Center");
         mIconAndText->addItem(Theme::StandardIcon::kAlignRight, "Right");
         mIconAndText->setAction(SegmentedControl::Action::kSelectOne);
+        mIconAndText->setAccessibilityText("SegmentedControl (select one, icon + text)");
         addChild(mIconAndText);
 
         mIconOnly = new SegmentedControl();
@@ -341,6 +346,7 @@ public:
         mIconOnly->addItem(Theme::StandardIcon::kItalicStyle);
         mIconOnly->addItem(Theme::StandardIcon::kUnderlineStyle);
         mIconOnly->setAction(SegmentedControl::Action::kSelectMultiple);
+        mIconOnly->setAccessibilityText("SegmentedControl (select multiple, icon only)");
         addChild(mIconOnly);
 
         mUndecoratedButtons = new SegmentedControl();
@@ -348,6 +354,7 @@ public:
         mUndecoratedButtons->addItem(Theme::StandardIcon::kFolder);
         mUndecoratedButtons->addItem(Theme::StandardIcon::kSaveFile);
         mUndecoratedButtons->addItem(Theme::StandardIcon::kPrint);
+        mUndecoratedButtons->setAccessibilityText("SegmentedControl (buttons, undecorated)");
         addChild(mUndecoratedButtons);
 
         mUndecoratedSelectOne = new SegmentedControl();
@@ -357,11 +364,13 @@ public:
         mUndecoratedSelectOne->addItem(Theme::StandardIcon::kAlignRight, "Right");
         mUndecoratedSelectOne->setAction(SegmentedControl::Action::kSelectOne);
         mUndecoratedSelectOne->setAction(SegmentedControl::Action::kSelectOne);
+        mUndecoratedSelectOne->setAccessibilityText("SegmentedControl (select one, icons + text, undecorated)");
         addChild(mUndecoratedSelectOne);
 
         mUndecoratedSelectMany = new SegmentedControl({"B", "I", "U"});
         mUndecoratedSelectMany->setDrawStyle(SegmentedControl::DrawStyle::kNoDecoration);
         mUndecoratedSelectMany->setAction(SegmentedControl::Action::kSelectMultiple);
+        mUndecoratedSelectMany->setAccessibilityText("SegmentedControl (select multiple, text, undecorated)");
         addChild(mUndecoratedSelectMany);
     }
 

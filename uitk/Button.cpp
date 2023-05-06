@@ -167,7 +167,7 @@ AccessibilityInfo Button::accessibilityInfo()
     if (info.text.empty()) {
         info.text = "icon";
     }
-    info.pressButton = [this]() { performClick(); };
+    info.performLeftClick = [this]() { performClick(); };
     return info;
 }
 

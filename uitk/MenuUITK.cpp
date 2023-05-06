@@ -134,6 +134,16 @@ public:
     void setForegroundColorNoRedraw(const Color& fg) override { }  // no-op, draw already does this
     // ----
 
+    AccessibilityInfo accessibilityInfo() override
+    {
+        auto info = Super::accessibilityInfo();
+        if (!mText.empty()) {
+            info.type = AccessibilityInfo::Type::kMenuItem;
+            info.text = mText;
+        }
+        return info;
+    }
+
 protected:
     std::string mText;
     std::string mShortcut;
@@ -197,6 +207,17 @@ public:
     }
 
     CellWidget* cell() const override { return &mCell; }
+
+    AccessibilityInfo accessibilityInfo() override
+    {
+        auto info = Super::accessibilityInfo();
+        if (!mCell.accessibilityText().empty()) {
+            info.type = AccessibilityInfo::Type::kMenuItem;
+            info.text = mCell.accessibilityText();
+            return info;
+        }
+        return mCell.accessibilityInfo();
+    }
 
     Size preferredSize(const LayoutContext& context) const override
     {
@@ -334,6 +355,35 @@ public:
 
     ~MenuListView()
     {
+    }
+
+    AccessibilityInfo accessibilityInfo() override
+    {
+        // For a menu we do not want the list grouping; the popup window containing the
+        // menu does that nicely.
+        auto info = Widget::accessibilityInfo();  // type will be kNone, so no grouping
+        for (int i = 0;  i < size();  ++i) {
+            auto *child = cellAtIndex(i);
+            if (auto *cell = dynamic_cast<MenuItemWidget*>(child)) {
+                if (!cell->isSeparator()) {
+                    auto childInfo = cell->accessibilityInfo();
+                    if (childInfo.type != AccessibilityInfo::Type::kNone) {
+                        if (cell->submenu()) {
+                            childInfo.performLeftClick = [this, menu = dynamic_cast<SubmenuItem*>(cell)]() {
+                                menu->openSubmenu();
+                            };
+                        } else {
+                            childInfo.performLeftClick = [this, i]() {
+                                this->setSelectedIndex(i);
+                                this->triggerOnSelectionChanged();
+                            };
+                        }
+                        info.children.push_back(childInfo);
+                    }
+                }
+            }
+        }
+        return info;
     }
 
     Size preferredSize(const LayoutContext& context) const override
@@ -1184,7 +1234,8 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord,
     osUL.x = int(osUL.x);
     osUL.y = int(osUL.y);
 #endif
-    mImpl->menuWindow = new Window("", int(osUL.x), int(osUL.y), 0, 0,
+    // The window title will appear on the accessibility window list, so it is useful to have one
+    mImpl->menuWindow = new Window("Popup menu", int(osUL.x), int(osUL.y), 0, 0,
                                    (Window::Flags::Value)(Window::Flags::kPopup | extraWindowFlags));
     // The window border is inside the window area on macOS and X11
     // (But, if X11 draws the border on the outside and the window manager

@@ -212,14 +212,17 @@ NumberEdit* NumberEdit::setOnValueChanged(std::function<void(NumberEdit*)> onCha
 AccessibilityInfo NumberEdit::accessibilityInfo()
 {
     auto info = Super::accessibilityInfo();
-    info.type = AccessibilityInfo::Type::kStatic;
+    auto textInfo = mImpl->stringEdit->accessibilityInfo();
+    auto incDecInfo = mImpl->incDec->accessibilityInfo();
+    incDecInfo.type = AccessibilityInfo::Type::kIncDec;
     if (double(int(mImpl->model.doubleIncrement())) == mImpl->model.doubleIncrement()) {
         info.value = mImpl->model.intValue();
     } else {
         info.value = mImpl->model.doubleValue();
     }
-    info.incrementNumeric = [this]() { performIncrement(); };
-    info.decrementNumeric = [this]() { performDecrement(); };
+    incDecInfo.performIncrementNumeric = [this]() { performIncrement(); };
+    incDecInfo.performDecrementNumeric = [this]() { performDecrement(); };
+    info.children = { textInfo, incDecInfo };
     return info;
 }
 
