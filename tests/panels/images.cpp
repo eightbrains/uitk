@@ -131,7 +131,7 @@ public:
                     IOError::Error err;
                     auto data = File(path).readContents(&err);
                     if (err == IOError::kNone) {
-                        mUser->setImage(Image::fromEncodedData((uint8_t*)data.data(), data.size()));
+                        mUser->setImage(Image::fromEncodedData((uint8_t*)data.data(), int(data.size())));
                     } else {
                         Dialog::showAlert(w, "Could not read file", "Could not read file: error " + std::to_string(int(err)), "");
                     }

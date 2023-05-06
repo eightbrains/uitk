@@ -635,6 +635,11 @@ void Win32Window::cancelIMEText()
     }
 }
 
+void Win32Window::setNeedsAccessibilityUpdate()
+{
+    // unsupported at this time
+}
+
 void Win32Window::setAccessibleElements(const std::vector<AccessibilityInfo>& elements)
 {
     // unsupported at this time

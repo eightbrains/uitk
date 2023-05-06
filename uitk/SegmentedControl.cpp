@@ -242,7 +242,7 @@ AccessibilityInfo SegmentedControl::accessibilityInfo()
             r.translated(convertToWindowFromLocal(Point::kZero)),
             item.name
         };
-        bInfo.indexInParent = i;
+        bInfo.indexInParent = int(i);
         if (childType != AccessibilityInfo::Type::kButton) {
             bInfo.value = item.isOn;
         }

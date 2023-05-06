@@ -67,6 +67,7 @@ std::string AccessibilityInfo::debugDescription(const std::string& indent /*= ""
             case Type::kPassword:
                 return "kPassword";
         }
+        return "Unknown";  // for MSVC; other platforms complain about incomplete cases (which is more helpful that 'default')
     };
 
     std::stringstream s;

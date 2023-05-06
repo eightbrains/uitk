@@ -631,7 +631,7 @@ AccessibilityInfo ListView::accessibilityInfo()
     // Note that we do not need to populate the whole tree of children, the top-level
     // caller will do that
     auto &childs = mImpl->content->children();
-    for (size_t i = 0;  i < childs.size();  ++i) {
+    for (int i = 0;  i < int(childs.size());  ++i) {
         auto *child = childs[i];
         if (!child->visible()) {
             continue;
