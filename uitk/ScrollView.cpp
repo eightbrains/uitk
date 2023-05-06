@@ -219,6 +219,14 @@ Point ScrollView::scrollPosition() const
     return Point(-b.x, -b.y);
 }
 
+AccessibilityInfo ScrollView::accessibilityInfo()
+{
+    auto info = Super::accessibilityInfo();
+    info.type = AccessibilityInfo::Type::kContainer;
+    info.text = "Scrollable container";
+    return info;
+}
+
 Size ScrollView::preferredSize(const LayoutContext& context) const
 {
     return Size(kDimGrow, kDimGrow);
@@ -284,7 +292,7 @@ Widget::EventResult ScrollView::mouse(const MouseEvent& e)
             if (mImpl->hideScrollbarsTimer == Application::kInvalidScheduledId) {
                 if (auto *w = window()) {
                     mImpl->hideScrollbarsTimer = Application::instance()
-                                                       .scheduleLater(w, 0.1,
+                                                       .scheduleLater(w, 0.1f,
                                                                       Application::ScheduleMode::kRepeating,
                                                                       [this](Application::ScheduledId id) {
                         assert(mImpl->hideScrollbarsTimer == id);

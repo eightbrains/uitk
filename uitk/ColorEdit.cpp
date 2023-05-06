@@ -29,6 +29,8 @@
 #include "Window.h"
 #include "themes/Theme.h"
 
+#include <sstream>
+
 namespace uitk {
 
 namespace {
@@ -55,7 +57,7 @@ public:
 
     void onChanged()
     {
-        auto color = colorAtCoord(mCurrentCoord);
+        auto color = colorAtCoord(mCurrentCoord, mMode);
         if (color.red() >= 0.0f) {  // < 0 is invalid color, means coord is invalid
             if (mOnValueChanged) {
                 mOnValueChanged(color);
@@ -75,7 +77,7 @@ public:
                 break;
             case Mode::k12Hues:
                 mBoxWidth = bounds().width / float(kNHueDivisions);
-                mBoxHeight = bounds().height / float(calcNVertDivisions());
+                mBoxHeight = bounds().height / float(calcNVertDivisions(mMode));
                 break;
             case Mode::k8Greys:
                 mBoxWidth = bounds().width / float(kNGreyDivisions + 1);
@@ -121,25 +123,22 @@ public:
             switch (e.key) {
                 case Key::kLeft: {
                     mCurrentCoord = { std::max(0, mCurrentCoord.x - 1), std::max(0, mCurrentCoord.y) };
-                    Color c = colorAtCoord(mCurrentCoord);
+                    Color c = colorAtCoord(mCurrentCoord, mMode);
                     while (c.red() < 0.0f && mCurrentCoord.x > 0) {
                         mCurrentCoord.x -= 1;
-                        c = colorAtCoord(mCurrentCoord);
+                        c = colorAtCoord(mCurrentCoord, mMode);
                     }
                     setNeedsDraw();
                     break;
                 }
                 case Key::kRight: {
                     mCurrentCoord = { std::max(0, mCurrentCoord.x + 1), std::max(0, mCurrentCoord.y) };
-                    int maxN = calcNHorizDivisions();
-                    if (mMode == Mode::k8Greys || mMode == Mode::kManyGreys) {
-                        maxN += 1;
-                    }
+                    int maxN = calcNHorizDivisions(mMode);
                     mCurrentCoord = { std::min(mCurrentCoord.x, maxN - 1), mCurrentCoord.y };
-                    Color c = colorAtCoord(mCurrentCoord);
+                    Color c = colorAtCoord(mCurrentCoord, mMode);
                     while (c.red() < 0.0f && mCurrentCoord.x < maxN - 1) {
                         mCurrentCoord.x += 1;
-                        c = colorAtCoord(mCurrentCoord);
+                        c = colorAtCoord(mCurrentCoord, mMode);
                     }
                     setNeedsDraw();
                     break;
@@ -151,7 +150,7 @@ public:
                 }
                 case Key::kDown: {
                     mCurrentCoord = { std::max(0, mCurrentCoord.x), std::max(0, mCurrentCoord.y + 1) };
-                    mCurrentCoord = { mCurrentCoord.x, std::min(mCurrentCoord.y, calcNVertDivisions() - 1) };
+                    mCurrentCoord = { mCurrentCoord.x, std::min(mCurrentCoord.y, calcNVertDivisions(mMode) - 1) };
                     setNeedsDraw();
                     break;
                 }
@@ -197,7 +196,7 @@ public:
             const int nSatDivisions = 8; // s = 0 and s = 1 are not shown
             const int nValDivisions = 8; // v = 0 and v = 1 are not shown
             // s = 0 (white) and v = 0 (black) are not shown;  (s=1, v=1) is the central row
-            const int nVertDivisions = calcNVertDivisions();
+            const int nVertDivisions = calcNVertDivisions(mMode);
             auto boxHeight = r.height / float(nVertDivisions);
             for (int i = 0;  i < kNHueDivisions;  ++i) {
                 for (int j = 0;  j < nVertDivisions;  ++j) {
@@ -205,7 +204,7 @@ public:
                     auto w = r.x + ui.dc.roundToNearestPixel(float(i + 1) * boxWidth) - x;
                     auto y = r.y + ui.dc.roundToNearestPixel(float(j) * boxHeight);
                     auto h = r.y + ui.dc.roundToNearestPixel(float(j + 1) * boxHeight) - y;
-                    ui.dc.setFillColor(colorAtCoord({ i, j }));
+                    ui.dc.setFillColor(colorAtCoord({ i, j }, mMode));
                     ui.dc.drawRect(Rect(x, y, w, h), kPaintFill);
                 }
             }
@@ -220,7 +219,7 @@ public:
             for (int i = 0;  i <= nDivs;  ++i) {
                 auto x = r.x + ui.dc.roundToNearestPixel(float(i) * mBoxWidth);
                 auto w = r.x + ui.dc.roundToNearestPixel(float(i + 1) * mBoxWidth) - x;
-                ui.dc.setFillColor(colorAtCoord({ i, 0 }));
+                ui.dc.setFillColor(colorAtCoord({ i, 0 }, mMode));
                 ui.dc.drawRect(Rect(x, PicaPt::kZero, w, bounds().height), kPaintFill);
             }
         } else if (mMode == Mode::kClear) {
@@ -237,7 +236,7 @@ public:
             assert(false);  // bad mode
         }
 
-        if (mDrawSelection && colorAtCoord(mCurrentCoord).red() >= 0.0f) {
+        if (mDrawSelection && colorAtCoord(mCurrentCoord, mMode).red() >= 0.0f) {
             Rect boxRect(ui.dc.roundToNearestPixel(float(mCurrentCoord.x) * mBoxWidth),
                          ui.dc.roundToNearestPixel(float(mCurrentCoord.y) * mBoxHeight),
                          ui.dc.roundToNearestPixel(mBoxWidth),
@@ -253,25 +252,109 @@ public:
         }
     }
 
-protected:
-    int calcNHorizDivisions() const
+    AccessibilityInfo accessibilityInfo() override
     {
-        if (mMode == Mode::k12Hues) {
+        auto info = Super::accessibilityInfo();
+
+        auto mode = mMode;
+        if (mode == Mode::kManyGreys) {
+            mode = Mode::k8Greys;
+        } else if (mode == Mode::kThousands) {
+            mode = Mode::k12Hues;
+        }
+        int nRows = calcNVertDivisions(mode);
+        int nCols = calcNHorizDivisions(mode);
+        // Always use the discrete versions, rather than the continuous, since if you
+        // need the accessibility, having hundreds of pixels to navigate is tedious, and
+        // that level of precision presumably isn't that important to you in that situation.
+        switch (mMode) {
+            case Mode::k12Hues:
+            case Mode::kThousands:
+            {
+                info.type = AccessibilityInfo::Type::kContainer;
+                info.children.reserve(nRows * nCols);
+                auto w = bounds().width / float(nCols);
+                auto h = bounds().height / float(nRows);
+                for (int col = 0;  col < nCols;  ++col) {
+                    for (int row = 0;  row < nRows;  ++row) {
+                        auto childInfo = Widget::accessibilityInfo();  // gives us 'this' frame
+                        childInfo.type = AccessibilityInfo::Type::kMenuItem;
+                        childInfo.frameWinCoord = Rect(info.frameWinCoord.x + float(col) * w,
+                                                       info.frameWinCoord.y + float(row) * h,
+                                                       w,
+                                                       h);
+                        auto color = colorAtCoord({ col, row }, mode);
+                        childInfo.text = std::to_string(int(std::round(color.red() * 100.0f))) + "% red, " +
+                                         std::to_string(int(std::round(color.green() * 100.0f))) + "% green, " +
+                                         std::to_string(int(std::round(color.blue() * 100.0f))) + "% blue";
+                        childInfo.performLeftClick = [this, row, col]() {
+                            mCurrentCoord = { col, row };
+                            if (mOnValueChanged) {
+                                mOnValueChanged(colorAtCoord(mCurrentCoord, Mode::k12Hues));
+                            }
+                        };
+                        info.children.push_back(childInfo);
+                    }
+                }
+                break;
+            }
+            case Mode::k8Greys:
+            case Mode::kManyGreys:
+            {
+                info.type = AccessibilityInfo::Type::kContainer;
+                info.children.reserve(nCols);
+                auto w = bounds().width / float(nCols);
+                for (int i = 0;  i < nCols;  ++i) {
+                    auto childInfo = Widget::accessibilityInfo();  // gives us 'this' frame
+                    childInfo.type = AccessibilityInfo::Type::kMenuItem;
+                    childInfo.text = std::to_string(int(std::round(float(i) / float(nCols - 1) * 100.0f))) + "% gray";
+                    childInfo.frameWinCoord = Rect(info.frameWinCoord.x + float(i) * w,
+                                                   info.frameWinCoord.y,
+                                                   w,
+                                                   info.frameWinCoord.height);
+                    childInfo.performLeftClick = [this, i]() {
+                        mCurrentCoord = { i, 0 };
+                        if (mOnValueChanged) {
+                            mOnValueChanged(colorAtCoord(mCurrentCoord, Mode::k8Greys));
+                        }
+                    };
+                    info.children.push_back(childInfo);
+                }
+                break;
+            }
+            case Mode::kClear:
+                info.type = AccessibilityInfo::Type::kMenuItem;
+                info.text = "transparent";
+                info.performLeftClick = [this]() {
+                    mCurrentCoord = { 0, 0 };
+                    if (mOnValueChanged) {
+                        mOnValueChanged(colorAtCoord(mCurrentCoord, mMode));
+                    }
+                };
+                break;
+        }
+        return info;
+    }
+
+protected:
+    int calcNHorizDivisions(Mode mode) const
+    {
+        if (mode == Mode::k12Hues) {
             return kNHueDivisions;
-        } else if (mMode == Mode::k8Greys) {
-            return kNGreyDivisions;
-        } else if (mMode == Mode::kThousands || mMode == Mode::kManyGreys) {
+        } else if (mode == Mode::k8Greys) {
+            return kNGreyDivisions + 1;
+        } else if (mode == Mode::kThousands || mode == Mode::kManyGreys) {
             return int(std::floor(bounds().width / mBoxHeight));
         } else {
             return 1;
         }
     }
 
-    int calcNVertDivisions() const
+    int calcNVertDivisions(Mode mode) const
     {
-        if (mMode == Mode::k12Hues) {
+        if (mode == Mode::k12Hues) {
             return (kNSatDivisions - 2) + (kNValDivisions - 2) + 1;
-        } else if (mMode == Mode::kThousands) {
+        } else if (mode == Mode::kThousands) {
             return int(std::floor(bounds().height / mBoxHeight));
         } else {
             return 1;
@@ -290,10 +373,10 @@ protected:
         return Coord{ int((p.x - r.x) / mBoxWidth), int((p.y - r.y) / mBoxHeight) };
     }
 
-    Color colorAtCoord(const Coord& coord)
+    Color colorAtCoord(const Coord& coord, Mode mode)
     {
         if (coord.x < 0 || coord.y < 0) { return Color(-1.0f, -1.0f, -1.0f); }
-        if (mMode == Mode::k12Hues) {
+        if (mode == Mode::k12Hues) {
             float hueDeg = float(coord.x) * 360.0f / float(kNHueDivisions);
             float sat = 1.0f;
             float val = 1.0f;
@@ -305,7 +388,7 @@ protected:
                 val = 1.0f - float((coord.y + 1) - (kNSatDivisions - 2) - 1) / float(kNValDivisions);
             }
             return HSVColor(hueDeg, sat, val).toColor();
-        } else if (mMode == Mode::kThousands) {
+        } else if (mode == Mode::kThousands) {
             int nw = int(std::floor(frame().width / mBoxWidth));
             int nh = int(std::floor(frame().height / mBoxHeight));
             int halfH = nh / 2;
@@ -313,16 +396,16 @@ protected:
             float sat = (coord.y <= halfH ? float(coord.y) / float(halfH) : 1.0f);
             float val = (coord.y <= halfH ? 1.0f : 1.0f - float(coord.y - halfH) / float(halfH));
             return HSVColor(hueDeg, sat, val).toColor();
-        } else if (mMode == Mode::k8Greys || mMode == Mode::kManyGreys) {
-            const int nDivs = calcNHorizDivisions();
+        } else if (mode == Mode::k8Greys || mode == Mode::kManyGreys) {
+            const int nDivs = calcNHorizDivisions(mode);
             int idx = coord.x;
-            if (idx >= 0 && idx <= nDivs) {
-                float r = std::min(1.0f, float(idx) / float(nDivs));
+            if (idx >= 0 && idx < nDivs) {
+                float r = std::min(1.0f, float(idx) / float(nDivs - 1));
                 return Color(r, r, r);
             } else {
                 return Color(-1.0f, -1.0f, 1.0f);
             }
-        } else if (mMode == Mode::kClear){
+        } else if (mode == Mode::kClear){
             return Color::kTransparent;
         } else {
             assert(false);
@@ -463,6 +546,22 @@ void ColorEdit::showPopup()
     });
 
     popup->showPopup(parentWindow, int(std::round(osLL.x)), int(std::round(osLL.y)));
+}
+
+AccessibilityInfo ColorEdit::accessibilityInfo()
+{
+    auto info = Super::accessibilityInfo();
+    info.type = AccessibilityInfo::Type::kCombobox;
+    info.text = "Color";
+    std::stringstream colorText;
+    colorText << int(std::round(mImpl->color.red() * 100.0f)) << "% red, "
+              << int(std::round(mImpl->color.green() * 100.0f)) << "% green, "
+              << int(std::round(mImpl->color.blue() * 100.0f)) << "% blue, "
+              << int(std::round(mImpl->color.alpha() * 100.0f)) << "% alpha, "
+              << "hex: " << mImpl->color.toHexString();
+    info.value = colorText.str();
+    info.performLeftClick = [this]() { showPopup(); };
+    return info;
 }
 
 Size ColorEdit::preferredSize(const LayoutContext& context) const

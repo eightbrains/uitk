@@ -300,6 +300,64 @@ void updateStandardItem(Window &w, MenuItem *item, MenuId activeWindowId)
     }
 }
 
+void getAccessibleChildren(uitk::Widget *w, std::vector<uitk::AccessibilityInfo> *accessibleChildren,
+                           bool addChildren = true, bool parentIsVisible = true)
+{
+    for (auto *child : w->children()) {
+        bool isVisible = parentIsVisible;
+        isVisible &= child->visible();  // two lines, as (bool & bool) becomes int
+        auto info = child->accessibilityInfo();
+        assert(info.widget);
+        info.isVisibleToUser = isVisible;
+        // Override the accessibility text here; Widget::accessibilityInfo() cannot
+        // do it because the function is virtual.
+        if (!child->accessibilityText().empty()) {
+            info.text = child->accessibilityText();
+        }
+        if (info.type == AccessibilityInfo::Type::kNone && info.children.empty()) {
+            getAccessibleChildren(child, accessibleChildren, true, isVisible);
+        } else if (info.type == AccessibilityInfo::Type::kContainer || !info.children.empty()) {
+            // accessibilityInfo() might need to populate the children itself
+            // (e.g. SegmentedControl, which has labels that act like buttons),
+            // in which case we obviously do not want duplicate them.
+            if (info.children.empty()) {
+                getAccessibleChildren(child, &info.children, true, isVisible);
+            } else {
+                // Populate the rest of the tree if the children are already handled.
+                // But, if a child of type kNone is included, we need to replace it
+                // with its children, like above.
+                std::vector<AccessibilityInfo> fixedChildren;
+                fixedChildren.reserve(info.children.size());
+                for (auto &childInfo : info.children) {
+                    childInfo.isVisibleToUser = isVisible;
+                    if (childInfo.type == AccessibilityInfo::Type::kNone) {
+                        getAccessibleChildren(info.widget, &fixedChildren, true, isVisible);
+                    } else {
+                        fixedChildren.push_back(childInfo);
+                        if (childInfo.type == AccessibilityInfo::Type::kContainer ||
+                            childInfo.type == AccessibilityInfo::Type::kList ||
+                            childInfo.type == AccessibilityInfo::Type::kRadioGroup)
+                        {
+                            getAccessibleChildren(childInfo.widget, &fixedChildren, false, isVisible);
+                        }
+                    }
+                }
+                info.children = fixedChildren;
+            }
+            if (addChildren && info.type != AccessibilityInfo::Type::kNone) {
+                accessibleChildren->push_back(info);
+            } else {
+                accessibleChildren->insert(accessibleChildren->end(),
+                                           info.children.begin(), info.children.end());
+            }
+        } else {
+            if (addChildren) {
+                accessibleChildren->push_back(info);
+            }
+        }
+    }
+}
+
 bool widgetCanAcceptKeyFocus(Widget *w, Application::KeyFocusCandidates candidates)
 {
     if (candidates == Application::KeyFocusCandidates::kAll) {
@@ -718,6 +776,11 @@ void Window::setNeedsLayout()
 {
     mImpl->needsLayout = true;
     setNeedsDraw();
+}
+
+void Window::setNeedsAccessibilityUpdate()
+{
+    mImpl->window->setNeedsAccessibilityUpdate();
 }
 
 void Window::postRedraw() const
@@ -1177,6 +1240,10 @@ void Window::onMouse(const MouseEvent& eOrig)
         mImpl->grabbedWidget = nullptr;
     }
 
+    if (e.type == MouseEvent::Type::kButtonUp || e.type == MouseEvent::Type::kDrag) {
+        setNeedsAccessibilityUpdate();
+    }
+
     mImpl->inMouse = false;
     if (mImpl->needsDraw) {
         postRedraw();
@@ -1230,6 +1297,10 @@ void Window::onKey(const KeyEvent &e)
             }
         }
 
+        if (e.type == KeyEvent::Type::kKeyDown) {
+            setNeedsAccessibilityUpdate();
+        }
+        
         mImpl->inKey = false;
         if (mImpl->needsDraw) {
             postRedraw();
@@ -1298,6 +1369,8 @@ void Window::onLayout(const DrawContext& dc)
     mImpl->rootWidget->layout(context);
     mImpl->needsLayout = false;
 
+    setNeedsAccessibilityUpdate();
+    
     // Focus widget's frame may have changed; update so that IME position
     // will be correct.
     if (mImpl->focusedWidget) {
@@ -1504,6 +1577,13 @@ void Window::onMenuActivated(MenuId id)
 void Window::onThemeChanged()
 {
     mImpl->rootWidget->themeChanged();
+}
+
+void Window::onUpdateAccessibility()
+{
+    std::vector<AccessibilityInfo> accessibleElements;
+    getAccessibleChildren(mImpl->rootWidget.get(), &accessibleElements);
+    mImpl->window->setAccessibleElements(accessibleElements);
 }
 
 bool Window::onWindowShouldClose()

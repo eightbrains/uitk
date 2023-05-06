@@ -72,6 +72,7 @@ public:
 
     ComboBox* setOnSelectionChanged(std::function<void(ComboBox*)> onChanged);
 
+    AccessibilityInfo accessibilityInfo() override;
     Size preferredSize(const LayoutContext& context) const override;
     void layout(const LayoutContext& context) override;
     EventResult mouse(const MouseEvent& e) override;

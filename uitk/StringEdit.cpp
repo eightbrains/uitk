@@ -302,6 +302,26 @@ TextEditorLogic* StringEdit::asTextEditorLogic()
     return &mImpl->editor;
 }
 
+AccessibilityInfo StringEdit::accessibilityInfo()
+{
+    auto info = Super::accessibilityInfo();
+    info.type = AccessibilityInfo::Type::kTextEdit;
+    if (isPassword()) {
+        info.type = AccessibilityInfo::Type::kPassword;
+    } else {
+        info.value = text();
+    }
+    info.placeholderText = placeholderText();
+    info.performSelectAll = [this]() {
+        mImpl->editor.setSelection(TextEditorLogic::Selection(0, mImpl->editor.endOfText(), TextEditorLogic::Selection::CursorLocation::kEnd));
+        // setSelection() doesn't call setNeedsDraw(), since it is normally called within
+        // a mouse/key event and the draw is scheduled there. But the accessibility callback
+        // will not be called within an event, so we need to call it manually.
+        setNeedsDraw();
+    };
+    return info;
+}
+
 Size StringEdit::preferredSize(const LayoutContext& context) const
 {
     return context.theme.calcPreferredTextEditSize(context.dc, context.theme.params().labelFont);

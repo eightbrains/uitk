@@ -48,6 +48,7 @@ struct Widget::Impl {
     MouseState state = MouseState::kNormal;
     std::optional<Theme::WidgetState> forcedThemeState = kUnsetThemeState;
     std::string tooltip;
+    std::string accessibilityText;
     double lastTooltipPreventingActivityTime = std::numeric_limits<double>::max();
     Application::ScheduledId tooltipTimer = Application::kInvalidScheduledId;
     bool drawsFrame = false;
@@ -156,6 +157,9 @@ Widget* Widget::setVisible(bool vis)
             updateKeyFocusOnVisibilityOrEnabledChange();
         }
         setNeedsDraw();
+        if (auto *win = window()) {
+            win->setNeedsAccessibilityUpdate();
+        }
     }
     return this;
 }
@@ -188,6 +192,17 @@ Widget* Widget::setTooltip(const std::string& tooltip)
 }
 
 bool Widget::hasTooltip() const { return (!mImpl->tooltip.empty()); }
+
+const std::string& Widget::accessibilityText() const
+{
+    return mImpl->accessibilityText;
+}
+
+Widget* Widget::setAccessibilityText(const std::string& text)
+{
+    mImpl->accessibilityText = text;
+    return this;
+}
 
 const Color& Widget::backgroundColor() const
 {
@@ -286,6 +301,9 @@ void Widget::removeAllChildren()
     }
     mImpl->children.clear();
     // Do not need a layout, technically: there's nothing left to layout
+    if (auto *win = window()) {
+        win->setNeedsAccessibilityUpdate();
+    }
 }
 
 void Widget::clearAllChildren()
@@ -344,7 +362,7 @@ Point Widget::convertToWindowFromLocal(const Point& localPt) const
         windowPt += win->contentRect().upperLeft();
     }
     const Widget *w = this;
-    while (w->mImpl->parent) {
+    while (w && w->mImpl->parent) {
         windowPt += w->frame().upperLeft();
         w = w->mImpl->parent;
     }
@@ -390,6 +408,24 @@ void Widget::setShowFocusRingOnParent(bool show)
 bool Widget::showFocusRingOnParent() const { return mImpl->showFocusRingOnParent; }
 
 bool Widget::acceptsKeyFocus() const { return false; }
+
+AccessibilityInfo Widget::accessibilityInfo()
+{
+    auto r = frame();
+    r.x = PicaPt::kZero;
+    r.y = PicaPt::kZero;
+    return {
+        AccessibilityInfo::Type::kNone,
+        this,
+        // Q: why calculate the frame even though we are invisible to the accessibility?
+        // A: so that derived classes can just Super and not have to copy the calculation.
+        r.translated(convertToWindowFromLocal(Point::kZero))
+        // The accessibilityText will be applied by the top-level caller, or
+        // when the native element is created, since it needs to override
+        // the default text, and anything we set here will be overwritten by
+        // the subclass, since we probably in a subclass super-ing.
+    };
+}
 
 CutPasteable* Widget::asCutPasteable() { return nullptr; }
 

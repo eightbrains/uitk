@@ -57,6 +57,7 @@ public:
     bool acceptsKeyFocus() const override;
     EventResult key(const KeyEvent& e) override;
     void draw(UIContext& context) override;
+    AccessibilityInfo accessibilityInfo() override;
 
 protected:
     bool shouldAutoGrab() const override;

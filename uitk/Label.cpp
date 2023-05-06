@@ -229,6 +229,14 @@ Widget* Label::setFrame(const Rect& frame)
     return this;
 }
 
+AccessibilityInfo Label::accessibilityInfo()
+{
+    auto info = Super::accessibilityInfo();
+    info.type = AccessibilityInfo::Type::kLabel;
+    info.text = mImpl->text.text();
+    return info;
+}
+
 void Label::themeChanged()
 {
     Super::themeChanged();

@@ -38,10 +38,18 @@ public:
         mFlags = flags;
 
         mHoriz = new SegmentedControl({"L", "C", "R"});
+        mHoriz->setAccessibilityText("Horizontal alignment");
+        mHoriz->setTooltip(0, "Align::kLeft");
+        mHoriz->setTooltip(1, "Align::kCenter");
+        mHoriz->setTooltip(2, "Align::kRight");
         mHoriz->setAction(SegmentedControl::Action::kSelectOne);
         mHoriz->setSegmentOn(0, true);
         addChild(mHoriz);
         mVert = new SegmentedControl({"T", "C", "B"});
+        mVert->setAccessibilityText("Vertical alignment");
+        mVert->setTooltip(0, "Align::kTop");
+        mVert->setTooltip(1, "Align::kCenter");
+        mVert->setTooltip(2, "Align::kBottom");
         mVert->setAction(SegmentedControl::Action::kSelectOne);
         mVert->setSegmentOn(0, true);
         addChild(mVert);

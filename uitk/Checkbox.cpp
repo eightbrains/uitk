@@ -49,6 +49,14 @@ Checkbox::~Checkbox()
 {
 }
 
+AccessibilityInfo Checkbox::accessibilityInfo()
+{
+    auto info = Super::accessibilityInfo();
+    info.type = AccessibilityInfo::Type::kCheckbox;
+    info.value = isOn();
+    return info;
+}
+
 Size Checkbox::preferredSize(const LayoutContext& context) const
 {
     auto font = context.theme.params().labelFont;

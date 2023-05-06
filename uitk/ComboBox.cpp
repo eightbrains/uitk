@@ -255,6 +255,19 @@ void ComboBox::didChangeSelection() {}
 void ComboBox::willShowMenu() {}
 void ComboBox::didHideMenu() {}
 
+AccessibilityInfo ComboBox::accessibilityInfo()
+{
+    auto info = Super::accessibilityInfo();
+    info.type = AccessibilityInfo::Type::kCombobox;
+    if (mImpl->selectedIndex >= 0 && mImpl->selectedIndex < int(mImpl->items.size())) {
+        info.text = mImpl->menu->itemText(mImpl->items[mImpl->selectedIndex].id);
+    } else {
+        info.text = "no selection";
+    }
+    info.performLeftClick = [this]() { showMenu(); };
+    return info;
+}
+
 Size ComboBox::preferredSize(const LayoutContext& context) const
 {
     auto menuPref = mImpl->menu->preferredSize(context);

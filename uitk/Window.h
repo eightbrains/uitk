@@ -194,6 +194,11 @@ public:
     /// Schedules a layout
     void setNeedsLayout();
 
+    /// Updates accessibility information (if active). Mouse presses, key events,
+    /// and layouts update accessibility, so it is not generally necessary to
+    /// call this directly.
+    void setNeedsAccessibilityUpdate();
+
     PicaPt borderWidth() const;
 
     /// Shows the tooltip based on the current mouse point. Takes ownership of
@@ -281,6 +286,7 @@ public:
     void onMenuWillShow() override;
     void onMenuActivated(MenuId id) override;
     void onThemeChanged() override;
+    void onUpdateAccessibility() override;
     bool onWindowShouldClose() override;
     void onWindowWillClose() override;
 

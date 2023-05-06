@@ -71,12 +71,18 @@ public:
     /// derived classes is likely to have no effect.
     SegmentedControl* setDrawStyle(DrawStyle s);
 
-    // Sets a function that will be called when a segment is clicked.
-    // The single argument is the segment currently clicked; if the action is
-    // kSelectMultiple, use isSegmentOn() to determine the states of other
-    // segments.
+    /// Sets a function that will be called when a segment is clicked.
+    /// The single argument is the segment currently clicked; if the action is
+    /// kSelectMultiple, use isSegmentOn() to determine the states of other
+    /// segments.
     SegmentedControl* setOnClicked(std::function<void(int)> onClicked);
 
+    /// Acts as if the user clicked on the index: the onClicked callback
+    /// will be called, unlike setSegmentOn(), and any toggle action will
+    /// be performed.
+    void performClick(int index);
+
+    AccessibilityInfo accessibilityInfo() override;
     Size preferredSize(const LayoutContext& context) const override;
     void layout(const LayoutContext& context) override;
     EventResult mouse(const MouseEvent& e) override;

@@ -23,6 +23,7 @@
 #ifndef UITK_WIDGET_H
 #define UITK_WIDGET_H
 
+#include "Accessibility.h"
 #include "CutPasteable.h"
 #include "themes/Theme.h"
 
@@ -74,6 +75,20 @@ public:
     /// since tooltips should be simple and understated. If you need a custom
     /// tooltip, override onTooltip() and hasTooltip() if necessary.
     Widget* setTooltip(const std::string& tooltip);
+
+    const std::string& accessibilityText() const;
+    /// Sets the text for the widget. This is generally not needed for
+    /// individual widgets, which generally use their text. However,
+    /// lists and other grouped elements benefit from accessibility
+    /// otherwise they group may be ignored and the elements placed
+    /// in the parent's space. A special case are widgets like
+    /// SegmentedControl, which have (or emulate) child widgets, but
+    /// for which it is sometimes better to have the items in a group
+    /// and sometimes better to have them as siblings of the. However,
+    /// it is still generally better easier to navigate if the group
+    /// is labeled: "font settings" is a lot easier to navigate (and skip
+    /// if you are not interested) than { "bold", "italic", "underline" }.
+    Widget* setAccessibilityText(const std::string& text);
 
     const Color& backgroundColor() const;
     Widget* setBackgroundColor(const Color& bg);
@@ -130,6 +145,11 @@ public:
     /// do not need to consider if the widget is disabled or hidden.
     virtual bool acceptsKeyFocus() const;
 
+    /// Returns the accesibility information for the widget.
+    /// Does not modify the object, but is non-const because further actions
+    /// using the AccessibilityInfo object may modify the object.
+    virtual AccessibilityInfo accessibilityInfo();
+    
     /// Objects that support cut and paste should override this and
     /// return this interface. This is used by the copy/cut/paste menu items.
     /// The base class action returns nullptr, which disables the items.

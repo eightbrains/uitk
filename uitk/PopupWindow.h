@@ -30,6 +30,7 @@ namespace uitk {
 
 class PopupWindow : public Window, public IPopupWindow
 {
+    using Super = Window;
 public:
     PopupWindow(const PicaPt& w, const PicaPt& h, const std::string& title = "");
 
@@ -37,6 +38,8 @@ public:
     Window* window() override;
 
     virtual void showPopup(Window *parent, int osX, int osY);
+
+    void onKey(const KeyEvent& e) override;
 
 private:
     struct Impl;

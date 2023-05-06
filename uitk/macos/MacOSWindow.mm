@@ -28,15 +28,18 @@
 
 #include "MacOSApplication.h"
 
+#include "../Accessibility.h"
 #include "../Application.h"
 #include "../Cursor.h"
 #include "../Events.h"
 #include "../OSCursor.h"
 #include "../TextEditorLogic.h"
+#include "../Widget.h"
 #include "../private/Utils.h"
 #include <nativedraw.h>
 
 #import <Cocoa/Cocoa.h>
+#import "MacOSAccessibility.h"
 
 #include <unordered_map>
 
@@ -114,13 +117,17 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 }  // namespace
 
 //-----------------------------------------------------------------------------
-@interface ContentView : NSView<NSTextInputClient>
+@interface ContentView : NSView<NSTextInputClient, RootAccessibilityElement>
+//---- RootAccessibilityElement ----
+@property NSAccessibilityElement* currentlyActiveElement;
+//----
 @end
 
 @interface ContentView ()
 {
-    bool mAppearanceChanged;
     std::vector<std::function<void()>> mDeferredCalls;
+    bool mAppearanceChanged;
+    bool mHasUsedAccessibility;
 }
 @property uitk::IWindowCallbacks *callbacks;  // ObjC does not accept reference
 @property bool inEvent;
@@ -128,17 +135,30 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 @property float hiresDPI;
 @property uitk::TextEditorLogic* textEditor;
 @property uitk::Rect textEditorFrame;
+@property bool needsAccessibilityUpdate;
 @end
 
 @implementation ContentView
 - (id)initWithCallbacks:(uitk::IWindowCallbacks*)cb {
     if (self = [super init]) {
         mAppearanceChanged = false;
+        mHasUsedAccessibility = false;
+        self.currentlyActiveElement = nil;
         self.callbacks = cb;
         self.inEvent = false;
+        // Set accessibilityElement=NO. If YES, then usually VoiceOver will start
+        // at the root group, instead of the first element in the group, which is
+        // what we want. (Except sometimes it does start on the first element, sigh...)
+        self.accessibilityElement = NO;
+        self.accessibilityRole = NSAccessibilityGroupRole;
+        self.accessibilityLabel = @"Root element";
+        [self updateAccessibilityFrame];
+        self.needsAccessibilityUpdate = true;
     }
     return self;
 }
+
+- (BOOL)acceptsFirstResponder { return YES; }  // debugging; remove
 
 - (void)updateDPI
 {
@@ -178,17 +198,141 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     return uitk::DrawContext::fromCoreGraphics(cgContext, width, height, self.dpi);
 }
 
++ (void)cacheAccessibilityTree:(NSAccessibilityElement*)root
+                         cache:(std::map<uitk::AccessibilityInfo::UID, AccessibilityElement*>&)cache
+{
+    if ([root isKindOfClass:AccessibilityElement.class]) {
+        AccessibilityElement *ae = (AccessibilityElement*)root;
+        auto uid = ae.info.uniqueId();  // 'id' is an Objective-C(++) reserved word
+        assert(cache.find(uid) == cache.end());  // should not be in cache: we are building it!
+        cache[uid] = ae;
+        for (NSAccessibilityElement *child in ae.accessibilityChildrenPure) {
+            [ContentView cacheAccessibilityTree:child cache:cache];
+        }
+    } else {
+        assert([root isKindOfClass:ContentView.class]);
+        assert(cache.empty());
+        for (NSAccessibilityElement *child in [(ContentView*)root accessibilityChildrenPure]) {
+            [ContentView cacheAccessibilityTree:child cache:cache];
+        }
+    }
+}
+
++ (void)cacheNewAccessibilityTree:(const uitk::AccessibilityInfo&)newRoot
+                            cache:(std::set<uitk::AccessibilityInfo::UID>&)cache
+{
+    cache.insert(newRoot.uniqueId());
+    for (auto &child : newRoot.children) {
+        [ContentView cacheNewAccessibilityTree:child cache:cache];
+    }
+}
+
+- (void)updateAccessibleElements:(const std::vector<uitk::AccessibilityInfo>&)elements
+{
+    if (self.window == nil) {
+        return;
+    }
+
+    //std::cout << "[debug] root" << std::endl;
+    //for (auto &e : elements) {
+    //    std::cout << e.debugDescription("[debug]   ") << std::endl;
+    //}
+
+    // If at all possible we try to keep the same UIKit objects, otherwise VoiceOver
+    // jumps to the beginning, and there does not seem to be a way to set the active
+    // element ourselves (posting NSAccessibilityLayoutChangedNotification has no
+    // effect). If anything was added or removed we will need to recreate the objects
+    // and reset the user, but that should be rare.
+
+    std::map<uitk::AccessibilityInfo::UID, AccessibilityElement*> oldCache;
+    [ContentView cacheAccessibilityTree:(NSAccessibilityElement*)self cache:oldCache];
+
+    // Check if widgets were added or removed (or reparented, which requires removing and then adding)
+    std::set<uitk::AccessibilityInfo::UID> newCache;
+    for (auto &e : elements) {
+        [ContentView cacheNewAccessibilityTree:e cache:newCache];
+    }
+    bool needsRecreate = false;
+    // Check that all the old elements are still in the new elements (no removed items)
+    for (auto &kv : oldCache) {
+        if (newCache.find(kv.first) == newCache.end()) {
+            needsRecreate = true;
+            break;
+        }
+    }
+    // Check that all the new elements already existed before (no enw items)
+    if (!needsRecreate) {
+        for (auto &w : newCache) {
+            if (oldCache.find(w) == oldCache.end()) {
+                needsRecreate = true;
+                break;
+            }
+        }
+    }
+
+    if (needsRecreate) {
+        oldCache.clear();
+    }
+
+    uitk::Widget *currentWidget = nullptr;
+    if (self.currentlyActiveElement != nil &&
+        [self.currentlyActiveElement isKindOfClass:AccessibilityElement.class])
+    {
+        currentWidget = ((AccessibilityElement*)self.currentlyActiveElement).info.widget;
+    }
+    auto llScreen = [self.window convertPointToScreen:self.frame.origin];
+    auto ulScreen = [self.window convertPointToScreen:NSMakePoint(self.frame.origin.x, self.frame.origin.y + self.frame.size.height)];
+    auto selfRect = uitk::Rect::fromPixels(0, 0, self.frame.size.width, self.frame.size.height, self.dpi);
+    AccessibilityElement *toSelect =
+        [AccessibilityElement updateAccessibleElements:elements
+                                                   for:(NSAccessibilityElement*)self
+                                              topLevel:(NSAccessibilityElement*)self
+                                         frameWinCoord:selfRect
+                                              ulOffset:llScreen
+                                             nsWinTopY:ulScreen.y
+                                                   dpi:self.dpi
+                                returnElementForWidget:currentWidget
+                                                 cache:oldCache
+         ];
+}
+
+- (void)updateAccessibilityFrame
+{
+    auto llScreen = [self.window convertPointToScreen:self.frame.origin];
+    auto urScreen = [self.window convertPointToScreen:NSMakePoint(NSMaxX(self.frame), NSMaxY(self.frame))];
+    self.needsAccessibilityUpdate |= (self.accessibilityFrame.origin.x != llScreen.x ||
+                                      self.accessibilityFrame.origin.y != llScreen.y);
+    self.accessibilityFrame = NSMakeRect(llScreen.x, llScreen.y,
+                                         urScreen.x - llScreen.x, urScreen.y - llScreen.y);
+}
+
+- (NSArray*)accessibilityChildren
+{
+    if (self.needsAccessibilityUpdate) {
+        self.callbacks->onUpdateAccessibility();
+        self.needsAccessibilityUpdate = false;
+        mHasUsedAccessibility = true;
+    }
+    return [super accessibilityChildren];
+}
+
+- (NSArray*)accessibilityChildrenPure
+{
+    return [super accessibilityChildren];
+
+}
 /*- (void)setFrame:(NSRect)frame
 {
     [super setFrame:frame];
     self.callbacks->onLayout();
 }
 */
+
 - (void)setFrameSize:(NSSize)newSize
 {
     [super setFrameSize:newSize];
     auto dc = [self createContext];
-    self.callbacks->onResize(*dc);
+    self.callbacks->onResize(*dc);  // onResize will mark accessibility dirty
 }
 
 - (void)layout
@@ -209,6 +353,11 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     dc->beginDraw();
     self.callbacks->onDraw(*dc);
     dc->endDraw();
+
+    if (self.needsAccessibilityUpdate && mHasUsedAccessibility) {
+        self.callbacks->onUpdateAccessibility();
+        self.needsAccessibilityUpdate = false;
+    }
 }
 
 - (void)mouseMoved:(NSEvent *)e
@@ -626,11 +775,18 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     return self;
 }
 
+- (void)windowDidMove:(NSNotification *)notification
+{
+    ContentView *cv = (ContentView*)self.window.contentView;
+    [cv updateAccessibilityFrame];
+}
+
 - (void)windowDidChangeScreen:(NSNotification *)notification
 {
     ContentView *cv = (ContentView*)self.window.contentView;
     if (cv != nil) {
         [cv updateDPI];
+        [cv updateAccessibilityFrame];
     }
 }
 
@@ -730,6 +886,7 @@ MacOSWindow::MacOSWindow(IWindowCallbacks& callbacks,
 
 MacOSWindow::~MacOSWindow()
 {
+//    [NSNotificationCenter.defaultCenter removeObserver name:NSAccessibilityFocusedUIElementChangedNotification object:nil];
     // There may still be events queued, and apparently macOS does not fully
     // delete the object until they are all done. However, we cannot be calling
     // any callbacks, because officially this object is deleted.
@@ -770,6 +927,9 @@ void MacOSWindow::show(bool show, std::function<void(const DrawContext&)> onWill
         // Note that -orderFront: sometimes doesn't put it in front, but
         // -orderFrontRegardless seems to.
         [mImpl->window orderFrontRegardless];
+        // TODO: it would be ideal to have VoiceOver move to the first item.
+        // Unfortunately, it does not appear to be possible to set the VO cursor.
+        // At least the user can navigate to the popup window with VO-F1.
     } else {
         [mImpl->window makeKeyAndOrderFront:nil];
     }
@@ -947,6 +1107,16 @@ void MacOSWindow::setTextEditing(TextEditorLogic *te, const Rect& frame)
 {
     mImpl->contentView.textEditor = te;
     mImpl->contentView.textEditorFrame = frame;
+}
+
+void MacOSWindow::setNeedsAccessibilityUpdate()
+{
+    mImpl->contentView.needsAccessibilityUpdate = true;
+}
+
+void MacOSWindow::setAccessibleElements(const std::vector<AccessibilityInfo>& elements)
+{
+    [mImpl->contentView updateAccessibleElements:elements];
 }
 
 }  // namespace uitk

@@ -27,6 +27,8 @@
 #include "UIContext.h"
 #include "Window.h"
 
+#include <stdio.h>
+
 namespace uitk {
 
 namespace {
@@ -168,6 +170,30 @@ double SliderLogic::doubleMaxLimit() const { return mImpl->model.doubleMaxLimit(
 
 double SliderLogic::doubleIncrement() const { return mImpl->model.doubleIncrement(); }
 
+void SliderLogic::performIncrement()
+{
+    if (double(int(mImpl->model.doubleIncrement())) == mImpl->model.doubleIncrement()) {
+        setValue(intValue() + intIncrement());
+    } else {
+        setValue(doubleValue() + doubleIncrement());
+    }
+    if (mImpl->onValueChanged) {
+        mImpl->onValueChanged(this);
+    }
+}
+
+void SliderLogic::performDecrement()
+{
+    if (double(int(mImpl->model.doubleIncrement())) == mImpl->model.doubleIncrement()) {
+        setValue(intValue() - intIncrement());
+    } else {
+        setValue(doubleValue() - doubleIncrement());
+    }
+    if (mImpl->onValueChanged) {
+        mImpl->onValueChanged(this);
+    }
+}
+
 SliderLogic* SliderLogic::setOnValueChanged(std::function<void(SliderLogic*)> onChanged)
 {
     mImpl->onValueChanged = onChanged;
@@ -175,6 +201,27 @@ SliderLogic* SliderLogic::setOnValueChanged(std::function<void(SliderLogic*)> on
 }
 
 bool SliderLogic::acceptsKeyFocus() const { return true; }
+
+AccessibilityInfo SliderLogic::accessibilityInfo()
+{
+    auto info = Super::accessibilityInfo();
+    info.type = AccessibilityInfo::Type::kSlider;
+    if (double(int(mImpl->model.doubleIncrement())) == mImpl->model.doubleIncrement()) {
+        info.value = mImpl->model.intValue();
+    } else {
+        // If we just set a floating point value, it turns out that macOS likes to round
+        // it up, which results in an incorrect value.
+        char fmtStr[] = "%.1f";
+        int digits = int(std::ceil(-std::log10(mImpl->model.doubleIncrement())));
+        fmtStr[2] = "0123456789"[std::min(6, digits)];
+        char valueStr[64];
+        snprintf(valueStr, sizeof(valueStr), fmtStr, mImpl->model.doubleValue());
+        info.value = std::string(valueStr);
+    }
+    info.performIncrementNumeric = [this]() { performIncrement(); };
+    info.performDecrementNumeric = [this]() { performDecrement(); };
+    return info;
+}
 
 Size SliderLogic::preferredSize(const LayoutContext& context) const
 {

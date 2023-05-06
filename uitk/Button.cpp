@@ -147,9 +147,29 @@ void Button::performClick()
     if (mImpl->onClicked) {
         mImpl->onClicked(this);
     }
+    setNeedsDraw();
 }
 
 bool Button::acceptsKeyFocus() const { return true; }
+
+AccessibilityInfo Button::accessibilityInfo()
+{
+    auto info = Super::accessibilityInfo();
+    info.type = AccessibilityInfo::Type::kButton;
+    if (auto *c = cell()) {
+        info.text = c->label()->text();
+    } else if (auto *lbl = label()) {
+        info.text = lbl->text();
+    }
+    if (info.text.empty()) {  // lbl might be null (in theory) or more probably, is icon-only
+        info.text = tooltip();
+    }
+    if (info.text.empty()) {
+        info.text = "icon";
+    }
+    info.performLeftClick = [this]() { performClick(); };
+    return info;
+}
 
 Size Button::preferredSize(const LayoutContext& context) const
 {

@@ -191,6 +191,67 @@ SegmentedControl* SegmentedControl::setOnClicked(std::function<void(int)> onClic
     return this;
 }
 
+void SegmentedControl::performClick(int index)
+{
+    if (index < 0 || index > int(mImpl->items.size())) {
+        return;
+    }
+
+    switch (mImpl->action) {
+        case Action::kSelectOne:
+            setSegmentOn(index, true);
+            break;
+        case Action::kSelectMultiple:
+            setSegmentOn(index, !mImpl->items[index].isOn);
+            break;
+        case Action::kButton:
+            break;  // do nothing, button action is not set on/off
+    }
+    if (mImpl->onClicked) {
+        mImpl->onClicked(index);
+    }
+}
+
+AccessibilityInfo SegmentedControl::accessibilityInfo()
+{
+    auto info = Super::accessibilityInfo();
+    auto childType = AccessibilityInfo::Type::kNone;
+    switch (mImpl->action) {
+        case Action::kButton:
+            info.type = AccessibilityInfo::Type::kContainer;
+            childType = AccessibilityInfo::Type::kButton;
+            break;
+        case Action::kSelectOne:
+            info.type = AccessibilityInfo::Type::kRadioGroup;
+            childType = AccessibilityInfo::Type::kRadioButton;
+            break;
+        case Action::kSelectMultiple:
+            info.type = AccessibilityInfo::Type::kContainer;
+            childType = AccessibilityInfo::Type::kCheckbox;
+            break;
+    }
+    // Normally the children would be automatically populated for by the
+    // caller, but since the actual children are just labels, we need
+    // to create the child elements ourselves.
+    for (size_t i = 0;  i < mImpl->items.size();  ++i) {
+        auto &item = mImpl->items[i];
+        auto r = item.frame;
+        auto bInfo = AccessibilityInfo{
+            childType,
+            this,
+            r.translated(convertToWindowFromLocal(Point::kZero)),
+            item.name
+        };
+        bInfo.indexInParent = int(i);
+        if (childType != AccessibilityInfo::Type::kButton) {
+            bInfo.value = item.isOn;
+        }
+        bInfo.performLeftClick = [this, index=int(i)]() { performClick(index); };
+        info.children.emplace_back(bInfo);
+    }
+    return info;
+}
+
 Size SegmentedControl::preferredSize(const LayoutContext& context) const
 {
     Size pref;
@@ -258,19 +319,7 @@ Widget::EventResult SegmentedControl::mouse(const MouseEvent& e)
     } else if (e.type == MouseEvent::Type::kButtonUp) {
         for (size_t i = 0;  i < mImpl->items.size();  ++i) {
             if (mImpl->items[i].frame.contains(e.pos)) {
-                switch (mImpl->action) {
-                    case Action::kSelectOne:
-                        setSegmentOn(int(i), true);
-                        break;
-                    case Action::kSelectMultiple:
-                        setSegmentOn(int(i), !mImpl->items[i].isOn);
-                        break;
-                    case Action::kButton:
-                        break;  // do nothing, button action is not set on/off
-                }
-                if (mImpl->onClicked) {
-                    mImpl->onClicked(int(i));
-                }
+                performClick(int(i));
                 result = EventResult::kConsumed;
                 break;
             }

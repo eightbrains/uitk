@@ -113,6 +113,7 @@ void FontListComboBox::addFont(const std::string& fontName)
 {
     auto *item = new FontNameLabel(fontName);
     item->setUseThemeFont(mImpl->useThemeFont);
+    item->setAccessibilityText(fontName);
     addItem(item);
 }
 

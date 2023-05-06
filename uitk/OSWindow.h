@@ -24,6 +24,7 @@
 #define UITK_OSWINDOW_H
 
 #include "OSMenu.h"
+#include "Accessibility.h"
 
 #include <nativedraw.h>
 
@@ -56,6 +57,7 @@ public:
     virtual void onMenuWillShow() = 0;
     virtual void onMenuActivated(MenuId id) = 0;
     virtual void onThemeChanged() = 0;
+    virtual void onUpdateAccessibility() = 0;
     virtual bool onWindowShouldClose() = 0;
     virtual void onWindowWillClose() = 0;
 };
@@ -139,6 +141,9 @@ public:
 
     // Frame is in window coordinates
     virtual void setTextEditing(TextEditorLogic *te, const Rect& frame) = 0;
+
+    virtual void setNeedsAccessibilityUpdate() = 0;
+    virtual void setAccessibleElements(const std::vector<AccessibilityInfo>& elements) = 0;
 };
 
 }  // namespace uitk

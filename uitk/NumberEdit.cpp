@@ -179,10 +179,51 @@ NumberEdit* NumberEdit::setDecimalDigits(int nDigits)
     return this;
 }
 
+void NumberEdit::performIncrement()
+{
+    if (double(int(mImpl->model.doubleIncrement())) == mImpl->model.doubleIncrement()) {
+        setValue(intValue() + intIncrement());
+    } else {
+        setValue(doubleValue() + doubleIncrement());
+    }
+    if (mImpl->onChanged) {
+        mImpl->onChanged(this);
+    }
+}
+
+void NumberEdit::performDecrement()
+{
+    if (double(int(mImpl->model.doubleIncrement())) == mImpl->model.doubleIncrement()) {
+        setValue(intValue() - intIncrement());
+    } else {
+        setValue(doubleValue() - doubleIncrement());
+    }
+    if (mImpl->onChanged) {
+        mImpl->onChanged(this);
+    }
+}
+
 NumberEdit* NumberEdit::setOnValueChanged(std::function<void(NumberEdit*)> onChanged)
 {
     mImpl->onChanged = onChanged;
     return this;
+}
+
+AccessibilityInfo NumberEdit::accessibilityInfo()
+{
+    auto info = Super::accessibilityInfo();
+    auto textInfo = mImpl->stringEdit->accessibilityInfo();
+    auto incDecInfo = mImpl->incDec->accessibilityInfo();
+    incDecInfo.type = AccessibilityInfo::Type::kIncDec;
+    if (double(int(mImpl->model.doubleIncrement())) == mImpl->model.doubleIncrement()) {
+        info.value = mImpl->model.intValue();
+    } else {
+        info.value = mImpl->model.doubleValue();
+    }
+    incDecInfo.performIncrementNumeric = [this]() { performIncrement(); };
+    incDecInfo.performDecrementNumeric = [this]() { performDecrement(); };
+    info.children = { textInfo, incDecInfo };
+    return info;
 }
 
 Size NumberEdit::preferredSize(const LayoutContext& context) const

@@ -37,6 +37,8 @@ public:
     /// Value ranges from 0 - 100.
     ProgressBar* setValue(float percent);
 
+    AccessibilityInfo accessibilityInfo() override;
+
     Size preferredSize(const LayoutContext& context) const override;
 
     void draw(UIContext& context) override;

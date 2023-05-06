@@ -59,11 +59,21 @@ public:
     double doubleMaxLimit() const;
     double doubleIncrement() const;
 
+    /// Increments the control as if the user did it (that is, the on value
+    /// changed callback is called);
+    void performIncrement();
+
+    /// Deccrements the control as if the user did it (that is, the on value
+    /// changed callback is called);
+    void performDecrement();
+
     /// Called when value changes due to mouse movement; is not called
     /// as a result of setValue() or setLimits().
     SliderLogic* setOnValueChanged(std::function<void(SliderLogic*)> onChanged);
 
     bool acceptsKeyFocus() const override;
+
+    AccessibilityInfo accessibilityInfo() override;
 
     Size preferredSize(const LayoutContext& context) const override;
     void layout(const LayoutContext& context) override;

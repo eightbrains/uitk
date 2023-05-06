@@ -79,6 +79,9 @@ public:
     void callWithLayoutContext(std::function<void(const DrawContext&)> f) override;
     void setTextEditing(TextEditorLogic *te, const Rect& frame) override;
 
+    void setNeedsAccessibilityUpdate() override;
+    void setAccessibleElements(const std::vector<AccessibilityInfo>& elements) override;
+
     void onResize();
     void onLayout();
     void onDraw();
