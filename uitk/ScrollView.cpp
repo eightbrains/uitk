@@ -103,12 +103,17 @@ struct ScrollView::Impl
 
     void hideScrollbars()
     {
+        this->cancelHideTimer();
+        this->horizScroll->setVisible(false);
+        this->vertScroll->setVisible(false);
+    }
+
+    void cancelHideTimer()
+    {
         if (this->hideScrollbarsTimer != Application::kInvalidScheduledId) {
             Application::instance().cancelScheduled(this->hideScrollbarsTimer);
             this->hideScrollbarsTimer = Application::kInvalidScheduledId;
         }
-        this->horizScroll->setVisible(false);
-        this->vertScroll->setVisible(false);
     }
 };
 
@@ -131,7 +136,9 @@ ScrollView::ScrollView()
 
 ScrollView::~ScrollView()
 {
-    mImpl->hideScrollbars();  // just in case timer is still going
+    // Cancel the timer in case it is still going. (Do not hideScrollbars(), since setVisible
+    // may attempt to use the window, which might be going away.)
+    mImpl->cancelHideTimer();
 }
 
 ScrollView* ScrollView::setFrame(const Rect& frame)
