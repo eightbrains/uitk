@@ -312,6 +312,10 @@ Widget::EventResult SegmentedControl::mouse(const MouseEvent& e)
     auto result = Super::mouse(e);
     auto newState = themeState();
 
+    // Note: use 'mImpl->items[i].frame.contains(e.pos)' to hittest, since children()[i].frame
+    // is not necessarily the same size. In particular, if the control is too wide, the child
+    // frame will be smaller than the hit area.
+    
     if (e.type == MouseEvent::Type::kButtonDown) {
         // Like Button, we don't do anything for mouse down, but it *does*
         // change state, and we do want to be the grab widget.
@@ -337,7 +341,7 @@ Widget::EventResult SegmentedControl::mouse(const MouseEvent& e)
     if (newState == Theme::WidgetState::kMouseOver || newState == Theme::WidgetState::kMouseDown) {
         for (size_t i = 0;  i < mImpl->items.size();  ++i) {
             auto oldSegState = mImpl->items[i].state;
-            if (children()[i]->frame().contains(e.pos)) {
+            if (mImpl->items[i].frame.contains(e.pos)) {
                 mImpl->items[i].state = newState;
             } else {
                 mImpl->items[i].state = Theme::WidgetState::kNormal;
@@ -475,11 +479,16 @@ void SegmentedControl::draw(UIContext& context)
     auto ds = (mImpl->drawStyle == DrawStyle::kNoDecoration
                     ? Theme::SegmentDrawStyle::kNoDecoration
                     : Theme::SegmentDrawStyle::kNormal);
+    // Draw the background
     context.theme.drawSegmentedControl(context, bounds(), ds, style(ctrlState), ctrlState);
-    for (auto &item : mImpl->items) { // do first, so that segments are under focus rect
+    // Next, draw the segment dividers (but not the one at index 0, which would be on top of the
+    // left border!)
+    for (size_t i = 1;  i < mImpl->items.size();  ++i) {
+        auto &item = mImpl->items[i];
         context.theme.drawSegmentDivider(context, item.frame.upperLeft(), item.frame.lowerLeft(),
                                          ds, style(ctrlState), ctrlState);
     }
+    // Last, draw each of the segments on top
     int nItems = int(mImpl->items.size());
     for (int i = 0;  i < nItems;  ++i) {
         auto &item = mImpl->items[i];
