@@ -569,6 +569,11 @@ Window::Window(const std::string& title, int x, int y, int width, int height,
 
 Window::~Window()
 {
+    // Delete the widget hierarchy before we get red of mImpl->window, in case anything
+    // decides to call something that uses it. (This seems to be a problem on Windows)
+    mImpl->menubarWidget.reset();
+    mImpl->rootWidget.reset();
+
     Application::instance().removeWindow(this);
     updateWindowList();
     mImpl->cancelPopup();
@@ -579,8 +584,6 @@ Window::~Window()
     mImpl->tooltipWidget = nullptr;
     mImpl->theme.reset();
     mImpl->window.reset();
-    mImpl->menubarWidget.reset();
-    mImpl->rootWidget.reset();
 }
 
 void Window::deleteLater()
