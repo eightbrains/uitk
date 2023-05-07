@@ -320,6 +320,14 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     } else {
         mScrollbarThumbStyles[NORMAL].bgColor = Color(0.0f, 0.0f, 0.0f, 0.5f);
     }
+    if (params.useHighContrast) {
+        // Windows 10's high contrast can use yellow or green for text
+        // It looks rather strange to have the track green and the thumb white.
+        // (However, Settings, MSVC, and Firefox all do the scrollbar differently,
+        // so there's no right way). On macOS the text color will be the same
+        // as the color above, so no change.
+        mScrollbarThumbStyles[NORMAL].bgColor = params.textColor;
+    }
     mScrollbarThumbStyles[NORMAL].fgColor = params.textColor;
     mScrollbarThumbStyles[NORMAL].borderColor = Color::kTransparent;
     mScrollbarThumbStyles[NORMAL].borderWidth = PicaPt::kZero;
@@ -333,6 +341,12 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     } else {
         mScrollbarThumbStyles[OVER].bgColor = mScrollbarThumbStyles[NORMAL].bgColor.darker(0.1f);
         mScrollbarThumbStyles[DOWN].bgColor = mScrollbarThumbStyles[NORMAL].bgColor.darker(0.3f);
+    }
+    if (params.useHighContrast) {
+        // This is especially important for Windows 10, where the scrollbars
+        mScrollbarThumbStyles[NORMAL].bgColor = params.textColor;
+        mScrollbarThumbStyles[OVER].bgColor = params.textColor;
+        mScrollbarThumbStyles[DOWN].bgColor = params.textColor;
     }
 
     // ProgressBar
