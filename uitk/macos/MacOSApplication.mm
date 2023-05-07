@@ -149,6 +149,18 @@ Theme::Params MacOSApplication::themeParams() const
     // the system buttons have white text in light mode.
     params.accentedBackgroundTextColor = toUITKColor(NSColor.alternateSelectedControlTextColor);
 
+    // Increased contrast (Settings >> Accessibility >> Display >> Increase contrast)
+    // mostly draws a border around every control.
+    if (NSWorkspace.sharedWorkspace.accessibilityDisplayShouldIncreaseContrast) {
+        // In dark mode the control background is transparent if the window is
+        // not active (which is the case currently).
+        if (isDarkMode && params.editableBackgroundColor.alpha() < 0.0001f) {
+            params.nonEditableBackgroundColor = Color(1.0f, 1.0f, 1.0f, 0.25f);
+        }
+        params.borderColor = textColor;
+        params.useHighContrast = true;
+    }
+
     // macOS gives the same font size no matter what the effective resolution
     // is (e.g. between native and scaled), so it handles the conversion to the
     // actual font size under the hood. Since we want the native resolution to

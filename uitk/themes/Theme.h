@@ -70,6 +70,7 @@ public:
         Color nonEditableBackgroundColor;
         Color editableBackgroundColor;
         Color disabledBackgroundColor;
+        Color borderColor; // if a border is used, this is the color to use
         Color textColor;
         Color disabledTextColor;
         Color accentedBackgroundTextColor;  // for when accentColor is bg of text
@@ -84,6 +85,7 @@ public:
 
         bool useClearTextButton = false;
         bool useClearTextButtonForSearch = false;
+        bool useHighContrast = false;
     };
 
     /// Draws an icon in the given color. Function need not save/restore the
