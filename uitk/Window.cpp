@@ -1580,6 +1580,7 @@ void Window::onMenuActivated(MenuId id)
 void Window::onThemeChanged()
 {
     mImpl->rootWidget->themeChanged();
+    setNeedsDraw();
 }
 
 void Window::onUpdateAccessibility()

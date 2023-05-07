@@ -31,13 +31,20 @@ Theme::Params EmpireTheme::defaultParams()
 
 Theme::Params EmpireTheme::EmpireTheme::darkModeParams(const Color& accent)
 {
+    bool accentIsDark = (accent.toGrey().red() < 0.5f);
+
     Theme::Params params;
     params.windowBackgroundColor = Color(0.176f, 0.176f, 0.176f);
     params.nonEditableBackgroundColor = Color(0.4f, 0.4f, 0.4f);
     params.editableBackgroundColor = Color(0.4f, 0.4f, 0.4f);
     params.disabledBackgroundColor = Color(0.3f, 0.3f, 0.3f);
+    params.borderColor = Color(1.0f, 1.0f, 1.0f, 0.2f);
     params.textColor = Color(0.875f, 0.875f, 0.875f);
-    params.accentedBackgroundTextColor = params.textColor;
+    if (accentIsDark) {
+        params.accentedBackgroundTextColor = params.textColor;
+    } else {
+        params.accentedBackgroundTextColor = Color(0.0f, 0.0f, 0.0f);
+    }
     params.disabledTextColor = Color(0.6f, 0.6f, 0.6f);
     params.accentColor = accent;
     params.keyFocusColor = Color(accent, 0.5f);
@@ -55,13 +62,20 @@ Theme::Params EmpireTheme::EmpireTheme::darkModeParams(const Color& accent)
 
 Theme::Params EmpireTheme::lightModeParams(const Color& accent)
 {
+    bool accentIsDark = (accent.toGrey().red() < 0.5f);
+
     Theme::Params params;
     params.windowBackgroundColor = Color(1.0f, 1.0f, 1.0f);
     params.nonEditableBackgroundColor = Color(0.975f, 0.975f, 0.975f);
     params.editableBackgroundColor = Color(1.0f, 1.0f, 1.0f);
     params.disabledBackgroundColor = Color(0.85f, 0.85f, 0.85f);
+    params.borderColor = Color(0.0f, 0.0f, 0.0f, 0.2f);
     params.textColor = Color(0.1f, 0.1f, 0.1f);
-    params.accentedBackgroundTextColor = Color(1.0f, 1.0f, 1.0f);
+    if (accentIsDark) {
+        params.accentedBackgroundTextColor = Color(1.0f, 1.0f, 1.0f);
+    } else {
+        params.accentedBackgroundTextColor = params.textColor;
+    }
     params.disabledTextColor = Color(0.4f, 0.4f, 0.4f);
     params.accentColor = accent;
     params.keyFocusColor = Color(accent, 0.5f);

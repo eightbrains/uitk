@@ -326,7 +326,7 @@ Theme::Params Win32Application::themeParams() const
     // nice, and consistent with everything else. (Note that if you use
     // lfHeight, it might be negative, meaning that it is in device units.)
     PicaPt fontSize = PicaPt::fromPixels(12.0f, 96.0f);
-    
+
     // It appears to be impossible to get the accent color without using
     // UISettings. (Which requires COM to be initialized.)
     // GetSysColor(COLOR_HIGHLIGHT) always returns blue (and the other colors
@@ -335,18 +335,27 @@ Theme::Params Win32Application::themeParams() const
     namespace wrl = Microsoft::WRL;
     namespace wf = Windows::Foundation;
 
-    wrl::ComPtr<abi_vm::IUISettings3> settings;
+    // Seriously, Microsoft?! IUISettings3 doesn't inherit from IUISettings??!
+    wrl::ComPtr<abi_vm::IUISettings> settings;
+    wrl::ComPtr<abi_vm::IUISettings3> settings3;
     wf::ActivateInstance(wrl::Wrappers::HStringReference(
         RuntimeClass_Windows_UI_ViewManagement_UISettings).Get(), &settings);
+    wf::ActivateInstance(wrl::Wrappers::HStringReference(
+        RuntimeClass_Windows_UI_ViewManagement_UISettings).Get(), &settings3);
 
-    auto getColor = [&settings](abi_vm::UIColorType type) {
+    auto getColor = [&settings3](abi_vm::UIColorType type) {
         ABI::Windows::UI::Color color;
-        settings->GetColorValue(type, &color);
+        settings3->GetColorValue(type, &color);
+        return Color(color.R, color.G, color.B, color.A);
+    };
+
+    auto getElementColor = [&settings](abi_vm::UIElementType type) {
+        ABI::Windows::UI::Color color;
+        settings->UIElementColor(type, &color);
         return Color(color.R, color.G, color.B, color.A);
     };
 
     Color background = getColor(abi_vm::UIColorType::UIColorType_Background);
-    //Color foreground = getColor(abi_vm::UIColorType::UIColorType_Foreground);
     Color accent = getColor(abi_vm::UIColorType::UIColorType_Accent);
 
     Theme::Params params;
@@ -355,8 +364,29 @@ Theme::Params Win32Application::themeParams() const
     } else {
         params = EmpireTheme::lightModeParams(accent);
     }
+    // Window's light mode is white (like our default), but the dark mode is black, which
+    // is too contrasty, so just use our background color, which looks better in dark mode.
     params.labelFont = Font(fontFamily, fontSize);
     params.nonNativeMenubarFont = params.labelFont;
+    // Note: all of WindowText, CaptionText, ButtonText are always black, which is not
+    //       desirable in dark mode (and is the case even for the OS's dark mode!)
+
+    HIGHCONTRASTA hc;
+    hc.cbSize = sizeof(hc);
+    SystemParametersInfoA(SPI_GETHIGHCONTRAST, hc.cbSize, &hc, 0);
+    params.useHighContrast = (hc.dwFlags & HCF_HIGHCONTRASTON);
+    if (params.useHighContrast) {
+        params.windowBackgroundColor = background; // want the black black in high contrast mode
+        params.nonEditableBackgroundColor = background;
+        params.editableBackgroundColor = background;
+        params.borderColor = params.textColor;
+        // Docs say _WindowText is for the title bar, but they appear to be wrong.
+        // In High Contrast mode, only _WindowText, not _ButtonText or _CaptionText
+        // have the green/yellow text color. Unlike dark mode, these *are* correct
+        // in high contrast mode.
+        params.textColor = getElementColor(abi_vm::UIElementType_WindowText);
+        params.disabledTextColor = getElementColor(abi_vm::UIElementType_GrayText);  // not gray in high contrast
+    }
 
     return params;
 }

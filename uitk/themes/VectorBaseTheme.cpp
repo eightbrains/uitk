@@ -75,8 +75,6 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     };
 
     bool isDarkMode = calcIsDarkMode(params);
-    Color borderColor = (isDarkMode ? Color(1.0f, 1.0f, 1.0f, 0.2f)
-                                    : Color(0.0f, 0.0f, 0.0f, 0.2f));
 
     // Labels
     mLabelStyles[NORMAL].bgColor = Color::kTransparent;
@@ -95,7 +93,11 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     // Normal button
     mButtonStyles[NORMAL].bgColor = params.nonEditableBackgroundColor;
     mButtonStyles[NORMAL].fgColor = params.textColor;
-    mButtonStyles[NORMAL].borderColor = params.nonEditableBackgroundColor.darker(0.2f);
+    if (params.useHighContrast) {
+        mButtonStyles[NORMAL].borderColor = params.borderColor;
+    } else {
+        mButtonStyles[NORMAL].borderColor = params.nonEditableBackgroundColor.darker(0.2f);
+    }
     mButtonStyles[NORMAL].borderWidth = mBorderWidth;
     mButtonStyles[NORMAL].borderRadius = mBorderRadius;
     mButtonStyles[DISABLED] = mButtonStyles[NORMAL];
@@ -305,7 +307,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
         mScrollbarTrackStyles[NORMAL].borderColor = Color::kTransparent;
         mScrollbarTrackStyles[NORMAL].borderWidth = PicaPt::kZero;
     } else {
-        mScrollbarTrackStyles[NORMAL].borderColor = borderColor;
+        mScrollbarTrackStyles[NORMAL].borderColor = params.borderColor;
         mScrollbarTrackStyles[NORMAL].borderWidth = mBorderWidth;
     }
     mScrollbarTrackStyles[NORMAL].borderRadius = PicaPt::kZero;
@@ -317,6 +319,14 @@ void VectorBaseTheme::setVectorParams(const Params &params)
         mScrollbarThumbStyles[NORMAL].bgColor = Color(1.0f, 1.0f, 1.0f, 0.5f);
     } else {
         mScrollbarThumbStyles[NORMAL].bgColor = Color(0.0f, 0.0f, 0.0f, 0.5f);
+    }
+    if (params.useHighContrast) {
+        // Windows 10's high contrast can use yellow or green for text
+        // It looks rather strange to have the track green and the thumb white.
+        // (However, Settings, MSVC, and Firefox all do the scrollbar differently,
+        // so there's no right way). On macOS the text color will be the same
+        // as the color above, so no change.
+        mScrollbarThumbStyles[NORMAL].bgColor = params.textColor;
     }
     mScrollbarThumbStyles[NORMAL].fgColor = params.textColor;
     mScrollbarThumbStyles[NORMAL].borderColor = Color::kTransparent;
@@ -332,6 +342,12 @@ void VectorBaseTheme::setVectorParams(const Params &params)
         mScrollbarThumbStyles[OVER].bgColor = mScrollbarThumbStyles[NORMAL].bgColor.darker(0.1f);
         mScrollbarThumbStyles[DOWN].bgColor = mScrollbarThumbStyles[NORMAL].bgColor.darker(0.3f);
     }
+    if (params.useHighContrast) {
+        // This is especially important for Windows 10, where the scrollbars
+        mScrollbarThumbStyles[NORMAL].bgColor = params.textColor;
+        mScrollbarThumbStyles[OVER].bgColor = params.textColor;
+        mScrollbarThumbStyles[DOWN].bgColor = params.textColor;
+    }
 
     // ProgressBar
     copyStyles(mSliderTrackStyles, mProgressBarStyles);
@@ -339,7 +355,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     // TextEdit
     mTextEditStyles[NORMAL].bgColor = params.editableBackgroundColor;
     mTextEditStyles[NORMAL].fgColor = params.textColor;
-    mTextEditStyles[NORMAL].borderColor = borderColor;
+    mTextEditStyles[NORMAL].borderColor = params.borderColor;
     mTextEditStyles[NORMAL].borderWidth = mBorderWidth;
     mTextEditStyles[NORMAL].borderRadius = PicaPt::kZero;
     mTextEditStyles[DISABLED] = mTextEditStyles[NORMAL];
@@ -358,7 +374,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     // ScrollView
     mScrollViewStyles[NORMAL].bgColor = Color::kTransparent;
     mScrollViewStyles[NORMAL].fgColor = params.textColor;
-    mScrollViewStyles[NORMAL].borderColor = borderColor;
+    mScrollViewStyles[NORMAL].borderColor = params.borderColor;
     mScrollViewStyles[NORMAL].borderWidth = mBorderWidth;
     mScrollViewStyles[NORMAL].borderRadius = PicaPt::kZero;
     mScrollViewStyles[DISABLED] = mScrollViewStyles[NORMAL];
@@ -845,6 +861,9 @@ void VectorBaseTheme::drawSegment(UIContext& ui, const Rect& frame, SegmentDrawS
     auto &widgetStyle = mSegmentedControlStyles[int(WidgetState::kNormal)];
     Rect r(frame.x, frame.y + widgetStyle.borderWidth,
            frame.width, frame.height - 2.0f * widgetStyle.borderWidth);
+    if (segmentIndex > 0) {  // offset to not cover left divider (segment 0 has no left divider)
+        r.x += widgetStyle.borderWidth;
+    }
 
     Color bg;
     if (isButton) {
