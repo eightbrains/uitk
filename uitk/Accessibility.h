@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 - 2022 Eight Brains Studios, LLC
+// Copyright 2021 - 2023 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -43,10 +43,12 @@ struct AccessibilityInfo
 
         kContainer,
         kRadioGroup,
+        kSplitter,
         kList,
 
         kLabel,
         kMenuItem,  /// menu item, or any item drawn by the widget but which acts as a separate child
+        kSplitterThumb,
         kButton,
         kCheckbox,
         kRadioButton,
@@ -81,7 +83,7 @@ public:
     
     /// Returns a unique ID suitable for identifying an AccessibilityElement again
     /// when it is recreated. Note that some widgets may have pieces with separate
-    /// accessibility elements but the same widget point because the widget draws
+    /// accessibility elements but the same widget pointer because the widget draws
     /// them directly. In this case, the widget should set indexInParent.
     /// (Setting indexInParent is fine even if they subwidgets are actual widgets.)
     UID uniqueId() const;

@@ -98,6 +98,8 @@ public:
         { return mTheme->calcPreferredIncDecSize(dc); }
     PicaPt calcPreferredScrollbarThickness(const DrawContext& dc) const override
         { return mTheme->calcPreferredScrollbarThickness(dc); }
+    PicaPt calcPreferredSplitterThumbThickness(const DrawContext& dc) const override
+        { return mTheme->calcPreferredSplitterThumbThickness(dc); }
     Size calcPreferredMenuItemSize(const DrawContext& dc,
                                    const std::string& text, const std::string& shortcut,
                                    MenuItemAttribute itemAttr,
@@ -188,6 +190,9 @@ public:
     void drawSearchBar(UIContext& ui, const Rect& frame, const WidgetStyle& style,
                                WidgetState state) const override
         { mTheme->drawSearchBar(ui, frame, style, state); }
+    void drawSplitterThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
+                           WidgetState state) const override
+        { mTheme->drawSplitterThumb(ui, frame, style, state); }
     void clipScrollView(UIContext& ui, const Rect& frame,
                         const WidgetStyle& style, WidgetState state, bool drawsFrame) const override
         { mTheme->clipScrollView(ui, frame, style, state, true); }

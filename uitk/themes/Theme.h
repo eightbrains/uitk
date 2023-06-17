@@ -77,6 +77,7 @@ public:
         Color accentColor;
         Color selectionColor;
         Color keyFocusColor;
+        Color splitterColor;
         Color nonNativeMenuSeparatorColor;
         Color nonNativeMenuBackgroundColor;
         Color nonNativeMenubarBackgroundColor;
@@ -243,6 +244,7 @@ public:
                                           const Font& font) const = 0;
     virtual Size calcPreferredIncDecSize(const DrawContext& dc) const = 0;
     virtual PicaPt calcPreferredScrollbarThickness(const DrawContext& dc) const = 0;
+    virtual PicaPt calcPreferredSplitterThumbThickness(const DrawContext& dc) const = 0;
     enum class MenuItemAttribute { kNormal, kChecked, kSubmenu };
     /// Returns preferred size of a menu item. If 'shortcutWidth' is non-null,
     /// the max of its value and the calculated shortcut width will be used in
@@ -334,6 +336,8 @@ public:
     // much needs to be a button order to have the same behavior
     virtual void drawSearchBar(UIContext& ui, const Rect& frame, const WidgetStyle& style,
                                WidgetState state) const = 0;
+    virtual void drawSplitterThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
+                                   WidgetState state) const = 0;
     virtual void clipScrollView(UIContext& ui, const Rect& frame,
                                 const WidgetStyle& style, WidgetState state, bool drawsFrame) const = 0;
     virtual void drawScrollView(UIContext& ui, const Rect& frame,

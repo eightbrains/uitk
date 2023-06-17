@@ -371,6 +371,13 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mSearchBarStyles[OVER].borderRadius = mBorderRadius;
     mSearchBarStyles[DOWN].borderRadius = mBorderRadius;
 
+    // Splitter
+    mSplitterStyles[NORMAL].bgColor = params.splitterColor;
+    mSplitterStyles[DISABLED] = mSplitterStyles[NORMAL];
+    mSplitterStyles[OVER] = mSplitterStyles[NORMAL];
+    mSplitterStyles[DOWN] = mSplitterStyles[NORMAL];
+    mSplitterStyles[SELECTED] = mSplitterStyles[NORMAL];
+
     // ScrollView
     mScrollViewStyles[NORMAL].bgColor = Color::kTransparent;
     mScrollViewStyles[NORMAL].fgColor = params.textColor;
@@ -543,6 +550,11 @@ PicaPt VectorBaseTheme::calcPreferredScrollbarThickness(const DrawContext& dc) c
 {
     auto fm = dc.fontMetrics(mParams.labelFont);
     return dc.ceilToNearestPixel(0.5f * fm.capHeight + fm.descent);
+}
+
+PicaPt VectorBaseTheme::calcPreferredSplitterThumbThickness(const DrawContext& dc) const
+{
+    return dc.ceilToNearestPixel(PicaPt::fromStandardPixels(1.0f));
 }
 
 Size VectorBaseTheme::calcPreferredMenuItemSize(const DrawContext& dc,
@@ -1290,6 +1302,13 @@ void VectorBaseTheme::drawSearchBar(UIContext& ui, const Rect& frame, const Widg
                                     WidgetState state) const
 {
     drawFrame(ui, frame, mSearchBarStyles[int(state)].merge(style));
+}
+
+void VectorBaseTheme::drawSplitterThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
+                                        WidgetState state) const
+{
+    ui.dc.setFillColor(mSplitterStyles[int(state)].merge(style).bgColor);
+    ui.dc.drawRect(frame, kPaintFill);
 }
 
 void VectorBaseTheme::clipScrollView(UIContext& ui, const Rect& frame,

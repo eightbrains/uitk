@@ -23,6 +23,7 @@ set(UITK_PUBLIC_HEADERS
                  IPopupWindow.h
                  Label.h
                  Layout.h
+                 Length.h
                  ListView.h
                  Menu.h
                  MenuUITK.h
@@ -44,6 +45,7 @@ set(UITK_PUBLIC_HEADERS
                  ShortcutKey.h
                  Slider.h
                  SliderLogic.h
+                 Splitter.h
                  StackedWidget.h
                  StringEdit.h
                  StringEditorLogic.h
@@ -82,6 +84,7 @@ set(UITK_SOURCES Accessibility.cpp
                  IncDecWidget.cpp
                  Label.cpp
                  Layout.cpp
+                 Length.cpp
                  ListView.cpp
                  Menu.cpp
                  MenubarUITK.cpp
@@ -99,6 +102,7 @@ set(UITK_SOURCES Accessibility.cpp
                  ShortcutKey.cpp
                  Slider.cpp
                  SliderLogic.cpp
+                 Splitter.cpp
                  StackedWidget.cpp
                  StringEdit.cpp
                  StringEditorLogic.cpp

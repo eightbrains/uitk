@@ -54,6 +54,7 @@ public:
     Rect calcTextEditRectForFrame(const Rect& frame, const DrawContext& dc, const Font& font) const override;
     Size calcPreferredIncDecSize(const DrawContext& dc) const override;
     PicaPt calcPreferredScrollbarThickness(const DrawContext& dc) const override;
+    PicaPt calcPreferredSplitterThumbThickness(const DrawContext& dc) const override;
     Size calcPreferredMenuItemSize(const DrawContext& dc,
                                    const std::string& text, const std::string& shortcut,
                                    MenuItemAttribute itemAttr,
@@ -114,6 +115,8 @@ public:
                       const WidgetStyle& style, WidgetState state, bool hasFocus) const override;
     void drawSearchBar(UIContext& ui, const Rect& frame, const WidgetStyle& style,
                                WidgetState state) const override;
+    void drawSplitterThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
+                           WidgetState state) const override;
     void clipScrollView(UIContext& ui, const Rect& frame,
                         const WidgetStyle& style, WidgetState state, bool drawsFrame) const override;
     void drawScrollView(UIContext& ui, const Rect& frame,
@@ -172,6 +175,7 @@ protected:
     WidgetStyle mProgressBarStyles[5];
     WidgetStyle mTextEditStyles[5];
     WidgetStyle mSearchBarStyles[5];
+    WidgetStyle mSplitterStyles[5];
     WidgetStyle mScrollViewStyles[5];
     WidgetStyle mListViewStyles[5];
     WidgetStyle mMenuItemStyles[5];

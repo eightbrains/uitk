@@ -50,6 +50,7 @@ Theme::Params EmpireTheme::EmpireTheme::darkModeParams(const Color& accent)
     params.keyFocusColor = Color(accent, 0.5f);
     //params.selectionColor = Color(0.11f, 0.23f, 0.45f);
     params.selectionColor = accent.darker();
+    params.splitterColor = Color::kBlack;
     params.nonNativeMenuSeparatorColor = params.disabledTextColor;
     params.nonNativeMenuBackgroundColor = Color(0.225f, 0.225f, 0.225f);
     params.nonNativeMenubarBackgroundColor = Color(0.275f, 0.275f, 0.275f);
@@ -80,6 +81,7 @@ Theme::Params EmpireTheme::lightModeParams(const Color& accent)
     params.accentColor = accent;
     params.keyFocusColor = Color(accent, 0.5f);
     params.selectionColor = accent.lighter();
+    params.splitterColor = Color(0.870f, 0.870f, 0.870f);
     params.nonNativeMenuSeparatorColor = Color(0.75f, 0.75f, 0.75f);
     params.nonNativeMenuBackgroundColor = Color(0.975f, 0.975f, 0.975f);
     params.nonNativeMenubarBackgroundColor = Color(1.0f, 1.0f, 1.0f);

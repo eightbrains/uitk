@@ -301,8 +301,26 @@ void updateStandardItem(Window &w, MenuItem *item, MenuId activeWindowId)
 }
 
 void getAccessibleChildren(uitk::Widget *w, std::vector<uitk::AccessibilityInfo> *accessibleChildren,
-                           bool addChildren = true, bool parentIsVisible = true)
+                           bool parentIsVisible = true)
 {
+    std::function<void(uitk::AccessibilityInfo *)> addAccessibleChildren;
+    addAccessibleChildren = [parentIsVisible, &addAccessibleChildren]
+                            (uitk::AccessibilityInfo *info) {
+        assert(info->type != AccessibilityInfo::Type::kNone);
+
+        if (!info->children.empty()) {
+            for (auto &childInfo : info->children) {
+                addAccessibleChildren(&childInfo);
+            }
+        } else if (info->type == AccessibilityInfo::Type::kContainer ||
+                   info->type == AccessibilityInfo::Type::kRadioGroup ||
+                   info->type == AccessibilityInfo::Type::kSplitter ||
+                   info->type == AccessibilityInfo::Type::kList) {
+            assert(info->children.empty());
+            getAccessibleChildren(info->widget, &info->children, info->isVisibleToUser);
+        }
+    };
+
     for (auto *child : w->children()) {
         bool isVisible = parentIsVisible;
         isVisible &= child->visible();  // two lines, as (bool & bool) becomes int
@@ -314,46 +332,27 @@ void getAccessibleChildren(uitk::Widget *w, std::vector<uitk::AccessibilityInfo>
         if (!child->accessibilityText().empty()) {
             info.text = child->accessibilityText();
         }
-        if (info.type == AccessibilityInfo::Type::kNone && info.children.empty()) {
-            getAccessibleChildren(child, accessibleChildren, true, isVisible);
-        } else if (info.type == AccessibilityInfo::Type::kContainer || !info.children.empty()) {
-            // accessibilityInfo() might need to populate the children itself
-            // (e.g. SegmentedControl, which has labels that act like buttons),
-            // in which case we obviously do not want duplicate them.
+
+        if (info.type == AccessibilityInfo::Type::kNone) {
             if (info.children.empty()) {
-                getAccessibleChildren(child, &info.children, true, isVisible);
+                getAccessibleChildren(child, accessibleChildren, isVisible);
             } else {
-                // Populate the rest of the tree if the children are already handled.
-                // But, if a child of type kNone is included, we need to replace it
-                // with its children, like above.
-                std::vector<AccessibilityInfo> fixedChildren;
-                fixedChildren.reserve(info.children.size());
                 for (auto &childInfo : info.children) {
                     childInfo.isVisibleToUser = isVisible;
-                    if (childInfo.type == AccessibilityInfo::Type::kNone) {
-                        getAccessibleChildren(info.widget, &fixedChildren, true, isVisible);
-                    } else {
-                        fixedChildren.push_back(childInfo);
-                        if (childInfo.type == AccessibilityInfo::Type::kContainer ||
-                            childInfo.type == AccessibilityInfo::Type::kList ||
-                            childInfo.type == AccessibilityInfo::Type::kRadioGroup)
-                        {
-                            getAccessibleChildren(childInfo.widget, &fixedChildren, false, isVisible);
-                        }
-                    }
+                    addAccessibleChildren(&childInfo);
                 }
-                info.children = fixedChildren;
+                accessibleChildren->insert(accessibleChildren->begin(), info.children.begin(),
+                                           info.children.end());
             }
-            if (addChildren && info.type != AccessibilityInfo::Type::kNone) {
-                accessibleChildren->push_back(info);
-            } else {
-                accessibleChildren->insert(accessibleChildren->end(),
-                                           info.children.begin(), info.children.end());
+        } else if (!info.children.empty()) {
+            for (auto &childInfo : info.children) {
+                childInfo.isVisibleToUser = isVisible;
+                addAccessibleChildren(&childInfo);
             }
+            accessibleChildren->push_back(std::move(info));
         } else {
-            if (addChildren) {
-                accessibleChildren->push_back(info);
-            }
+            addAccessibleChildren(&info);
+            accessibleChildren->push_back(std::move(info));
         }
     }
 }

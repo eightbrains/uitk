@@ -53,6 +53,7 @@
 #include "SearchBar.h"
 #include "SegmentedControl.h"
 #include "Slider.h"
+#include "Splitter.h"
 #include "StackedWidget.h"
 #include "StringEdit.h"
 #include "UIContext.h"
