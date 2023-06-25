@@ -493,7 +493,7 @@ void Splitter::draw(UIContext& context)
 {
     for (auto child : children()) {
         context.dc.save();
-        context.dc.clearRect(child->frame());
+        context.dc.clipToRect(child->frame());
         drawChild(context, child);
         context.dc.restore();
     }

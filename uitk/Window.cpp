@@ -1387,8 +1387,8 @@ void Window::onDraw(DrawContext& dc)
     static GetBorderTheme gGetBorderTheme;
 
     // It's not clear when to re-layout. We could send a user message for layout,
-    // but it's still going to delay a draw (since it is all done by the same thread),
-    // so it seems like it is simpler just to do it on a draw.
+    // but it's still going to delay a draw (since it is all done by the same
+    // thread), so it seems like it is simpler just to do it on a draw.
     if (mImpl->needsLayout) {
         onLayout(dc);
     }
@@ -1416,9 +1416,9 @@ void Window::onDraw(DrawContext& dc)
     mImpl->rootWidget->draw(context);
     dc.translate(-rootUL.x, -rootUL.y);
 
-    // Draw the focus (if necessary). This is a bit of a hack: since there is no way
-    // to get the border path of a Widget, since the theme functions draw the frame.
-    // So, we have a special Theme that just records the frame.
+    // Draw the focus (if necessary). This is a bit of a hack: since there is no
+    // way to get the border path of a Widget, since the theme functions draw
+    // the frame. So, we have a special Theme that just records the frame.
     bool cancelFocus = false;
     if (context.isWindowActive && mImpl->focusedWidget && mImpl->showFocusRing) {
         if (mImpl->focusedWidget->visible() && mImpl->focusedWidget->enabled()) {
