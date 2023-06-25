@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 - 2022 Eight Brains Studios, LLC
+// Copyright 2021 - 2023 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -31,6 +31,8 @@
 
 namespace uitk {
 
+namespace {
+
 Color blend(const Color& top, const Color& bottom)
 {
     auto a = top.alpha();
@@ -47,6 +49,24 @@ bool calcIsDarkMode(const Theme::Params& params)
     return (params.textColor.toGrey().red() > 0.5f);
 }
 
+static const int NORMAL = int(Theme::WidgetState::kNormal);
+static const int DISABLED = int(Theme::WidgetState::kDisabled);
+static const int OVER = int(Theme::WidgetState::kMouseOver);
+static const int DOWN = int(Theme::WidgetState::kMouseDown);
+static const int SELECTED = int(Theme::WidgetState::kSelected);
+static const int INACTIVE_WIN = int(Theme::WidgetState::kSelected) + 1;
+
+inline int paramsIndex(const UIContext& context, Theme::WidgetState ws)
+{
+    if (!context.isWindowActive && ws == Theme::WidgetState::kNormal) {
+        return INACTIVE_WIN;
+    } else {
+        return int(ws);
+    }
+}
+
+}  // namespace
+
 VectorBaseTheme::VectorBaseTheme(const Params& params, const PicaPt& borderWidth,
                                  const PicaPt& borderRadius)
     : mParams(params), mBorderWidth(borderWidth), mBorderRadius(borderRadius)
@@ -59,22 +79,19 @@ void VectorBaseTheme::setVectorParams(const Params &params)
 {
     mParams = params;
 
-    const int NORMAL = int(WidgetState::kNormal);
-    const int DISABLED = int(WidgetState::kDisabled);
-    const int OVER = int(WidgetState::kMouseOver);
-    const int DOWN = int(WidgetState::kMouseDown);
-    const int SELECTED = int(WidgetState::kSelected);
-
-    auto copyStyles = [NORMAL, DISABLED, OVER, DOWN, SELECTED]
-                      (const WidgetStyle src[], WidgetStyle dest[]) {
+    auto copyStyles = [](const WidgetStyle src[], WidgetStyle dest[]) {
         dest[NORMAL] = src[NORMAL];
         dest[DISABLED] = src[DISABLED];
         dest[OVER] = src[OVER];
         dest[DOWN] = src[DOWN];
         dest[SELECTED] = src[SELECTED];
+        dest[INACTIVE_WIN] = src[INACTIVE_WIN];
     };
 
     bool isDarkMode = calcIsDarkMode(params);
+
+    Color inactiveAccentColor(0.666f, 0.666f, 0.666f);
+    Color inactiveAccentedBackgroundTextColor(0.0f, 0.0f, 0.0f);
 
     // Labels
     mLabelStyles[NORMAL].bgColor = Color::kTransparent;
@@ -89,6 +106,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mLabelStyles[SELECTED] = mLabelStyles[NORMAL];
     mLabelStyles[SELECTED].bgColor = Color::kTransparent;  // owner will draw bg; selection area might be larger than label
     mLabelStyles[SELECTED].fgColor = params.accentedBackgroundTextColor;
+    mLabelStyles[INACTIVE_WIN] = mLabelStyles[NORMAL];
 
     // Normal button
     mButtonStyles[NORMAL].bgColor = params.nonEditableBackgroundColor;
@@ -113,6 +131,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mButtonStyles[DOWN].bgColor = params.accentColor;
     mButtonStyles[DOWN].fgColor = params.accentedBackgroundTextColor;
     mButtonStyles[SELECTED] = mButtonStyles[DOWN];  // not applicable, but mButtonStyles is copied for many styles
+    mButtonStyles[INACTIVE_WIN] = mButtonStyles[NORMAL];
 
     // Button that is ON
     copyStyles(mButtonStyles, mButtonOnStyles);
@@ -125,6 +144,8 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mButtonOnStyles[DOWN].bgColor = params.accentColor.lighter();
     mButtonOnStyles[DOWN].fgColor = params.accentedBackgroundTextColor;
     mButtonOnStyles[SELECTED] = mButtonOnStyles[DOWN];
+    mButtonOnStyles[INACTIVE_WIN].bgColor = inactiveAccentColor;
+    mButtonOnStyles[INACTIVE_WIN].fgColor = inactiveAccentedBackgroundTextColor;
 
     // Undecorated button (normal)
     mButtonUndecoratedStyles[NORMAL].bgColor = Color::kTransparent;
@@ -143,6 +164,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mButtonUndecoratedStyles[DOWN] = mButtonUndecoratedStyles[NORMAL];
     mButtonUndecoratedStyles[DOWN].fgColor = params.accentColor;
     mButtonUndecoratedStyles[SELECTED] = mButtonUndecoratedStyles[DOWN];
+    mButtonUndecoratedStyles[INACTIVE_WIN] = mButtonUndecoratedStyles[NORMAL];
 
     // Undecorated button (ON)
     copyStyles(mButtonUndecoratedStyles, mButtonUndecoratedOnStyles);
@@ -151,6 +173,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mButtonUndecoratedOnStyles[OVER].fgColor = params.accentColor.lighter();
     mButtonUndecoratedOnStyles[DOWN].fgColor = params.textColor;
     mButtonUndecoratedOnStyles[SELECTED] = mButtonUndecoratedOnStyles[DOWN];
+    mButtonUndecoratedOnStyles[INACTIVE_WIN].fgColor = inactiveAccentColor;
 
     // Accessory button, like the X that clear a text widget
     copyStyles(mButtonStyles, mButtonAccessoryStyles);
@@ -173,6 +196,8 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mButtonDefaultDialogStyles[NORMAL].fgColor = params.accentedBackgroundTextColor;
     mButtonDefaultDialogStyles[OVER].bgColor = params.accentColor.lighter();
     mButtonDefaultDialogStyles[DOWN].bgColor = mButtonDefaultDialogStyles[OVER].bgColor;
+    mButtonDefaultDialogStyles[INACTIVE_WIN].bgColor = inactiveAccentColor;
+    mButtonDefaultDialogStyles[INACTIVE_WIN].fgColor = inactiveAccentedBackgroundTextColor;
 
     // Checkbox
     copyStyles(mButtonStyles, mCheckboxStyles);
@@ -191,6 +216,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
         mCheckboxOnStyles[OVER].bgColor = params.accentColor.darker(0.05f);
         mCheckboxOnStyles[DOWN].bgColor = params.accentColor.darker(0.15f);
     }
+    mCheckboxOnStyles[INACTIVE_WIN] = mCheckboxStyles[INACTIVE_WIN];
 
     // SegmentedControl (background)
     copyStyles(mButtonStyles, mSegmentedControlStyles);  // only NORMAL, DISABLED matter
@@ -255,6 +281,8 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mSegmentOnStyles[DOWN].bgColor = adjustSegmentBG(mSegmentOnStyles[DOWN].bgColor);
     mSegmentOnStyles[DOWN].borderRadius = PicaPt::kZero;
     mSegmentOnStyles[DOWN].borderWidth = PicaPt::kZero;
+    mSegmentOnStyles[INACTIVE_WIN].bgColor = inactiveAccentColor;
+    mSegmentOnStyles[INACTIVE_WIN].fgColor = inactiveAccentedBackgroundTextColor;
 
     // Segmented control, button action (undecorated)
     copyStyles(mButtonUndecoratedStyles, mSegmentUndecoratedStyles);
@@ -276,6 +304,8 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mComboBoxIconAreaStyles[OVER] = mComboBoxIconAreaStyles[NORMAL];
     mComboBoxIconAreaStyles[OVER].bgColor = mCheckboxOnStyles[OVER].bgColor;
     mComboBoxIconAreaStyles[DOWN] = mComboBoxIconAreaStyles[OVER];
+    mComboBoxIconAreaStyles[INACTIVE_WIN] = mComboBoxIconAreaStyles[NORMAL];
+    mComboBoxIconAreaStyles[INACTIVE_WIN].bgColor = Color::kTransparent;
 
     // ColorEdit
     copyStyles(mComboBoxStyles, mColorEditTrackStyles);
@@ -299,6 +329,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
         mSliderThumbStyles[OVER].bgColor = Color(0.975f, 0.975f, 0.975f);
         mSliderThumbStyles[DOWN].bgColor = Color(0.95f, 0.95f, 0.95f);
     }
+    mSliderThumbStyles[INACTIVE_WIN] = mSliderThumbStyles[NORMAL];
 
     // Scrollbar
     mScrollbarTrackStyles[NORMAL].bgColor = Color::kTransparent;
@@ -314,6 +345,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mScrollbarTrackStyles[DISABLED] = mScrollbarTrackStyles[NORMAL];
     mScrollbarTrackStyles[OVER] = mScrollbarTrackStyles[NORMAL];
     mScrollbarTrackStyles[DOWN] = mScrollbarTrackStyles[NORMAL];
+    mScrollbarTrackStyles[INACTIVE_WIN] = mScrollbarTrackStyles[NORMAL];
 
     if (isDarkMode) {
         mScrollbarThumbStyles[NORMAL].bgColor = Color(1.0f, 1.0f, 1.0f, 0.5f);
@@ -348,6 +380,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
         mScrollbarThumbStyles[OVER].bgColor = params.textColor;
         mScrollbarThumbStyles[DOWN].bgColor = params.textColor;
     }
+    mScrollbarThumbStyles[INACTIVE_WIN] = mScrollbarThumbStyles[NORMAL];
 
     // ProgressBar
     copyStyles(mSliderTrackStyles, mProgressBarStyles);
@@ -363,6 +396,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mTextEditStyles[OVER] = mTextEditStyles[NORMAL];
     mTextEditStyles[DOWN] = mTextEditStyles[NORMAL];
     mTextEditStyles[SELECTED] = mTextEditStyles[SELECTED];
+    mTextEditStyles[INACTIVE_WIN] = mTextEditStyles[NORMAL];
 
     // SearchBar
     copyStyles(mTextEditStyles, mSearchBarStyles);
@@ -377,6 +411,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mSplitterStyles[OVER] = mSplitterStyles[NORMAL];
     mSplitterStyles[DOWN] = mSplitterStyles[NORMAL];
     mSplitterStyles[SELECTED] = mSplitterStyles[NORMAL];
+    mSplitterStyles[INACTIVE_WIN] = mSplitterStyles[NORMAL];
 
     // ScrollView
     mScrollViewStyles[NORMAL].bgColor = Color::kTransparent;
@@ -387,6 +422,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mScrollViewStyles[DISABLED] = mScrollViewStyles[NORMAL];
     mScrollViewStyles[OVER] = mScrollViewStyles[NORMAL];
     mScrollViewStyles[DOWN] = mScrollViewStyles[NORMAL];
+    mScrollViewStyles[INACTIVE_WIN] = mScrollViewStyles[NORMAL];
 
     // ListView
     copyStyles(mScrollViewStyles, mListViewStyles);
@@ -396,6 +432,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mListViewStyles[DOWN].fgColor = mListViewStyles[DOWN].bgColor;  // don't highlight individual row
     mListViewStyles[SELECTED].fgColor = mParams.accentColor;
     mListViewStyles[SELECTED].bgColor = mParams.accentedBackgroundTextColor;
+    mListViewStyles[INACTIVE_WIN].fgColor = inactiveAccentColor;
 
     // Menu Items
     mMenuItemStyles[NORMAL].bgColor = Color::kTransparent;
@@ -411,12 +448,14 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mMenuItemStyles[DOWN] = mMenuItemStyles[OVER];
     mMenuItemStyles[SELECTED].bgColor = params.accentColor;
     mMenuItemStyles[SELECTED].fgColor = params.accentedBackgroundTextColor;
+    mMenuItemStyles[INACTIVE_WIN] = mMenuItemStyles[NORMAL];
 
     // Menubar items
     copyStyles(mMenuItemStyles, mMenubarItemStyles);
     mMenubarItemStyles[OVER].bgColor = mMenubarItemStyles[NORMAL].bgColor;
     mMenubarItemStyles[DOWN].bgColor = params.accentColor;
     mMenubarItemStyles[DOWN].fgColor = params.accentedBackgroundTextColor;
+    mMenubarItemStyles[INACTIVE_WIN] = mMenubarItemStyles[NORMAL];
 
     // Tooltips
     // Neither macOS nor Win32 offer any good way of getting tooltip colors.
@@ -770,9 +809,10 @@ void VectorBaseTheme::drawFocusFrame(UIContext& ui, const Rect& frame, const Pic
 //   TODO: need to implement path expansion
 //}
 
-Theme::WidgetStyle VectorBaseTheme::labelStyle(const WidgetStyle& style, WidgetState state) const
+Theme::WidgetStyle VectorBaseTheme::labelStyle(UIContext& ui, const WidgetStyle& style,
+                                               WidgetState state) const
 {
-    return mLabelStyles[int(state)].merge(style);
+    return mLabelStyles[paramsIndex(ui, state)].merge(style);
 }
 
 void VectorBaseTheme::drawButton(UIContext& ui, const Rect& frame, ButtonDrawStyle buttonStyle,
@@ -783,47 +823,48 @@ void VectorBaseTheme::drawButton(UIContext& ui, const Rect& frame, ButtonDrawSty
     switch (buttonStyle) {
         case Theme::ButtonDrawStyle::kNormal:
             if (isOn) {
-                bs = &mButtonOnStyles[int(state)];
+                bs = &mButtonOnStyles[paramsIndex(ui, state)];
             } else {
-                bs = &mButtonStyles[int(state)];
+                bs = &mButtonStyles[paramsIndex(ui, state)];
             }
             break;
         case Theme::ButtonDrawStyle::kNoDecoration:
         case Theme::ButtonDrawStyle::kAccessory:
             return;
         case Theme::ButtonDrawStyle::kDialogDefault:
-            bs = &mButtonDefaultDialogStyles[int(state)];
+            bs = &mButtonDefaultDialogStyles[paramsIndex(ui, state)];
             break;
     }
     drawFrame(ui, frame, bs->merge(style));
 }
 
-const Theme::WidgetStyle& VectorBaseTheme::buttonTextStyle(WidgetState state, ButtonDrawStyle buttonStyle,
+const Theme::WidgetStyle& VectorBaseTheme::buttonTextStyle(UIContext& ui, WidgetState state,
+                                                           ButtonDrawStyle buttonStyle,
                                                            bool isOn) const
 {
     switch (buttonStyle) {
         case ButtonDrawStyle::kNormal:
             if (isOn) {
-                return mButtonOnStyles[int(state)];
+                return mButtonOnStyles[paramsIndex(ui, state)];
             } else {
-                return mButtonStyles[int(state)];
+                return mButtonStyles[paramsIndex(ui, state)];
             }
         case ButtonDrawStyle::kDialogDefault:
             if (isOn) {
-                return mButtonOnStyles[int(state)]; // shouldn't happen
+                return mButtonOnStyles[paramsIndex(ui, state)]; // shouldn't happen
             } else {
-                return mButtonDefaultDialogStyles[int(state)];
+                return mButtonDefaultDialogStyles[paramsIndex(ui, state)];
             }
         case ButtonDrawStyle::kNoDecoration:
             if (isOn) {
-                return mButtonUndecoratedOnStyles[int(state)];
+                return mButtonUndecoratedOnStyles[paramsIndex(ui, state)];
             } else {
-                return mButtonUndecoratedStyles[int(state)];
+                return mButtonUndecoratedStyles[paramsIndex(ui, state)];
             }
         case ButtonDrawStyle::kAccessory:
-            return mButtonAccessoryStyles[int(state)];
+            return mButtonAccessoryStyles[paramsIndex(ui, state)];
     }
-    return mButtonStyles[int(state)];  // for MSVC (don't use 'default' so we get warnings if enum changes)
+    return mButtonStyles[paramsIndex(ui, state)];  // for MSVC (don't use 'default' so we get warnings if enum changes)
 }
 
 void VectorBaseTheme::drawCheckbox(UIContext& ui, const Rect& frame,
@@ -832,14 +873,14 @@ void VectorBaseTheme::drawCheckbox(UIContext& ui, const Rect& frame,
 {
     const WidgetStyle *bs;
     if (isOn) {
-        bs = &mCheckboxOnStyles[int(state)];
+        bs = &mCheckboxOnStyles[paramsIndex(ui, state)];
     } else {
-        bs = &mCheckboxStyles[int(state)];
+        bs = &mCheckboxStyles[paramsIndex(ui, state)];
     }
     drawFrame(ui, frame, bs->merge(style));
 
     if (isOn) {
-        auto margin = ui.dc.ceilToNearestPixel(0.15f * frame.width);
+        auto margin = ui.dc.ceilToNearestPixel(0.175f * frame.width);
         drawCheckmark(ui, frame.insetted(margin, margin), *bs);
     }
 }
@@ -855,9 +896,9 @@ void VectorBaseTheme::drawSegmentedControl(UIContext& ui,
     }
 
     if (state == WidgetState::kDisabled) {
-        drawFrame(ui, frame, mSegmentedControlStyles[int(state)].merge(style));
+        drawFrame(ui, frame, mSegmentedControlStyles[paramsIndex(ui, state)].merge(style));
     } else {
-        drawFrame(ui, frame, mSegmentedControlStyles[int(WidgetState::kNormal)].merge(style));
+        drawFrame(ui, frame, mSegmentedControlStyles[paramsIndex(ui, WidgetState::kNormal)].merge(style));
     }
 }
 
@@ -870,7 +911,7 @@ void VectorBaseTheme::drawSegment(UIContext& ui, const Rect& frame, SegmentDrawS
         return;
     }
 
-    auto &widgetStyle = mSegmentedControlStyles[int(WidgetState::kNormal)];
+    auto &widgetStyle = mSegmentedControlStyles[paramsIndex(ui, WidgetState::kNormal)];
     Rect r(frame.x, frame.y + widgetStyle.borderWidth,
            frame.width, frame.height - 2.0f * widgetStyle.borderWidth);
     if (segmentIndex > 0) {  // offset to not cover left divider (segment 0 has no left divider)
@@ -879,12 +920,12 @@ void VectorBaseTheme::drawSegment(UIContext& ui, const Rect& frame, SegmentDrawS
 
     Color bg;
     if (isButton) {
-        bg = mSegmentStyles[int(state)].bgColor;
+        bg = mSegmentStyles[paramsIndex(ui, state)].bgColor;
     } else {
         if (isOn) {
-            bg = mSegmentOnStyles[int(state)].bgColor;
+            bg = mSegmentOnStyles[paramsIndex(ui, state)].bgColor;
         } else {
-            bg = mSegmentOffStyles[int(state)].bgColor;
+            bg = mSegmentOffStyles[paramsIndex(ui, state)].bgColor;
         }
     }
     if (drawStyle == SegmentDrawStyle::kNoDecoration && showKeyFocus) {
@@ -980,7 +1021,7 @@ void VectorBaseTheme::drawSegmentDivider(UIContext& ui, const Point& top, const 
         return;
     }
 
-    auto style = mSegmentedControlStyles[int(ctrlState)].merge(ctrlStyle);
+    auto style = mSegmentedControlStyles[paramsIndex(ui, ctrlState)].merge(ctrlStyle);
     auto p1 = top;
     p1.y += style.borderWidth;
     auto p2 = bottom;
@@ -996,30 +1037,31 @@ void VectorBaseTheme::drawSegmentDivider(UIContext& ui, const Point& top, const 
     ui.dc.drawLines({p1, p2});
 }
 
-const Theme::WidgetStyle& VectorBaseTheme::segmentTextStyle(WidgetState state, SegmentDrawStyle drawStyle,
+const Theme::WidgetStyle& VectorBaseTheme::segmentTextStyle(UIContext& ui, WidgetState state,
+                                                            SegmentDrawStyle drawStyle,
                                                             bool isOn) const
 {
     switch (drawStyle) {
         case SegmentDrawStyle::kNormal:
             if (isOn) {
-                return mSegmentOnStyles[int(state)];
+                return mSegmentOnStyles[paramsIndex(ui, state)];
             } else {
-                return mSegmentOffStyles[int(state)];
+                return mSegmentOffStyles[paramsIndex(ui, state)];
             }
         case SegmentDrawStyle::kNoDecoration:
             if (isOn) {
-                return mSegmentUndecoratedOnStyles[int(state)];
+                return mSegmentUndecoratedOnStyles[paramsIndex(ui, state)];
             } else {
-                return mSegmentUndecoratedOffStyles[int(state)];
+                return mSegmentUndecoratedOffStyles[paramsIndex(ui, state)];
             }
     }
-    return mSegmentOffStyles[int(state)];  //for MSVC (don't use 'default' so we get warnings if enum changes)
+    return mSegmentOffStyles[paramsIndex(ui, state)];  //for MSVC (don't use 'default' so we get warnings if enum changes)
 }
 
 void VectorBaseTheme::drawComboBoxAndClip(UIContext& ui, const Rect& frame,
                                           const WidgetStyle& style, WidgetState state) const
 {
-    auto s = mComboBoxStyles[int(state)].merge(style);
+    auto s = mComboBoxStyles[paramsIndex(ui, state)].merge(style);
     drawFrame(ui, frame, s);
 
     auto iconWidth = ui.dc.roundToNearestPixel(0.8f * frame.height - 2.0f * s.borderWidth);
@@ -1053,16 +1095,16 @@ void VectorBaseTheme::drawComboBoxAndClip(UIContext& ui, const Rect& frame,
     } else {
         path->addRect(iconRect);
     }
-    s = mComboBoxIconAreaStyles[int(state)];
+    s = mComboBoxIconAreaStyles[paramsIndex(ui, state)];
     ui.dc.setFillColor(s.bgColor);
     ui.dc.drawPath(path, kPaintFill);
 
     ui.dc.save();  // so line style changes get cleaned up
     ui.dc.setStrokeColor(s.fgColor);
-    ui.dc.setStrokeWidth(PicaPt(1.5));
+    ui.dc.setStrokeWidth(PicaPt(1.0));
     ui.dc.setStrokeEndCap(kEndCapRound);
     ui.dc.setStrokeJoinStyle(kJoinRound);
-    auto h = 0.2f * iconRect.height;
+    auto h = 0.175f * iconRect.height;
     ui.dc.drawLines({ Point(iconRect.midX() - h, iconRect.midY() - 0.5f * h),
                       Point(iconRect.midX(), iconRect.midY() - 1.5f * h),
                       Point(iconRect.midX() + h, iconRect.midY() - 0.5f * h) });
@@ -1081,7 +1123,7 @@ void VectorBaseTheme::drawComboBoxAndClip(UIContext& ui, const Rect& frame,
 void VectorBaseTheme::drawColorEdit(UIContext& ui, const Rect& frame, const Color& color,
                                     const WidgetStyle& style, WidgetState state) const
 {
-    auto frameStyle = mColorEditTrackStyles[int(state)].merge(style);  // copy
+    auto frameStyle = mColorEditTrackStyles[paramsIndex(ui, state)].merge(style);  // copy
     drawFrame(ui, frame, frameStyle);
 
     auto marginVert = ui.dc.roundToNearestPixel(0.25f * mParams.labelFont.pointSize());
@@ -1092,7 +1134,7 @@ void VectorBaseTheme::drawColorEdit(UIContext& ui, const Rect& frame, const Colo
 void VectorBaseTheme::drawSliderTrack(UIContext& ui, SliderDir dir, const Rect& frame, const Point& thumbMid,
                                       const WidgetStyle& style, WidgetState state) const
 {
-    auto frameStyle = mSliderTrackStyles[int(state)].merge(style);  // copy
+    auto frameStyle = mSliderTrackStyles[paramsIndex(ui, state)].merge(style);  // copy
 
     // Draw the track
     auto h = 0.3f * frame.height;
@@ -1132,7 +1174,7 @@ void VectorBaseTheme::drawSliderThumb(UIContext& ui, const Rect& frame,
     //    but ultimately the theme and widget must work together. We are the view; all we
     //    can do is draw what the controller gives us.
 
-    auto thumbStyle = mSliderThumbStyles[int(state)].merge(style);
+    auto thumbStyle = mSliderThumbStyles[paramsIndex(ui, state)].merge(style);
     if (thumbStyle.borderRadius > PicaPt::kZero) {
         thumbStyle.borderRadius = 0.5f * frame.height;
     }
@@ -1143,7 +1185,7 @@ void VectorBaseTheme::drawScrollbarTrack(UIContext& ui, SliderDir dir, const Rec
                                          const Point& thumbMid, const WidgetStyle& style,
                                          WidgetState state) const
 {
-    auto frameStyle = mScrollbarTrackStyles[int(state)].merge(style);  // copy
+    auto frameStyle = mScrollbarTrackStyles[paramsIndex(ui, state)].merge(style);  // copy
 
     // Draw the track
     auto h = 0.3f * frame.height;
@@ -1156,7 +1198,7 @@ void VectorBaseTheme::drawScrollbarTrack(UIContext& ui, SliderDir dir, const Rec
 void VectorBaseTheme::drawScrollbarThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
                                          WidgetState state) const
 {
-    auto thumbStyle = mScrollbarThumbStyles[int(state)].merge(style);
+    auto thumbStyle = mScrollbarThumbStyles[paramsIndex(ui, state)].merge(style);
     if (thumbStyle.borderRadius > PicaPt::kZero) {
         thumbStyle.borderRadius = 0.5f * std::min(frame.width, frame.height);
     }
@@ -1168,7 +1210,7 @@ void VectorBaseTheme::drawProgressBar(UIContext& ui, const Rect& frame, float va
 {
     drawSliderTrack(ui, SliderDir::kHoriz, frame,
                     Point(frame.x + 0.01f * value * frame.width, PicaPt::kZero),
-                    mProgressBarStyles[int(state)].merge(style), state);
+                    mProgressBarStyles[paramsIndex(ui, state)].merge(style), state);
 }
 
 void VectorBaseTheme::drawIncDec(UIContext& ui, const Rect& frame,
@@ -1185,12 +1227,12 @@ void VectorBaseTheme::drawIncDec(UIContext& ui, const Rect& frame,
 
     ui.dc.save();
     ui.dc.clipToRect(incRect);
-    drawFrame(ui, frame, mButtonStyles[int(incState)]);
+    drawFrame(ui, frame, mButtonStyles[paramsIndex(ui, incState)]);
     ui.dc.restore();
 
     ui.dc.save();
     ui.dc.clipToRect(decRect);
-    drawFrame(ui, frame, mButtonStyles[int(decState)]);
+    drawFrame(ui, frame, mButtonStyles[paramsIndex(ui, decState)]);
     ui.dc.restore();
 
     ui.dc.save();  // so line style changes get cleaned up
@@ -1207,12 +1249,12 @@ void VectorBaseTheme::drawIncDec(UIContext& ui, const Rect& frame,
         auto h = frame.height;
         hw = kHalfWidthMultiplier * (h * aspect - 2.0f * kStrokeWidth);
     }
-    ui.dc.setStrokeColor(mButtonStyles[int(incState)].fgColor);
+    ui.dc.setStrokeColor(mButtonStyles[paramsIndex(ui, incState)].fgColor);
     auto top = frame.midY() - 0.2f * frame.height;
     ui.dc.drawLines({ Point(frame.midX() - hw, top),
                       Point(frame.midX(), top - hw),
                       Point(frame.midX() + hw, top) });
-    ui.dc.setStrokeColor(mButtonStyles[int(decState)].fgColor);
+    ui.dc.setStrokeColor(mButtonStyles[paramsIndex(ui, decState)].fgColor);
     auto bottom = frame.midY() + 0.2f * frame.height + hw;
     ui.dc.drawLines({ Point(frame.midX() - hw, bottom - hw),
                       Point(frame.midX(), bottom),
@@ -1220,9 +1262,10 @@ void VectorBaseTheme::drawIncDec(UIContext& ui, const Rect& frame,
     ui.dc.restore();
 }
 
-Theme::WidgetStyle VectorBaseTheme::textEditStyle(const WidgetStyle& style, WidgetState state) const
+Theme::WidgetStyle VectorBaseTheme::textEditStyle(UIContext& ui, const WidgetStyle& style,
+                                                  WidgetState state) const
 {
-    return mTextEditStyles[int(state)].merge(style);
+    return mTextEditStyles[paramsIndex(ui, state)].merge(style);
 }
 
 void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaPt& scrollOffset,
@@ -1232,7 +1275,7 @@ void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaP
 {
     horizAlign = horizAlign & Alignment::kHorizMask;
 
-    auto s = textEditStyle(style, state);
+    auto s = textEditStyle(ui, style, state);
     drawFrame(ui, frame, s);
 
     auto font = mParams.labelFont;
@@ -1261,7 +1304,7 @@ void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaP
     // Outset textRect by the caret width for the clip rect so that cursor is visible at edges
     ui.dc.clipToRect(textRect.insetted(-caretWidth, PicaPt::kZero));
 
-    if (hasFocus && selectionStart != selectionEnd) {
+    if (hasFocus && ui.isWindowActive && selectionStart != selectionEnd) {
         auto selectionRect = Rect(ui.dc.roundToNearestPixel(selectionStart),
                                   textRect.y,
                                   PicaPt::kZero,
@@ -1273,7 +1316,7 @@ void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaP
 
     if (editor.isEmpty() && editor.imeConversion().isEmpty()) {
         if (!placeholder.empty()) {
-            ui.dc.setFillColor(mTextEditStyles[int(WidgetState::kDisabled)].fgColor);
+            ui.dc.setFillColor(mTextEditStyles[paramsIndex(ui, WidgetState::kDisabled)].fgColor);
             ui.dc.drawText(placeholder.c_str(), textRect, horizAlign | Alignment::kVCenter,
                            kWrapNone, mParams.labelFont, kPaintFill);
         }
@@ -1287,7 +1330,7 @@ void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaP
 
     ui.dc.restore();
 
-    if (hasFocus && selectionStart == selectionEnd) {
+    if (hasFocus && ui.isWindowActive && selectionStart == selectionEnd) {
         PicaPt x = ui.dc.roundToNearestPixel(selectionStart) - std::floor(0.5f * caretWidth / ui.dc.onePixel());
 
         // On macOS, text caret is same color as text. Usually there is no need to change
@@ -1301,20 +1344,20 @@ void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaP
 void VectorBaseTheme::drawSearchBar(UIContext& ui, const Rect& frame, const WidgetStyle& style,
                                     WidgetState state) const
 {
-    drawFrame(ui, frame, mSearchBarStyles[int(state)].merge(style));
+    drawFrame(ui, frame, mSearchBarStyles[paramsIndex(ui, state)].merge(style));
 }
 
 void VectorBaseTheme::drawSplitterThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
                                         WidgetState state) const
 {
-    ui.dc.setFillColor(mSplitterStyles[int(state)].merge(style).bgColor);
+    ui.dc.setFillColor(mSplitterStyles[paramsIndex(ui, state)].merge(style).bgColor);
     ui.dc.drawRect(frame, kPaintFill);
 }
 
 void VectorBaseTheme::clipScrollView(UIContext& ui, const Rect& frame,
                                      const WidgetStyle& style, WidgetState state, bool drawsFrame) const
 {
-    auto s = mScrollViewStyles[int(state)].merge(style);
+    auto s = mScrollViewStyles[paramsIndex(ui, state)].merge(style);
     if (!drawsFrame) {
         s.borderWidth = PicaPt::kZero;
         s.borderColor = Color::kTransparent;
@@ -1325,25 +1368,25 @@ void VectorBaseTheme::clipScrollView(UIContext& ui, const Rect& frame,
 void VectorBaseTheme::drawScrollView(UIContext& ui, const Rect& frame,
                                      const WidgetStyle& style, WidgetState state) const
 {
-    drawFrame(ui, frame, mScrollViewStyles[int(state)].merge(style));
+    drawFrame(ui, frame, mScrollViewStyles[paramsIndex(ui, state)].merge(style));
 }
 
 void VectorBaseTheme::drawListView(UIContext& ui, const Rect& frame,
                                    const WidgetStyle& style, WidgetState state) const
 {
-    drawFrame(ui, frame, mListViewStyles[int(state)].merge(style));
+    drawFrame(ui, frame, mListViewStyles[paramsIndex(ui, state)].merge(style));
 }
 
 void VectorBaseTheme::clipListView(UIContext& ui, const Rect& frame,
                                    const WidgetStyle& style, WidgetState state) const
 {
-    clipFrame(ui, frame, mListViewStyles[int(state)].merge(style));
+    clipFrame(ui, frame, mListViewStyles[paramsIndex(ui, state)].merge(style));
 }
 
 void VectorBaseTheme::drawListViewSpecialRow(UIContext& ui, const Rect& frame,
                                              const WidgetStyle& style, WidgetState state) const
 {
-    WidgetStyle s = mListViewStyles[int(state)].merge(style);
+    WidgetStyle s = mListViewStyles[paramsIndex(ui, state)].merge(style);
     ui.dc.setFillColor(s.fgColor);
     ui.dc.drawRect(frame, kPaintFill);
 }
@@ -1387,7 +1430,7 @@ void VectorBaseTheme::drawMenuItem(UIContext& ui, const Rect& frame, const PicaP
     Rect checkmarkRect, textRect, shortcutRect;
     calcMenuItemFrames(ui.dc, frame, shortcutWidth, &checkmarkRect, &textRect, &shortcutRect);
 
-    auto s = mMenuItemStyles[int(state)].merge(style);
+    auto s = mMenuItemStyles[paramsIndex(ui, state)].merge(style);
     drawFrame(ui, frame, s);
     if (itemAttr == MenuItemAttribute::kChecked) {
         drawCheckmark(ui, checkmarkRect, s);
@@ -1465,7 +1508,7 @@ void VectorBaseTheme::drawMenubarItem(UIContext& ui, const Rect& frame, const st
                                       WidgetState state) const
 {
     
-    auto s = mMenubarItemStyles[int(state)];
+    auto s = mMenubarItemStyles[paramsIndex(ui, state)];
     // Draw background (if selected)
     drawFrame(ui, frame, s);
     
