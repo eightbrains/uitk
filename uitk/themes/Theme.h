@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 - 2022 Eight Brains Studios, LLC
+// Copyright 2021 - 2023 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -35,7 +35,8 @@ struct LayoutContext;
 class TextEditorLogic;
 struct UIContext;
 
-class Theme {
+class Theme
+{
 public:
     enum class WidgetState {
         kNormal = 0, // normal state (mouse not in widget)
@@ -43,6 +44,7 @@ public:
         kMouseOver,  // mouse is over widget (widget is highlighted)
         kMouseDown,  // mouse is clicking on widget
         kSelected    // widget is drawn selected (e.g. in list view)
+
     };
 
     struct WidgetStyle {
@@ -280,7 +282,7 @@ public:
     //virtual void drawFocusFrame(UIContext& ui, const std::shared_ptr<BezierPath> path) const = 0;
     virtual void drawIcon(UIContext& ui, const Rect& r, const Icon& icon, const Color& color) const;
     virtual void drawIcon(UIContext& ui, const Rect& r, StandardIcon icon, const Color& color) const;
-    virtual WidgetStyle labelStyle(const WidgetStyle& style, WidgetState state) const = 0;
+    virtual WidgetStyle labelStyle(UIContext& ui, const WidgetStyle& style, WidgetState state) const = 0;
     enum class ButtonDrawStyle
     {
         kNormal,        /// normal button with a frame
@@ -291,8 +293,8 @@ public:
     virtual void drawButton(UIContext& ui, const Rect& frame, ButtonDrawStyle buttonStyle,
                             const WidgetStyle& style, WidgetState state,
                             bool isOn) const = 0;
-    virtual const WidgetStyle& buttonTextStyle(WidgetState state, ButtonDrawStyle buttonStyle,
-                                               bool isOn) const = 0;
+    virtual const WidgetStyle& buttonTextStyle(UIContext& ui, WidgetState state,
+                                               ButtonDrawStyle buttonStyle, bool isOn) const = 0;
     virtual void drawCheckbox(UIContext& ui, const Rect& frame,
                               const WidgetStyle& style, WidgetState state,
                               bool isOn) const = 0;
@@ -309,8 +311,8 @@ public:
     virtual void drawSegmentDivider(UIContext& ui, const Point& top, const Point& bottom,
                                     SegmentDrawStyle drawStyle,
                                     const WidgetStyle& ctrlStyle, WidgetState ctrlState) const = 0;
-    virtual const WidgetStyle& segmentTextStyle(WidgetState state, SegmentDrawStyle drawStyle,
-                                                bool isOn) const = 0;
+    virtual const WidgetStyle& segmentTextStyle(UIContext& ui, WidgetState state,
+                                                SegmentDrawStyle drawStyle, bool isOn) const = 0;
     virtual void drawComboBoxAndClip(UIContext& ui, const Rect& frame,
                                      const WidgetStyle& style, WidgetState state) const = 0;
     virtual void drawColorEdit(UIContext& ui, const Rect& frame, const Color& color,
@@ -326,7 +328,8 @@ public:
     virtual void drawProgressBar(UIContext& ui, const Rect& frame, float value,
                                  const WidgetStyle& style, WidgetState state) const = 0;
     virtual void drawIncDec(UIContext& ui, const Rect& frame, WidgetState incState, WidgetState decState) const = 0;
-    virtual WidgetStyle textEditStyle(const WidgetStyle& style, WidgetState state) const = 0;
+    virtual WidgetStyle textEditStyle(UIContext& ui, const WidgetStyle& style,
+                                      WidgetState state) const = 0;
     virtual void drawTextEdit(UIContext& ui, const Rect& frame, const PicaPt& scrollOffset,
                               const std::string& placeholder, TextEditorLogic& editor, int horizAlign, 
                               const WidgetStyle& style, WidgetState state, bool hasFocus) const = 0;

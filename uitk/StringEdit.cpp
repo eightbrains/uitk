@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 - 2022 Eight Brains Studios, LLC
+// Copyright 2021 - 2023 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -157,6 +157,7 @@ struct StringEdit::Impl
     std::function<void(StringEdit*)> onValueChanged;
     bool textHasChanged = false;
     bool themeWantsClearButton = false;
+    bool windowWasActiveLastDraw = false;
 
     bool isUsingClearButton()
     {
@@ -493,10 +494,20 @@ void StringEdit::themeChanged()
 
 void StringEdit::draw(UIContext& context)
 {
+    // If the window becomes inactive or active AND there is a selection, then relayout so
+    // that the selection color (which must be stored in the TextLayout) changes.
+    if (mImpl->windowWasActiveLastDraw != context.isWindowActive) {
+        auto sel = mImpl->editor.selection();
+        if (sel.start != sel.end) {
+            mImpl->editor.setNeedsLayout();
+        }
+    }
+    mImpl->windowWasActiveLastDraw = context.isWindowActive;
+
     // mouse() and key() do not have access to the DrawContext, so we need to postpone
     // layout until the draw.
     if (mImpl->editor.needsLayout() || mImpl->editor.layoutDPI() != context.dc.dpi()) {
-        auto s = context.theme.textEditStyle(style(themeState()), themeState());
+        auto s = context.theme.textEditStyle(context, style(themeState()), themeState());
         mImpl->editor.layoutText(context.dc, context.theme.params().labelFont, s.fgColor,
                                  context.theme.params().accentedBackgroundTextColor, PicaPt(1e6));
     }
@@ -521,7 +532,7 @@ void StringEdit::draw(UIContext& context)
         mImpl->passwordDisplay->setString(passwordStr);
         mImpl->passwordDisplay->setSelection(sel);
 
-        auto s = context.theme.textEditStyle(style(themeState()), themeState());
+        auto s = context.theme.textEditStyle(context, style(themeState()), themeState());
         mImpl->passwordDisplay->layoutText(context.dc, context.theme.params().labelFont, s.fgColor,
                                            context.theme.params().accentedBackgroundTextColor, PicaPt(1e6));
     }

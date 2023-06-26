@@ -293,7 +293,7 @@ void Label::draw(UIContext& ui)
 
     Color fg;
     if (mImpl->textColor.alpha() == 0.0f) {  // color is unset
-         fg = ui.theme.labelStyle(themeStyle, themeState()).fgColor;
+         fg = ui.theme.labelStyle(ui, themeStyle, themeState()).fgColor;
      } else {
          fg = mImpl->textColor;
      }

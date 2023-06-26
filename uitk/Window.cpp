@@ -1092,6 +1092,8 @@ bool Window::beginModalDialog(Dialog *d)
     mImpl->dialog.window->resizeToFit();
     mImpl->window->beginModalDialog(mImpl->dialog.window->nativeWindow());
 
+    mImpl->dialog.window->onActivated(Point(PicaPt(-1), PicaPt(-1)));
+
     return true;
 }
 
@@ -1110,6 +1112,8 @@ Dialog* Window::endModalDialog()
     // delete the dialog window now.
     mImpl->dialog.window->deleteLater();
     mImpl->dialog.window.release();
+
+    onActivated(Point(PicaPt(-1), PicaPt(-1)));
 
     return dialog;
 }
@@ -1441,7 +1445,7 @@ void Window::onDraw(DrawContext& dc)
             if (path.type == GetBorderTheme::Type::kPath
                 || focusRect.width <= PicaPt::kZero || focusRect.height <= PicaPt::kZero)
             {
-                // Note that this is NOT necessary bounds()!
+                // Note that this is NOT necessarilyy bounds()!
                 focusRect = Rect(PicaPt::kZero, PicaPt::kZero, w->frame().width, w->frame().height);
             }
             focusRect.translate(ul.x, ul.y);
@@ -1492,12 +1496,15 @@ void Window::onActivated(const Point& currentMousePos)
     if (mImpl->dialog.dialog && mImpl->dialog.window) {
         mImpl->dialog.window->raiseToTop();
         Application::instance().beep();
+#if defined(__APPLE__)  // window sheets do not seem to work quite the same as a normal window
+        mImpl->dialog.window->onActivated(mImpl->dialog.window->mImpl->window->currentMouseLocation());
+#endif // __APPLE__
         return;
     }
 
     mImpl->isActive = true;
     mImpl->cancelPopup();
-    if (!(mImpl->flags & Flags::kPopup)) {
+    if (!(mImpl->flags & Flags::kPopup) && !(mImpl->flags & Flags::kDialog)) {
         Application::instance().setActiveWindow(this);
     }
 
@@ -1518,10 +1525,19 @@ void Window::onActivated(const Point& currentMousePos)
             postRedraw();
         }
     }
+
+    // Always redraw, so that the accent color returns back from grey.
+    postRedraw();
 }
 
 void Window::onDeactivated()
 {
+#if defined(__APPLE__)
+    if (mImpl->dialog.dialog && mImpl->dialog.window) {
+        mImpl->dialog.window->onDeactivated();
+    }
+#endif // __APPLE__
+
     mImpl->isActive = false;
     mImpl->cancelPopup();
 

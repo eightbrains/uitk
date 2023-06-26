@@ -498,7 +498,7 @@ void SegmentedControl::draw(UIContext& context)
                                       mImpl->action == Action::kButton,
                                       item.isOn, showKeyFocus, i, nItems);
         }
-        auto ws = context.theme.segmentTextStyle(item.state, ds, item.isOn);
+        auto ws = context.theme.segmentTextStyle(context, item.state, ds, item.isOn);
         static_cast<IconAndText*>(children()[i])->setForegroundColorNoRedraw(ws.fgColor);
     }
 
