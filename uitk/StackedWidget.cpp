@@ -52,12 +52,12 @@ StackedWidget* StackedWidget::addPanel(Widget *w)
     return this;
 }
 
-StackedWidget* StackedWidget::removePanel(Widget *w)
+Widget* StackedWidget::removePanel(Widget *w)
 {
     w->setVisible(true);
     Super::removeChild(w);
     setIndexShowing(mImpl->index);
-    return this;
+    return w;
 }
 
 int StackedWidget::indexShowing() const { return mImpl->index; }

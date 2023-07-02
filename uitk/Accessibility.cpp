@@ -44,12 +44,16 @@ std::string AccessibilityInfo::debugDescription(const std::string& indent /*= ""
                 return "kContainer";
             case Type::kRadioGroup:
                 return "kRadioGroup";
+            case Type::kSplitter:
+                return "kSplitter";
             case Type::kList:
                 return "kList";
             case Type::kLabel:
                 return "kLabel";
             case Type::kMenuItem:
                 return "kMenuItem";
+            case Type::kSplitterThumb:
+                return "kSplitterThumb";
             case Type::kButton:
                 return "kButton";
             case Type::kCheckbox:

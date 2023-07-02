@@ -39,8 +39,10 @@ public:
     StackedWidget();
     ~StackedWidget();
 
+    /// Adds panel to bottom of stack. Takes ownership.
     StackedWidget* addPanel(Widget *w);
-    StackedWidget* removePanel(Widget *w);
+    /// Removes panel, returns the pointer, and returns ownership to caller.
+    Widget* removePanel(Widget *w);
 
     int indexShowing() const;
     /// Sets the child that is displayed. Set to kNoIndex to display no child.

@@ -301,8 +301,26 @@ void updateStandardItem(Window &w, MenuItem *item, MenuId activeWindowId)
 }
 
 void getAccessibleChildren(uitk::Widget *w, std::vector<uitk::AccessibilityInfo> *accessibleChildren,
-                           bool addChildren = true, bool parentIsVisible = true)
+                           bool parentIsVisible = true)
 {
+    std::function<void(uitk::AccessibilityInfo *)> addAccessibleChildren;
+    addAccessibleChildren = [parentIsVisible, &addAccessibleChildren]
+                            (uitk::AccessibilityInfo *info) {
+        assert(info->type != AccessibilityInfo::Type::kNone);
+
+        if (!info->children.empty()) {
+            for (auto &childInfo : info->children) {
+                addAccessibleChildren(&childInfo);
+            }
+        } else if (info->type == AccessibilityInfo::Type::kContainer ||
+                   info->type == AccessibilityInfo::Type::kRadioGroup ||
+                   info->type == AccessibilityInfo::Type::kSplitter ||
+                   info->type == AccessibilityInfo::Type::kList) {
+            assert(info->children.empty());
+            getAccessibleChildren(info->widget, &info->children, info->isVisibleToUser);
+        }
+    };
+
     for (auto *child : w->children()) {
         bool isVisible = parentIsVisible;
         isVisible &= child->visible();  // two lines, as (bool & bool) becomes int
@@ -314,46 +332,27 @@ void getAccessibleChildren(uitk::Widget *w, std::vector<uitk::AccessibilityInfo>
         if (!child->accessibilityText().empty()) {
             info.text = child->accessibilityText();
         }
-        if (info.type == AccessibilityInfo::Type::kNone && info.children.empty()) {
-            getAccessibleChildren(child, accessibleChildren, true, isVisible);
-        } else if (info.type == AccessibilityInfo::Type::kContainer || !info.children.empty()) {
-            // accessibilityInfo() might need to populate the children itself
-            // (e.g. SegmentedControl, which has labels that act like buttons),
-            // in which case we obviously do not want duplicate them.
+
+        if (info.type == AccessibilityInfo::Type::kNone) {
             if (info.children.empty()) {
-                getAccessibleChildren(child, &info.children, true, isVisible);
+                getAccessibleChildren(child, accessibleChildren, isVisible);
             } else {
-                // Populate the rest of the tree if the children are already handled.
-                // But, if a child of type kNone is included, we need to replace it
-                // with its children, like above.
-                std::vector<AccessibilityInfo> fixedChildren;
-                fixedChildren.reserve(info.children.size());
                 for (auto &childInfo : info.children) {
                     childInfo.isVisibleToUser = isVisible;
-                    if (childInfo.type == AccessibilityInfo::Type::kNone) {
-                        getAccessibleChildren(info.widget, &fixedChildren, true, isVisible);
-                    } else {
-                        fixedChildren.push_back(childInfo);
-                        if (childInfo.type == AccessibilityInfo::Type::kContainer ||
-                            childInfo.type == AccessibilityInfo::Type::kList ||
-                            childInfo.type == AccessibilityInfo::Type::kRadioGroup)
-                        {
-                            getAccessibleChildren(childInfo.widget, &fixedChildren, false, isVisible);
-                        }
-                    }
+                    addAccessibleChildren(&childInfo);
                 }
-                info.children = fixedChildren;
+                accessibleChildren->insert(accessibleChildren->begin(), info.children.begin(),
+                                           info.children.end());
             }
-            if (addChildren && info.type != AccessibilityInfo::Type::kNone) {
-                accessibleChildren->push_back(info);
-            } else {
-                accessibleChildren->insert(accessibleChildren->end(),
-                                           info.children.begin(), info.children.end());
+        } else if (!info.children.empty()) {
+            for (auto &childInfo : info.children) {
+                childInfo.isVisibleToUser = isVisible;
+                addAccessibleChildren(&childInfo);
             }
+            accessibleChildren->push_back(std::move(info));
         } else {
-            if (addChildren) {
-                accessibleChildren->push_back(info);
-            }
+            addAccessibleChildren(&info);
+            accessibleChildren->push_back(std::move(info));
         }
     }
 }
@@ -1093,6 +1092,8 @@ bool Window::beginModalDialog(Dialog *d)
     mImpl->dialog.window->resizeToFit();
     mImpl->window->beginModalDialog(mImpl->dialog.window->nativeWindow());
 
+    mImpl->dialog.window->onActivated(Point(PicaPt(-1), PicaPt(-1)));
+
     return true;
 }
 
@@ -1111,6 +1112,8 @@ Dialog* Window::endModalDialog()
     // delete the dialog window now.
     mImpl->dialog.window->deleteLater();
     mImpl->dialog.window.release();
+
+    onActivated(Point(PicaPt(-1), PicaPt(-1)));
 
     return dialog;
 }
@@ -1388,8 +1391,8 @@ void Window::onDraw(DrawContext& dc)
     static GetBorderTheme gGetBorderTheme;
 
     // It's not clear when to re-layout. We could send a user message for layout,
-    // but it's still going to delay a draw (since it is all done by the same thread),
-    // so it seems like it is simpler just to do it on a draw.
+    // but it's still going to delay a draw (since it is all done by the same
+    // thread), so it seems like it is simpler just to do it on a draw.
     if (mImpl->needsLayout) {
         onLayout(dc);
     }
@@ -1417,9 +1420,9 @@ void Window::onDraw(DrawContext& dc)
     mImpl->rootWidget->draw(context);
     dc.translate(-rootUL.x, -rootUL.y);
 
-    // Draw the focus (if necessary). This is a bit of a hack: since there is no way
-    // to get the border path of a Widget, since the theme functions draw the frame.
-    // So, we have a special Theme that just records the frame.
+    // Draw the focus (if necessary). This is a bit of a hack: since there is no
+    // way to get the border path of a Widget, since the theme functions draw
+    // the frame. So, we have a special Theme that just records the frame.
     bool cancelFocus = false;
     if (context.isWindowActive && mImpl->focusedWidget && mImpl->showFocusRing) {
         if (mImpl->focusedWidget->visible() && mImpl->focusedWidget->enabled()) {
@@ -1442,7 +1445,7 @@ void Window::onDraw(DrawContext& dc)
             if (path.type == GetBorderTheme::Type::kPath
                 || focusRect.width <= PicaPt::kZero || focusRect.height <= PicaPt::kZero)
             {
-                // Note that this is NOT necessary bounds()!
+                // Note that this is NOT necessarilyy bounds()!
                 focusRect = Rect(PicaPt::kZero, PicaPt::kZero, w->frame().width, w->frame().height);
             }
             focusRect.translate(ul.x, ul.y);
@@ -1493,12 +1496,15 @@ void Window::onActivated(const Point& currentMousePos)
     if (mImpl->dialog.dialog && mImpl->dialog.window) {
         mImpl->dialog.window->raiseToTop();
         Application::instance().beep();
+#if defined(__APPLE__)  // window sheets do not seem to work quite the same as a normal window
+        mImpl->dialog.window->onActivated(mImpl->dialog.window->mImpl->window->currentMouseLocation());
+#endif // __APPLE__
         return;
     }
 
     mImpl->isActive = true;
     mImpl->cancelPopup();
-    if (!(mImpl->flags & Flags::kPopup)) {
+    if (!(mImpl->flags & Flags::kPopup) && !(mImpl->flags & Flags::kDialog)) {
         Application::instance().setActiveWindow(this);
     }
 
@@ -1519,10 +1525,19 @@ void Window::onActivated(const Point& currentMousePos)
             postRedraw();
         }
     }
+
+    // Always redraw, so that the accent color returns back from grey.
+    postRedraw();
 }
 
 void Window::onDeactivated()
 {
+#if defined(__APPLE__)
+    if (mImpl->dialog.dialog && mImpl->dialog.window) {
+        mImpl->dialog.window->onDeactivated();
+    }
+#endif // __APPLE__
+
     mImpl->isActive = false;
     mImpl->cancelPopup();
 

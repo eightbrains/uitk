@@ -49,15 +49,20 @@ class RootWidget : public Widget
 public:
     RootWidget()
     {
+        mSplitter = new Splitter(Dir::kHoriz);
+        mSplitter->setPanelLengthsEm({ 10.0f });
+        addChild(mSplitter);
+
         mPanelChooser = new ListView();
+        mPanelChooser->setBorderWidth(PicaPt::kZero);
         mPanelChooser->setKeyNavigationWraps(true);
         mPanelChooser->setOnSelectionChanged([this](ListView *lv) {
             mPanels->setIndexShowing(lv->selectedIndex());
         });
-        addChild(mPanelChooser);
+        mSplitter->addPanel(mPanelChooser);
 
         mPanels = new StackedWidget();
-        addChild(mPanels);
+        mSplitter->addPanel(mPanels);
     }
 
     void addPanel(const std::string& title, Widget *panel)
@@ -73,15 +78,12 @@ public:
 
     void layout(const LayoutContext& context) override
     {
-        auto em = context.theme.params().labelFont.pointSize();
-        auto chooserWidth = context.dc.roundToNearestPixel(10.0f * em);
-        auto &r = bounds();
-        mPanelChooser->setFrame(Rect(PicaPt::kZero, PicaPt::kZero, chooserWidth, r.height));
-        mPanels->setFrame(Rect(chooserWidth, PicaPt::kZero, r.maxX() - chooserWidth, r.height));
+        mSplitter->setFrame(bounds());
         Super::layout(context);
     }
 
 private:
+    Splitter *mSplitter;
     ListView *mPanelChooser;
     StackedWidget *mPanels;
 };

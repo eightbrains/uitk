@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 - 2022 Eight Brains Studios, LLC
+// Copyright 2021 - 2023 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -64,8 +64,9 @@
                                   frameWinCoord.width.toPixels(dpi),
                                   frameWinCoord.height.toPixels(dpi));
     parent.accessibilityElement = YES;
-    parent.accessibilityRole = NSAccessibilityGroupRole;
     parent.accessibilityFrame = parentFrame;
+    // Do not set parent.accessibilityRole, or it will overwrite the different grouped roles
+    // set prior to this call.
     if (parent == topLevel) {  // NSView isa NSAccessibilityElement
         parent.accessibilityLabel = @"Root element";
     }
@@ -107,10 +108,13 @@
             ae.info = e;
             if (e.type == uitk::AccessibilityInfo::Type::kContainer ||
                 e.type == uitk::AccessibilityInfo::Type::kRadioGroup ||
+                e.type == uitk::AccessibilityInfo::Type::kSplitter ||
                 e.type == uitk::AccessibilityInfo::Type::kList)
             {
                 if (e.type == uitk::AccessibilityInfo::Type::kRadioGroup) {
                     ae.accessibilityRole = NSAccessibilityRadioGroupRole;
+                } else if (e.type == uitk::AccessibilityInfo::Type::kSplitter) {
+                    ae.accessibilityRole = NSAccessibilitySplitGroupRole;
                 } else if (e.type == uitk::AccessibilityInfo::Type::kList) {
                     ae.accessibilityRole = NSAccessibilityTableRole;
                 } else {
@@ -130,6 +134,31 @@
                      ];
                 if (!elementForWidget && maybeForWidget) {
                     elementForWidget = maybeForWidget;
+                }
+
+                if (e.type == uitk::AccessibilityInfo::Type::kSplitter) {
+                    NSMutableArray *splitters = [[NSMutableArray alloc]
+                                                 initWithCapacity:e.children.size() / 2];
+                    for (int i = 1;  i < ae.accessibilityChildren.count;  i += 2) {
+                        NSAccessibilityElement *thumb = [ae.accessibilityChildren objectAtIndex:i];
+                        thumb.accessibilityPreviousContents = @[ [ae.accessibilityChildren objectAtIndex:i - 1]
+                        ];
+                        thumb.accessibilityNextContents = @[
+                            [ae.accessibilityChildren objectAtIndex:i + 1]
+                        ];
+                        if (!e.placeholderText.empty() &&
+                            (e.placeholderText[0] == 'h' || e.placeholderText[0] == 'H'))
+                        {
+                            // Note that Splitter's direction is the orientation of the control,
+                            // but macOS considers the orientation of the them which way the long
+                            // part is, so a horiz Splitter is a vertical thumb.
+                            thumb.accessibilityOrientation = NSAccessibilityOrientationVertical;
+                        } else {
+                            thumb.accessibilityOrientation = NSAccessibilityOrientationHorizontal;
+                        }
+                        [splitters addObject: thumb];
+                    }
+                    ae.accessibilitySplitters = splitters;
                 }
             } else if (e.type == uitk::AccessibilityInfo::Type::kCheckbox) {  // must come before kButton
                 ae.accessibilityRole = NSAccessibilityCheckBoxRole;
@@ -158,6 +187,23 @@
                 }
             } else if (e.type == uitk::AccessibilityInfo::Type::kMenuItem) {
                 ae.accessibilityRole = NSAccessibilityMenuItemRole;
+            } else if (e.type == uitk::AccessibilityInfo::Type::kSplitterThumb) {
+                ae.accessibilityRole = NSAccessibilitySplitterRole;
+
+                // Max and min are required to actually show the contents of accessibilityValue.
+                ae.accessibilityMinValue = @(0);
+                ae.accessibilityMaxValue = @(100);
+
+                // TODO: there is some other magic required in order to get
+                // accessibilityPerformIncrement/decrement. (Or, figure out what other function
+                // is called instead, assuming that is the case.)
+                // - to my knowledge there are no accessibility* functions that
+                //   either NSSplitViewSplitter or NSSplitView define that we are not doing.
+                //   (In addition to manually calling functions in the debugger, also checked
+                //   what methods the classes define.)
+                // - the next step seems to me to be a wrapper around NSSplitViewSplitter
+                //   that forwards any possible function (since we do not know what the important
+                //   function is). Not sure how to do that, or if it is even possible.
             }
 
             // Either this is a custom menu item, or it's a clickable label, but either

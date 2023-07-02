@@ -98,6 +98,8 @@ public:
         { return mTheme->calcPreferredIncDecSize(dc); }
     PicaPt calcPreferredScrollbarThickness(const DrawContext& dc) const override
         { return mTheme->calcPreferredScrollbarThickness(dc); }
+    PicaPt calcPreferredSplitterThumbThickness(const DrawContext& dc) const override
+        { return mTheme->calcPreferredSplitterThumbThickness(dc); }
     Size calcPreferredMenuItemSize(const DrawContext& dc,
                                    const std::string& text, const std::string& shortcut,
                                    MenuItemAttribute itemAttr,
@@ -122,15 +124,15 @@ public:
     void clipFrame(UIContext& ui, const Rect& frame,
                    const WidgetStyle& style) const override {}
     void drawFocusFrame(UIContext& ui, const Rect& frame, const PicaPt& radius) const override {}
-    WidgetStyle labelStyle(const WidgetStyle& style, WidgetState state) const override
-        { return mTheme->labelStyle(style, state); }
+    WidgetStyle labelStyle(UIContext& ui, const WidgetStyle& style, WidgetState state) const override
+        { return mTheme->labelStyle(ui, style, state); }
     void drawButton(UIContext& ui, const Rect& frame, ButtonDrawStyle buttonStyle,
                     const WidgetStyle& style, WidgetState state,
                     bool isOn) const override
         { mTheme->drawButton(ui, frame, buttonStyle, style, state, isOn);}
-    const WidgetStyle& buttonTextStyle(WidgetState state, ButtonDrawStyle buttonStyle,
+    const WidgetStyle& buttonTextStyle(UIContext& ui, WidgetState state, ButtonDrawStyle buttonStyle,
                                        bool isOn) const override
-        { return mTheme->buttonTextStyle(state, buttonStyle, isOn); }
+        { return mTheme->buttonTextStyle(ui, state, buttonStyle, isOn); }
     void drawCheckbox(UIContext& ui, const Rect& frame,
                       const WidgetStyle& style, WidgetState state,
                       bool isOn) const override
@@ -147,9 +149,9 @@ public:
                             SegmentDrawStyle drawStyle,
                             const WidgetStyle& ctrlStyle, WidgetState ctrlState) const override
         {}
-    const WidgetStyle& segmentTextStyle(WidgetState state, SegmentDrawStyle drawStyle,
+    const WidgetStyle& segmentTextStyle(UIContext& ui, WidgetState state, SegmentDrawStyle drawStyle,
                                         bool isOn) const override
-        { return mTheme->segmentTextStyle(state, drawStyle, isOn); }
+        { return mTheme->segmentTextStyle(ui, state, drawStyle, isOn); }
     void drawColorEdit(UIContext& ui, const Rect& frame, const Color& color,
                        const WidgetStyle& style, WidgetState state) const override
         { mTheme->drawColorEdit(ui, frame, color, style, state); }
@@ -176,8 +178,9 @@ public:
         { mTheme->drawProgressBar(ui, frame, value, style, state); }
     void drawIncDec(UIContext& ui, const Rect& frame, WidgetState incState, WidgetState decState) const override
         { mTheme->drawIncDec(ui, frame, incState, decState); }
-    WidgetStyle textEditStyle(const WidgetStyle& style, WidgetState state) const override
-        { return mTheme->textEditStyle(style, state); }
+    WidgetStyle textEditStyle(UIContext& ui, const WidgetStyle& style,
+                              WidgetState state) const override
+        { return mTheme->textEditStyle(ui, style, state); }
     void drawTextEdit(UIContext& ui, const Rect& frame, const PicaPt& scrollOffset,
                       const std::string& placeholder, TextEditorLogic& editor, int horizAlign,
                       const WidgetStyle& style, WidgetState state, bool hasFocus) const override
@@ -188,6 +191,9 @@ public:
     void drawSearchBar(UIContext& ui, const Rect& frame, const WidgetStyle& style,
                                WidgetState state) const override
         { mTheme->drawSearchBar(ui, frame, style, state); }
+    void drawSplitterThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
+                           WidgetState state) const override
+        { mTheme->drawSplitterThumb(ui, frame, style, state); }
     void clipScrollView(UIContext& ui, const Rect& frame,
                         const WidgetStyle& style, WidgetState state, bool drawsFrame) const override
         { mTheme->clipScrollView(ui, frame, style, state, true); }

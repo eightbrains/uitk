@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 - 2022 Eight Brains Studios, LLC
+// Copyright 2021 - 2023 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -43,10 +43,12 @@ struct AccessibilityInfo
 
         kContainer,
         kRadioGroup,
+        kSplitter,
         kList,
 
         kLabel,
         kMenuItem,  /// menu item, or any item drawn by the widget but which acts as a separate child
+        kSplitterThumb,
         kButton,
         kCheckbox,
         kRadioButton,

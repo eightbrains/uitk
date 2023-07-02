@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 - 2022 Eight Brains Studios, LLC
+// Copyright 2021 - 2023 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -54,6 +54,7 @@ public:
     Rect calcTextEditRectForFrame(const Rect& frame, const DrawContext& dc, const Font& font) const override;
     Size calcPreferredIncDecSize(const DrawContext& dc) const override;
     PicaPt calcPreferredScrollbarThickness(const DrawContext& dc) const override;
+    PicaPt calcPreferredSplitterThumbThickness(const DrawContext& dc) const override;
     Size calcPreferredMenuItemSize(const DrawContext& dc,
                                    const std::string& text, const std::string& shortcut,
                                    MenuItemAttribute itemAttr,
@@ -73,11 +74,11 @@ public:
                    const WidgetStyle& style) const override;
     void drawFocusFrame(UIContext& ui, const Rect& frame, const PicaPt& radius) const override;
     //void drawFocusFrame(UIContext& ui, const std::shared_ptr<BezierPath> path) const override;
-    WidgetStyle labelStyle(const WidgetStyle& style, WidgetState state) const override;
+    WidgetStyle labelStyle(UIContext& ui, const WidgetStyle& style, WidgetState state) const override;
     void drawButton(UIContext& ui, const Rect& frame, ButtonDrawStyle buttonStyle,
                     const WidgetStyle& style, WidgetState state,
                     bool isOn) const override;
-    const WidgetStyle& buttonTextStyle(WidgetState state, ButtonDrawStyle buttonStyle,
+    const WidgetStyle& buttonTextStyle(UIContext& ui, WidgetState state, ButtonDrawStyle buttonStyle,
                                        bool isOn) const override;
     void drawCheckbox(UIContext& ui, const Rect& frame,
                       const WidgetStyle& style, WidgetState state,
@@ -91,7 +92,7 @@ public:
     void drawSegmentDivider(UIContext& ui, const Point& top, const Point& bottom,
                             SegmentDrawStyle drawStyle,
                             const WidgetStyle& ctrlStyle, WidgetState ctrlState) const override;
-    const WidgetStyle& segmentTextStyle(WidgetState state, SegmentDrawStyle drawStyle,
+    const WidgetStyle& segmentTextStyle(UIContext& ui, WidgetState state, SegmentDrawStyle drawStyle,
                                         bool isOn) const override;
     void drawComboBoxAndClip(UIContext& ui, const Rect& frame,
                              const WidgetStyle& style, WidgetState state) const override;
@@ -108,12 +109,15 @@ public:
     void drawProgressBar(UIContext& ui, const Rect& frame, float value,
                          const WidgetStyle& style, WidgetState state) const override;
     void drawIncDec(UIContext& ui, const Rect& frame, WidgetState incState, WidgetState decState) const override;
-    WidgetStyle textEditStyle(const WidgetStyle& style, WidgetState state) const override;
+    WidgetStyle textEditStyle(UIContext& ui, const WidgetStyle& style,
+                              WidgetState state) const override;
     void drawTextEdit(UIContext& ui, const Rect& frame, const PicaPt& scrollOffset,
                       const std::string& placeholder, TextEditorLogic& editor, int horizAlign, 
                       const WidgetStyle& style, WidgetState state, bool hasFocus) const override;
     void drawSearchBar(UIContext& ui, const Rect& frame, const WidgetStyle& style,
                                WidgetState state) const override;
+    void drawSplitterThumb(UIContext& ui, const Rect& frame, const WidgetStyle& style,
+                           WidgetState state) const override;
     void clipScrollView(UIContext& ui, const Rect& frame,
                         const WidgetStyle& style, WidgetState state, bool drawsFrame) const override;
     void drawScrollView(UIContext& ui, const Rect& frame,
@@ -146,36 +150,37 @@ protected:
     PicaPt mBorderWidth;
     PicaPt mBorderRadius;
 
-    WidgetStyle mLabelStyles[5];
-    WidgetStyle mButtonStyles[5];
-    WidgetStyle mButtonOnStyles[5];
-    WidgetStyle mButtonUndecoratedStyles[5];
-    WidgetStyle mButtonUndecoratedOnStyles[5];
-    WidgetStyle mButtonAccessoryStyles[5];
-    WidgetStyle mButtonDefaultDialogStyles[5];
-    WidgetStyle mCheckboxStyles[5];
-    WidgetStyle mCheckboxOnStyles[5];
-    WidgetStyle mSegmentedControlStyles[5];  // style for the background
-    WidgetStyle mSegmentStyles[5];  // style for individual segment (button-style)
-    WidgetStyle mSegmentOffStyles[5];  // style for individual segment (off)
-    WidgetStyle mSegmentOnStyles[5];  // style for individual segment (on)
-    WidgetStyle mSegmentUndecoratedStyles[5];  // style for individual segment (button-style)
-    WidgetStyle mSegmentUndecoratedOffStyles[5];  // style for individual segment (off)
-    WidgetStyle mSegmentUndecoratedOnStyles[5];  // style for individual segment (on)
-    WidgetStyle mComboBoxStyles[5];
-    WidgetStyle mComboBoxIconAreaStyles[5];
-    WidgetStyle mColorEditTrackStyles[5];
-    WidgetStyle mSliderTrackStyles[5];
-    WidgetStyle mSliderThumbStyles[5];
-    WidgetStyle mScrollbarTrackStyles[5];
-    WidgetStyle mScrollbarThumbStyles[5];
-    WidgetStyle mProgressBarStyles[5];
-    WidgetStyle mTextEditStyles[5];
-    WidgetStyle mSearchBarStyles[5];
-    WidgetStyle mScrollViewStyles[5];
-    WidgetStyle mListViewStyles[5];
-    WidgetStyle mMenuItemStyles[5];
-    WidgetStyle mMenubarItemStyles[5];
+    WidgetStyle mLabelStyles[6];
+    WidgetStyle mButtonStyles[6];
+    WidgetStyle mButtonOnStyles[6];
+    WidgetStyle mButtonUndecoratedStyles[6];
+    WidgetStyle mButtonUndecoratedOnStyles[6];
+    WidgetStyle mButtonAccessoryStyles[6];
+    WidgetStyle mButtonDefaultDialogStyles[6];
+    WidgetStyle mCheckboxStyles[6];
+    WidgetStyle mCheckboxOnStyles[6];
+    WidgetStyle mSegmentedControlStyles[6];  // style for the background
+    WidgetStyle mSegmentStyles[6];  // style for individual segment (button-style)
+    WidgetStyle mSegmentOffStyles[6];  // style for individual segment (off)
+    WidgetStyle mSegmentOnStyles[6];  // style for individual segment (on)
+    WidgetStyle mSegmentUndecoratedStyles[6];  // style for individual segment (button-style)
+    WidgetStyle mSegmentUndecoratedOffStyles[6];  // style for individual segment (off)
+    WidgetStyle mSegmentUndecoratedOnStyles[6];  // style for individual segment (on)
+    WidgetStyle mComboBoxStyles[6];
+    WidgetStyle mComboBoxIconAreaStyles[6];
+    WidgetStyle mColorEditTrackStyles[6];
+    WidgetStyle mSliderTrackStyles[6];
+    WidgetStyle mSliderThumbStyles[6];
+    WidgetStyle mScrollbarTrackStyles[6];
+    WidgetStyle mScrollbarThumbStyles[6];
+    WidgetStyle mProgressBarStyles[6];
+    WidgetStyle mTextEditStyles[6];
+    WidgetStyle mSearchBarStyles[6];
+    WidgetStyle mSplitterStyles[6];
+    WidgetStyle mScrollViewStyles[6];
+    WidgetStyle mListViewStyles[6];
+    WidgetStyle mMenuItemStyles[6];
+    WidgetStyle mMenubarItemStyles[6];
     WidgetStyle mTooltipStyle;
 };
 
