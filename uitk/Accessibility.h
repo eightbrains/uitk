@@ -81,7 +81,7 @@ public:
     
     /// Returns a unique ID suitable for identifying an AccessibilityElement again
     /// when it is recreated. Note that some widgets may have pieces with separate
-    /// accessibility elements but the same widget point because the widget draws
+    /// accessibility elements but the same widget pointer because the widget draws
     /// them directly. In this case, the widget should set indexInParent.
     /// (Setting indexInParent is fine even if they subwidgets are actual widgets.)
     UID uniqueId() const;

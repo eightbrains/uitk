@@ -349,6 +349,12 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 
 - (void)drawRect:(NSRect)dirtyRect
 {
+    // This can happen if draw is queued (e.g. animation is happening) and the window
+    // is closed with the mouse.
+    if (!self.callbacks) {
+        return;
+    }
+
     auto dc = [self createContext];
     dc->beginDraw();
     self.callbacks->onDraw(*dc);
