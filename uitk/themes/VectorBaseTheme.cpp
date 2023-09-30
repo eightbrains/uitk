@@ -313,13 +313,10 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     // Slider
     copyStyles(mButtonStyles, mSliderTrackStyles);
     mSliderTrackStyles[NORMAL].fgColor = params.accentColor;
-    mSliderTrackStyles[DISABLED].fgColor = params.accentColor.toGrey();
+    mSliderTrackStyles[DISABLED].fgColor = params.accentColor.blend(params.windowBackgroundColor, 0.5f);
     mSliderTrackStyles[OVER] = mSliderTrackStyles[NORMAL];
     mSliderTrackStyles[DOWN] = mSliderTrackStyles[NORMAL];
-    // Note that text colors can be alpha on macOS, and we need the thumb's background
-    // colors to be solid to hide everything underneath.
     copyStyles(mButtonStyles, mSliderThumbStyles);
-    mSliderThumbStyles[DISABLED].bgColor = Color(0.5f, 0.5f, 0.5f);
     if (isDarkMode) {
         mSliderThumbStyles[NORMAL].bgColor = Color(0.85f, 0.85f, 0.85f);
         mSliderThumbStyles[OVER].bgColor = Color(0.9f, 0.9f, 0.9f);
@@ -328,7 +325,14 @@ void VectorBaseTheme::setVectorParams(const Params &params)
         mSliderThumbStyles[NORMAL].bgColor = Color(1.0f, 1.0f, 1.0f);
         mSliderThumbStyles[OVER].bgColor = Color(0.975f, 0.975f, 0.975f);
         mSliderThumbStyles[DOWN].bgColor = Color(0.95f, 0.95f, 0.95f);
+        mSliderThumbStyles[NORMAL].borderColor = Color(0.5f, 0.5f, 0.5f);
+        mSliderThumbStyles[OVER].borderColor = mSliderThumbStyles[NORMAL].borderColor;
+        mSliderThumbStyles[DOWN].borderColor = mSliderThumbStyles[NORMAL].borderColor;
+        mSliderThumbStyles[INACTIVE_WIN].borderColor = mSliderThumbStyles[NORMAL].borderColor;
     }
+    // Note that colors can be alpha on macOS, and we need the thumb's background
+    // color to be solid to hide everything underneath.
+    mSliderThumbStyles[DISABLED].bgColor = mSliderThumbStyles[NORMAL].bgColor.blend(params.windowBackgroundColor, 0.5f).colorWithAlpha(1.0f);
     mSliderThumbStyles[INACTIVE_WIN] = mSliderThumbStyles[NORMAL];
 
     // Scrollbar
@@ -1299,6 +1303,7 @@ void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaP
     textRect.width -= 2.0f * textMargins.width;
 
     PicaPt caretWidth = ui.dc.ceilToNearestPixel(0.05f * textRect.height);
+    caretWidth = std::max(caretWidth, ui.dc.onePixel());
 
     ui.dc.save();
     // Outset textRect by the caret width for the clip rect so that cursor is visible at edges

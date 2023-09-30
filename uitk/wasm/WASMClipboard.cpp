@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2023 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -20,26 +20,52 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_EMPIRE_THEME_H
-#define UITK_EMPIRE_THEME_H
+#include "WASMClipboard.h"
 
-#include "VectorBaseTheme.h"
+#include <emscripten.h>
+#include <emscripten/html5.h>
 
 namespace uitk {
 
-class EmpireTheme : public VectorBaseTheme
-{
-public:
-    static Theme::Params defaultParams();
-    static Theme::Params darkModeParams(const Color& accent);
-    static Theme::Params lightModeParams(const Color& accent);
-    static Theme::Params customParams(const Color& bgColor, const Color& fgColor,
-                                      const Color& accent);
+EM_ASYNC_JS(void, jsWriteClipboardText, (const char* str), {
+    await navigator.clipboard.writeText(UTF8ToString(str));
+});
 
-    EmpireTheme();
-    explicit EmpireTheme(const Params& params);
+EM_ASYNC_JS(char*, jsReadClipboardText, (), {
+    const strJS = await navigator.clipboard.readText();
+    const len = lengthBytesUTF8(strJS) + 1;
+    const str = _malloc(len);
+    stringToUTF8(strJS, str, len);
+    return str;
+});
+
+struct WASMClipboard::Impl
+{
 };
 
-}  // namespace uitk
-#endif // UITK_EMPIRE_THEME_H
+WASMClipboard::WASMClipboard()
+    : mImpl(new Impl())
+{
+}
 
+WASMClipboard::~WASMClipboard()
+{
+}
+
+bool WASMClipboard::hasString() const { return !this->string().empty(); }
+
+std::string WASMClipboard::string() const
+{
+    return jsReadClipboardText();
+}
+
+void WASMClipboard::setString(const std::string& utf8)
+{
+    jsWriteClipboardText(utf8.c_str());
+}
+
+bool WASMClipboard::supportsX11SelectionString() const { return false; }
+void WASMClipboard::setX11SelectionString(const std::string& utf8) {}
+std::string WASMClipboard::x11SelectionString() const { return std::string(); }
+
+} // namespace uitk

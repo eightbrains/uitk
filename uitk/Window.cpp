@@ -46,6 +46,8 @@
 #include "macos/MacOSWindow.h"
 #elif defined(_WIN32) || defined(_WIN64)  // _WIN32 covers everything except 64-bit ARM
 #include "win32/Win32Window.h"
+#elif defined(__EMSCRIPTEN__)
+#include "wasm/WASMWindow.h"
 #else
 #include "x11/X11Window.h"
 #endif
@@ -476,6 +478,7 @@ struct Window::Impl
     std::function<void(Window&)> onDidDeactivate;
     std::function<bool(Window&)> onShouldClose;
     std::function<void(Window&)> onWillClose;
+    bool drawContextMightBeShared;
     bool showFocusRing = false;
     bool isActive = false;
     bool inResize = false;
@@ -551,9 +554,13 @@ Window::Window(const std::string& title, int x, int y, int width, int height,
     mImpl->window = std::make_unique<MacOSWindow>(*this, title, x, y, width, height, flags);
 #elif defined(_WIN32) || defined(_WIN64)
     mImpl->window = std::make_unique<Win32Window>(*this, title, x, y, width, height, flags);
+#elif defined(__EMSCRIPTEN__)
+    mImpl->window = std::make_unique<WASMWindow>(*this, title, x, y, width, height, flags);
 #else
     mImpl->window = std::make_unique<X11Window>(*this, title, x, y, width, height, flags);
 #endif
+
+    mImpl->drawContextMightBeShared = Application::instance().windowsMightUseSameDrawContext();  // cache for faster drawing;
 
     pushCursor(Cursor::arrow());
     addStandardMenuHandlers(*this);
@@ -1171,7 +1178,7 @@ void Window::onMouse(const MouseEvent& eOrig)
     MouseEvent e = eOrig;  // copy
     e.pos.y = eOrig.pos.y - mImpl->rootWidget->frame().y;
 
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
     // X11 and Win32 treat scroll as lines, not pixels like macOS.
     // The event loop in X11 does not have access to the theme, so we need
     // to convert from lines to pixels here.
@@ -1179,7 +1186,7 @@ void Window::onMouse(const MouseEvent& eOrig)
         e.scroll.dx *= 3.0f * mImpl->theme->params().labelFont.pointSize();
         e.scroll.dy *= 3.0f * mImpl->theme->params().labelFont.pointSize();
     }
-#endif // !__APPLE__
+#endif // !__APPLE__ && !__EMSCRIPTEN
 
     if (mImpl->grabbedWidget == nullptr) {
         if (mImpl->menubarWidget && mImpl->menubarWidget->frame().contains(eOrig.pos)) {
@@ -1357,11 +1364,12 @@ void Window::onLayout(const DrawContext& dc)
         mImpl->menubarWidget->setFrame(Rect(contentRect.x, y, contentRect.width, menubarHeight));
         mImpl->menubarWidget->layout(context);
         y += menubarHeight;
+        contentRect.height -= menubarHeight;
     }
 
     assert(y == dc.roundToNearestPixel(y));
     mImpl->rootWidget->setFrame(Rect(contentRect.x, y,
-                                     contentRect.width, contentRect.height - y));
+                                     contentRect.width, contentRect.height));
     if (mImpl->onLayout) {
         mImpl->onLayout(*this, context);
     } else {
@@ -1407,6 +1415,13 @@ void Window::onDraw(DrawContext& dc)
 
     // --- start draw ---
     dc.beginDraw();
+    if (mImpl->drawContextMightBeShared) {
+        auto osFrame = mImpl->window->osFrame();
+        auto frame = Rect::fromPixels(osFrame.x, osFrame.y, osFrame.width, osFrame.height, dc.dpi());
+        dc.save();
+        dc.translate(frame.x, frame.y);
+        dc.clipToRect(Rect(PicaPt::kZero, PicaPt::kZero, frame.width, frame.height));
+    }
 
     // Draw the background
     if (mImpl->flags & Window::Flags::kPopup) {
@@ -1473,6 +1488,9 @@ void Window::onDraw(DrawContext& dc)
         mImpl->menubarWidget->draw(context);
     }
 
+    if (mImpl->drawContextMightBeShared) {
+        dc.restore();
+    }
     dc.endDraw();
     mImpl->inDraw = false;
     // --- end draw ---

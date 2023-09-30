@@ -129,6 +129,7 @@ ExternalProject_Add(libnativedraw
                     GIT_REPOSITORY "https://github.com/eightbrains/libnativedraw"
                     PREFIX ${LIBNATIVEDRAW_PREFIX}
                     #UPDATE_DISCONNECTED true # not necessary to check github each build
+                    CMAKE_COMMAND "${CMAKE_CMD_FOR_EXTERNAL_PROJECT}"  # Emscripten needs emcmake
                     CMAKE_ARGS -DCMAKE_INSTALL_PREFIX:PATH=${LIBNATIVEDRAW_PREFIX} "-DCMAKE_CXX_FLAGS:STRING=-DND_NAMESPACE=${ND_NAMESPACE}"
                    )
 add_library(nativedraw STATIC IMPORTED)
@@ -173,7 +174,17 @@ elseif (WIN32)
                              win32/Win32Utils.cpp
                              win32/Win32Window.cpp)
     list(APPEND UITK_LIBS imm32 d3d11 d2d1 dwrite shcore comctl32 WindowsApp)
-elseif (UNIX)  # note that APPLE is UNIX, so need to check that first
+elseif (EMSCRIPTEN)
+    list(APPEND UITK_HEADERS wasm/WASMApplication.h
+                             wasm/WASMClipboard.h
+                             wasm/WASMCursor.h
+                             wasm/WASMWindow.h)
+    list(APPEND UITK_SOURCES wasm/WASMApplication.cpp
+                             wasm/WASMClipboard.cpp
+                             wasm/WASMCursor.cpp
+                             wasm/WASMWindow.cpp)
+    list(APPEND UITK_LIBS embind)
+elseif (UNIX)  # note that APPLE and EMSCRIPTEN are UNIX, so check them first
     list(APPEND UITK_HEADERS x11/X11Application.h
                              x11/X11Clipboard.h
                              x11/X11Cursor.h

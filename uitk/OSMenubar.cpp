@@ -40,7 +40,9 @@ void OSMenubar::addStandardItems(Menu **file, Menu **edit, Menu **window, Menu *
                                  const std::vector<StandardItem>& excluded /*= {}*/)
 {
     auto vItems = { StandardItem::kAbout,
+#if !defined(__EMSCRIPTEN__)
                     StandardItem::kQuit,
+#endif // !__EMSCRIPTEN__
                     StandardItem::kCopy, StandardItem::kCut, StandardItem::kPaste,
                     StandardItem::kUndo, StandardItem::kRedo,
                     StandardItem::kPreferences,

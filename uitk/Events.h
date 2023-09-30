@@ -45,7 +45,12 @@ struct KeyModifier {
 };
 
 enum class MouseButton {
-    kNone = 0, kLeft, kRight, kMiddle, kButton4, kButton5
+    kNone = 0,
+    kLeft =    1 << 0,
+    kRight =   1 << 1,
+    kMiddle =  1 << 2,
+    kButton4 = 1 << 3,
+    kButton5 = 1 << 4
 };
 
 struct MouseEvent
@@ -66,7 +71,6 @@ struct MouseEvent
         struct {
             PicaPt dx;
             PicaPt dy;
-            bool shouldHideScrollbars;
         } scroll;
     };
 

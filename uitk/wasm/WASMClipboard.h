@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2023 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -20,26 +20,36 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_EMPIRE_THEME_H
-#define UITK_EMPIRE_THEME_H
+#ifndef UITK_WASM_CLIPBOARD_H
+#define UITK_WASM_CLIPBOARD_H
 
-#include "VectorBaseTheme.h"
+#include "../Clipboard.h"
+
+#include <memory>
+#include <vector>
 
 namespace uitk {
 
-class EmpireTheme : public VectorBaseTheme
+class WASMClipboard : public Clipboard
 {
 public:
-    static Theme::Params defaultParams();
-    static Theme::Params darkModeParams(const Color& accent);
-    static Theme::Params lightModeParams(const Color& accent);
-    static Theme::Params customParams(const Color& bgColor, const Color& fgColor,
-                                      const Color& accent);
+    WASMClipboard();
+    ~WASMClipboard();
 
-    EmpireTheme();
-    explicit EmpireTheme(const Params& params);
+    bool hasString() const override;
+
+    std::string string() const override;
+
+    void setString(const std::string& utf8) override;
+
+    bool supportsX11SelectionString() const override;
+    void setX11SelectionString(const std::string& utf8) override;
+    std::string x11SelectionString() const override;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
 };
 
-}  // namespace uitk
-#endif // UITK_EMPIRE_THEME_H
-
+} // namespace uitk
+#endif // UITK_WASM_CLIPBOARD_H

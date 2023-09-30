@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2023 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -20,8 +20,8 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_X11_WINDOW_H
-#define UITK_X11_WINDOW_H
+#ifndef UITK_WASM_WINDOW_H
+#define UITK_WASM_WINDOW_H
 
 #include "../OSWindow.h"
 #include "../Window.h" // for Window::Flags
@@ -30,16 +30,16 @@
 
 namespace uitk {
 
-class X11Window : public OSWindow
+class WASMWindow : public OSWindow
 {
 public:
-    X11Window(IWindowCallbacks& callbacks,
+    WASMWindow(IWindowCallbacks& callbacks,
               const std::string& title, int width, int height,
               Window::Flags::Value flags);
-    X11Window(IWindowCallbacks& callbacks,
+    WASMWindow(IWindowCallbacks& callbacks,
               const std::string& title, int x, int y, int width, int height,
               Window::Flags::Value flags);
-    ~X11Window();
+    ~WASMWindow();
 
     bool isShowing() const override;
     void show(bool show,
@@ -82,23 +82,17 @@ public:
     void setNeedsAccessibilityUpdate() override;
     void setAccessibleElements(const std::vector<AccessibilityInfo>& elements) override;
 
+    Window::Flags::Value flags() const;
     void onResize();
     void onLayout();
     void onDraw();
-    void onMouse(MouseEvent& e, int x, int y);
+    void onMouse(const MouseEvent& e);
     void onKey(const KeyEvent& e);
     void onText(const TextEvent& e);
-    void onActivated(const Point& currentMousePos);
+    void onActivated();
     void onDeactivated();
     bool onWindowShouldClose();
     void onWindowWillClose();
-
-public:
-    void* xic() const;
-    bool isEditing() const;
-    int imeMove(int ximDir, int arg);
-    void imeUpdate(const char *utf8, int start, int len, int newOffset);
-    void imeDone();
 
 private:
     struct Impl;
@@ -106,4 +100,4 @@ private:
 };
 
 }  // namespace uitk
-#endif // UITK_X11_WINDOW_H
+#endif // UITK_WASM_WINDOW_H

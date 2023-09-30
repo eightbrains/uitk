@@ -35,6 +35,8 @@
 #elif defined(_WIN32) || defined(_WIN64)  // _WIN32 covers everything except 64-bit ARM
 #include "win32/Win32Application.h"
 #include "win32/Win32Menubar.h"
+#elif defined(__EMSCRIPTEN__)
+#include "wasm/WASMApplication.h"
 #else
 #include "x11/X11Application.h"
 #endif
@@ -83,6 +85,8 @@ Application::Application()
     mImpl->osApp = std::make_unique<MacOSApplication>();
 #elif defined(_WIN32) || defined(_WIN64)
     mImpl->osApp = std::make_unique<Win32Application>();
+#elif defined(__EMSCRIPTEN__)
+    mImpl->osApp = std::make_unique<WASMApplication>();
 #else
     mImpl->osApp = std::make_unique<X11Application>();
 #endif
@@ -205,6 +209,11 @@ bool Application::isWindowBorderInsideWindowFrame() const
     return mImpl->osApp->isWindowBorderInsideWindowFrame();
 }
 
+bool Application::windowsMightUseSameDrawContext() const
+{
+    return mImpl->osApp->windowsMightUseSameDrawContext();
+}
+
 bool Application::shouldHideScrollbars() const
 {
     return mImpl->osApp->shouldHideScrollbars();
@@ -232,6 +241,8 @@ bool Application::supportsNativeMenus() const
     return true;
 #elif defined(_WIN32) || defined(_WIN64)
     return true;
+#elif defined(__EMSCRIPTEN__)
+    return false;
 #else
     return false;
 #endif
@@ -248,6 +259,8 @@ void Application::setSupportsNativeDialogs(bool supports)
     mImpl->supportsNativeDialogs = supports;
 #elif defined(_WIN32) || defined(_WIN64)
     mImpl->supportsNativeDialogs = supports;
+#elif defined(__EMSCRIPTEN__)
+    mImpl->supportsNativeDialogs = false;
 #else
     mImpl->supportsNativeDialogs = false;
 #endif
@@ -260,6 +273,8 @@ std::shared_ptr<Theme> Application::theme() const
 #if defined(__APPLE__)
         mImpl->theme = std::make_unique<EmpireTheme>(params);
 #elif defined(_WIN32) || defined(_WIN64)
+        mImpl->theme = std::make_unique<EmpireTheme>(params);
+#elif defined(__EMSCRIPTEN__)
         mImpl->theme = std::make_unique<EmpireTheme>(params);
 #else
         mImpl->theme = std::make_unique<EmpireTheme>(params);

@@ -107,6 +107,8 @@ bool MacOSApplication::isOriginInUpperLeft() const { return false; }
 
 bool MacOSApplication::isWindowBorderInsideWindowFrame() const { return true; }
 
+bool MacOSApplication::windowsMightUseSameDrawContext() const { return false; }
+
 bool MacOSApplication::shouldHideScrollbars() const { return true; }
 
 bool MacOSApplication::canKeyFocusEverything() const

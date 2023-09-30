@@ -245,9 +245,7 @@ bool TextEditorLogic::handleKeyEvent(const KeyEvent& e)
                 break;
             case Key::kEnter:
             case Key::kReturn:
-                if (onTextCommitted) {
-                    onTextCommitted();
-                }
+                commit();
                 break;
             default:
                 break;
@@ -261,6 +259,13 @@ void TextEditorLogic::handleTextEvent(const TextEvent& e)
     insertText(e.utf8);
     if (onTextChanged) {
         onTextChanged();
+    }
+}
+
+void TextEditorLogic::commit()
+{
+    if (onTextCommitted) {
+        onTextCommitted();
     }
 }
 

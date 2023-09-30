@@ -2,6 +2,14 @@ include_directories(AFTER SYSTEM ..
                                  ${CMAKE_BINARY_DIR}/libnativedraw/include
                    )
 
+if (EMSCRIPTEN)
+    # Emscripten does not automatically add optimization
+    if (CMAKE_MAKE_TYPE MATCHES "RELEASE")
+       add_compile_options(-O3)
+    endif ()
+endif()
+
+
 set(TEST_WIDGET_HEADERS fractal.h)
 set(TEST_WIDGET_SOURCES test-widgets.cpp
                         fractal.cpp)
@@ -10,6 +18,12 @@ if (WIN32)
 else()
     add_executable(test-widgets ${TEST_WIDGET_SOURCES})
 endif()
+if (EMSCRIPTEN)
+    add_custom_command(TARGET test-widgets POST_BUILD
+                              COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PROJECT_SOURCE_DIR}/tests/test-widgets.html" $<TARGET_FILE_DIR:test-widgets>
+                      )
+endif()
+
 target_link_libraries(test-widgets uitk)
 
 set(TEST_IO_HEADERS TestCase.h)
