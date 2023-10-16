@@ -490,7 +490,6 @@ void VectorBaseTheme::setParams(const Params& params)
 Size VectorBaseTheme::calcPreferredTextMargins(const DrawContext& dc, const Font& font) const
 {
     auto fm = dc.fontMetrics(font);
-    auto em = fm.ascent + fm.descent;
     auto margin = dc.ceilToNearestPixel(1.5 * fm.descent);
     return Size(margin, margin);
 }
@@ -575,10 +574,10 @@ Rect VectorBaseTheme::calcTextEditRectForFrame(const Rect& frame, const DrawCont
                                                const Font& font) const
 {
     auto textMargins = calcPreferredTextMargins(dc, font);
-    auto fm = dc.fontMetrics(mParams.labelFont);
+    auto fm = dc.fontMetrics(font);
     auto baseline = dc.ceilToNearestPixel(frame.y + 0.5f * (frame.height + fm.capHeight));
     return Rect(frame.x + textMargins.width,
-                baseline - fm.ascent,
+                baseline - fm.capHeight,
                 frame.width - 2.0f * textMargins.width,
                 fm.ascent + fm.descent);
 }
@@ -1329,7 +1328,7 @@ void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaP
         // The layout incorporates the color, so we cannot set it.
         auto textRect = calcTextEditRectForFrame(frame, ui.dc, font);
         if (editor.layout()) {
-            ui.dc.drawText(*editor.layout(), textRect.upperLeft() + Point(scrollOffset, textMargins.height));
+            ui.dc.drawText(*editor.layout(), textRect.upperLeft() + Point(scrollOffset, PicaPt::kZero));
         }
     }
 
