@@ -67,9 +67,8 @@ inline int paramsIndex(const UIContext& context, Theme::WidgetState ws)
 
 }  // namespace
 
-VectorBaseTheme::VectorBaseTheme(const Params& params, const PicaPt& borderWidth,
-                                 const PicaPt& borderRadius)
-    : mParams(params), mBorderWidth(borderWidth), mBorderRadius(borderRadius)
+VectorBaseTheme::VectorBaseTheme(const Params& params)
+    : mParams(params)
 {
     // Cannot call setParams() since it is virtual and we are in the constructor
     setVectorParams(params);
@@ -116,8 +115,8 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     } else {
         mButtonStyles[NORMAL].borderColor = params.nonEditableBackgroundColor.darker(0.2f);
     }
-    mButtonStyles[NORMAL].borderWidth = mBorderWidth;
-    mButtonStyles[NORMAL].borderRadius = mBorderRadius;
+    mButtonStyles[NORMAL].borderWidth = params.borderWidth;
+    mButtonStyles[NORMAL].borderRadius = params.borderRadius;
     mButtonStyles[DISABLED] = mButtonStyles[NORMAL];
     mButtonStyles[DISABLED].bgColor = params.disabledBackgroundColor;
     mButtonStyles[DISABLED].fgColor = params.disabledTextColor;
@@ -152,7 +151,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mButtonUndecoratedStyles[NORMAL].fgColor = params.textColor;
     mButtonUndecoratedStyles[NORMAL].borderColor = Color::kTransparent;
     mButtonUndecoratedStyles[NORMAL].borderWidth = PicaPt::kZero;
-    mButtonUndecoratedStyles[NORMAL].borderRadius = mBorderRadius;
+    mButtonUndecoratedStyles[NORMAL].borderRadius = params.borderRadius;
     mButtonUndecoratedStyles[DISABLED] = mButtonUndecoratedStyles[NORMAL];
     mButtonUndecoratedStyles[DISABLED].fgColor = params.disabledTextColor;
     mButtonUndecoratedStyles[OVER] = mButtonUndecoratedStyles[NORMAL];
@@ -343,7 +342,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
         mScrollbarTrackStyles[NORMAL].borderWidth = PicaPt::kZero;
     } else {
         mScrollbarTrackStyles[NORMAL].borderColor = params.borderColor;
-        mScrollbarTrackStyles[NORMAL].borderWidth = mBorderWidth;
+        mScrollbarTrackStyles[NORMAL].borderWidth = params.borderWidth;
     }
     mScrollbarTrackStyles[NORMAL].borderRadius = PicaPt::kZero;
     mScrollbarTrackStyles[DISABLED] = mScrollbarTrackStyles[NORMAL];
@@ -367,7 +366,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mScrollbarThumbStyles[NORMAL].fgColor = params.textColor;
     mScrollbarThumbStyles[NORMAL].borderColor = Color::kTransparent;
     mScrollbarThumbStyles[NORMAL].borderWidth = PicaPt::kZero;
-    mScrollbarThumbStyles[NORMAL].borderRadius = mBorderRadius;
+    mScrollbarThumbStyles[NORMAL].borderRadius = params.borderRadius;
     mScrollbarThumbStyles[DISABLED] = mScrollbarThumbStyles[NORMAL];
     mScrollbarThumbStyles[OVER] = mScrollbarThumbStyles[NORMAL];
     mScrollbarThumbStyles[DOWN] = mScrollbarThumbStyles[NORMAL];
@@ -393,7 +392,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mTextEditStyles[NORMAL].bgColor = params.editableBackgroundColor;
     mTextEditStyles[NORMAL].fgColor = params.textColor;
     mTextEditStyles[NORMAL].borderColor = params.borderColor;
-    mTextEditStyles[NORMAL].borderWidth = mBorderWidth;
+    mTextEditStyles[NORMAL].borderWidth = params.borderWidth;
     mTextEditStyles[NORMAL].borderRadius = PicaPt::kZero;
     mTextEditStyles[DISABLED] = mTextEditStyles[NORMAL];
     mTextEditStyles[DISABLED].fgColor = params.disabledTextColor;
@@ -404,10 +403,10 @@ void VectorBaseTheme::setVectorParams(const Params &params)
 
     // SearchBar
     copyStyles(mTextEditStyles, mSearchBarStyles);
-    mSearchBarStyles[NORMAL].borderRadius = mBorderRadius;
-    mSearchBarStyles[DISABLED].borderRadius = mBorderRadius;
-    mSearchBarStyles[OVER].borderRadius = mBorderRadius;
-    mSearchBarStyles[DOWN].borderRadius = mBorderRadius;
+    mSearchBarStyles[NORMAL].borderRadius = params.borderRadius;
+    mSearchBarStyles[DISABLED].borderRadius = params.borderRadius;
+    mSearchBarStyles[OVER].borderRadius = params.borderRadius;
+    mSearchBarStyles[DOWN].borderRadius = params.borderRadius;
 
     // Splitter
     mSplitterStyles[NORMAL].bgColor = params.splitterColor;
@@ -421,7 +420,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mScrollViewStyles[NORMAL].bgColor = Color::kTransparent;
     mScrollViewStyles[NORMAL].fgColor = params.textColor;
     mScrollViewStyles[NORMAL].borderColor = params.borderColor;
-    mScrollViewStyles[NORMAL].borderWidth = mBorderWidth;
+    mScrollViewStyles[NORMAL].borderWidth = params.borderWidth;
     mScrollViewStyles[NORMAL].borderRadius = PicaPt::kZero;
     mScrollViewStyles[DISABLED] = mScrollViewStyles[NORMAL];
     mScrollViewStyles[OVER] = mScrollViewStyles[NORMAL];
@@ -477,7 +476,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
         mTooltipStyle.bgColor = params.windowBackgroundColor;  // gets too dark if we use darker()
         mTooltipStyle.borderColor = mTooltipStyle.bgColor.darker();
     }
-    mTooltipStyle.borderWidth = mBorderWidth;
+    mTooltipStyle.borderWidth = params.borderWidth;
 }
 
 const Theme::Params& VectorBaseTheme::params() const { return mParams; }

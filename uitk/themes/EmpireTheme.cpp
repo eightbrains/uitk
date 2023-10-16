@@ -24,6 +24,11 @@
 
 namespace uitk {
 
+namespace {
+static const float kBorderWidthStdPx = 0.5f;
+static const float kBorderRadiusStdPx = 3.0f;
+}
+
 Theme::Params EmpireTheme::defaultParams()
 {
     return EmpireTheme::darkModeParams(Color(0.22f, 0.45f, 0.90f));
@@ -39,6 +44,8 @@ Theme::Params EmpireTheme::EmpireTheme::darkModeParams(const Color& accent)
     params.editableBackgroundColor = Color(0.4f, 0.4f, 0.4f);
     params.disabledBackgroundColor = Color(0.3f, 0.3f, 0.3f);
     params.borderColor = Color(1.0f, 1.0f, 1.0f, 0.2f);
+    params.borderWidth = PicaPt::fromStandardPixels(kBorderWidthStdPx);
+    params.borderRadius = PicaPt::fromStandardPixels(kBorderRadiusStdPx); 
     params.textColor = Color(0.875f, 0.875f, 0.875f);
     if (accentIsDark) {
         params.accentedBackgroundTextColor = params.textColor;
@@ -71,6 +78,8 @@ Theme::Params EmpireTheme::lightModeParams(const Color& accent)
     params.editableBackgroundColor = Color(1.0f, 1.0f, 1.0f);
     params.disabledBackgroundColor = Color(0.85f, 0.85f, 0.85f);
     params.borderColor = Color(0.0f, 0.0f, 0.0f, 0.2f);
+    params.borderWidth = PicaPt::fromStandardPixels(kBorderWidthStdPx);
+    params.borderRadius = PicaPt::fromStandardPixels(kBorderRadiusStdPx); 
     params.textColor = Color(0.1f, 0.1f, 0.1f);
     if (accentIsDark) {
         params.accentedBackgroundTextColor = Color(1.0f, 1.0f, 1.0f);
@@ -130,6 +139,8 @@ Theme::Params EmpireTheme::customParams(const Color& bgColor,
     }
     params.disabledBackgroundColor = params.nonEditableBackgroundColor.blend(fgColor, 0.1667);
     params.borderColor = fgColor.colorWithAlpha(0.2f);
+    params.borderWidth = PicaPt::fromStandardPixels(kBorderWidthStdPx);
+    params.borderRadius = PicaPt::fromStandardPixels(kBorderRadiusStdPx); 
     params.textColor = fgColor;
     if (accentIsDark) {
         params.accentedBackgroundTextColor = Color(1.0f, 1.0f, 1.0f);
@@ -164,10 +175,7 @@ EmpireTheme::EmpireTheme()
 }
 
 EmpireTheme::EmpireTheme(const Params& params)
-    : VectorBaseTheme(params,
-                      PicaPt::fromPixels(0.5, 96),  // borderWidth
-                      PicaPt::fromPixels(3, 96)   // borderRadius
-                     )
+    : VectorBaseTheme(params)
 {
 }
 

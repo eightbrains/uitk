@@ -100,8 +100,6 @@ WASMWindow::WASMWindow(IWindowCallbacks& callbacks,
     } else {
         borderPx = int(std::round(PicaPt::fromStandardPixels(1).toPixels(mImpl->dpi)));
         mImpl->borderWidth = PicaPt::fromPixels(borderPx, mImpl->dpi);
-//        borderPx = 0;
-//        mImpl->borderWidth = PicaPt::kZero;
     }
 
     const int maxWidth = int(osscreen.desktopFrame.width);
@@ -318,16 +316,52 @@ void WASMWindow::onLayout()
 
 void WASMWindow::onDraw()
 {
-    mImpl->callbacks.onDraw(*mImpl->dc);
+    bool drawsBorder = (mImpl->borderWidth > PicaPt::kZero);
 
-    // Draw the border last (if necessary)
-    if (mImpl->borderWidth > PicaPt::kZero) {
-        auto borderColor = Application::instance().theme()->params().nonNativeMenuSeparatorColor;
-        mImpl->dc->setStrokeColor(borderColor);
-        mImpl->dc->setStrokeWidth(mImpl->borderWidth);
+    if (!drawsBorder) {
+        mImpl->callbacks.onDraw(*mImpl->dc);
+    } else {
+        auto &params = Application::instance().theme()->params();
         auto dx = 0.5f * mImpl->borderWidth;
         auto r = mImpl->frame.insetted(dx, dx);
-        mImpl->dc->drawRect(r, kPaintStroke);
+        auto roundedBorder = (params.borderRadius > PicaPt::kZero);
+        // Window::draw() will clip to a rect, so if we are a rounded window
+        // we need to pre-clip to the rounded rect so that any fill does not
+        // bleed into the corners. (We need to do this here because Window
+        // should not know how the OS [which is us in this case] is drawing
+        // the window.)
+        // Design Question: should we always do this beginDraw() and remove
+        //   Window's drawContextMightBeShared property and always do the
+        //   frame offset and clipping (if necessary) here? Seems cleaner for
+        //   Window but dirtier here; now we can at least pretend that it's
+        //   "clean" because the "dirty" path is only for dialogs.
+        if (roundedBorder) {
+            // This is somewhat hacky: to clip, we need to be in a beginDraw,
+            // but Window::onDraw() will also--and correctly--call beginDraw.
+            // We rely on the WASM version of libnativedraw not asserting
+            // if beginDraw() is called twice. There should be a comment to
+            // this effect in the WASM implementation of beginDraw().
+            mImpl->dc->beginDraw();
+            mImpl->dc->save();
+            auto path = mImpl->dc->createBezierPath();
+            path->addRoundedRect(r, params.borderRadius);
+            mImpl->dc->clipToPath(path);
+        }
+        mImpl->callbacks.onDraw(*mImpl->dc);
+        // We do NOT call restore() or endDraw(), because onDraw() already
+        // called endDraw(), which also restores anything unrestored (as is
+        // necessary to make sure the canvas context state is properly
+        // restored.
+
+        // Draw the border last, so it is on top
+        auto borderColor = params.nonNativeMenuSeparatorColor;
+        mImpl->dc->setStrokeColor(borderColor);
+        mImpl->dc->setStrokeWidth(mImpl->borderWidth);
+        if (!roundedBorder) {
+            mImpl->dc->drawRect(r, kPaintStroke);
+        } else {
+            mImpl->dc->drawRoundedRect(r, params.borderRadius, kPaintStroke);
+        }
     }
 }
 
