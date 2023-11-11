@@ -465,6 +465,7 @@ struct Window::Impl
     TooltipWidget *tooltipWidget = nullptr;  // owned by rootWidget
     Widget *grabbedWidget = nullptr;
     Widget *focusedWidget = nullptr;
+    Widget *mouseoverWidget = nullptr;
     IPopupWindow *activePopup = nullptr;
     PopupState popupState = PopupState::kNone;
     struct {
@@ -496,6 +497,33 @@ struct Window::Impl
             // These are redundant, since cancel() should call setPopupMenu(nullptr)
             this->activePopup = nullptr;
             this->popupState = PopupState::kNone;
+        }
+    }
+
+    void setTooltip(Widget *tooltip)
+    {
+        if (!this->isActive) {
+            return;
+        }
+
+        this->tooltipWidget = new TooltipWidget(tooltip);  // TooltipWidget now owns
+        this->rootWidget->addChild(this->tooltipWidget);
+        auto *tw = this->tooltipWidget;
+        auto cursorRect = this->cursorStack.back().osCursor()
+                              ->rectForPosition(this->window.get(), this->lastMousePos);
+        tw->setBasePosition(this->lastMousePos, cursorRect.maxY() - this->lastMousePos.y);
+        tw->setNeedsLayout();
+    }
+
+    void clearTooltip(Window *w)
+    {
+        if (this->tooltipWidget) {
+            this->tooltipWidget->setVisible(false);
+            this->rootWidget->removeChild(this->tooltipWidget);  // transfers ownership to us
+            Application::instance().scheduleLater(w, [widget=this->tooltipWidget]() {
+                delete widget;
+            });
+            this->tooltipWidget = nullptr;
         }
     }
 };
@@ -1023,31 +1051,23 @@ PicaPt Window::borderWidth() const { return mImpl->window->borderWidth(); }
 
 void Window::setTooltip(Widget *tooltip)
 {
-    if (!isActive()) {
-        return;
-    }
-
-    clearTooltip();
-
-    mImpl->tooltipWidget = new TooltipWidget(tooltip);  // TooltipWidget now owns
-    mImpl->rootWidget->addChild(mImpl->tooltipWidget);
-    auto *tw = mImpl->tooltipWidget;
-    auto cursorRect = mImpl->cursorStack.back().osCursor()
-                           ->rectForPosition(mImpl->window.get(), mImpl->lastMousePos);
-    tw->setBasePosition(mImpl->lastMousePos, cursorRect.maxY() - mImpl->lastMousePos.y);
-    tw->setNeedsLayout();
+    mImpl->clearTooltip(this);
+    mImpl->setTooltip(tooltip);
 }
 
 void Window::clearTooltip()
 {
-    if (mImpl->tooltipWidget) {
-        mImpl->tooltipWidget->setVisible(false);
-        mImpl->rootWidget->removeChild(mImpl->tooltipWidget);  // transfers ownership to us
-        Application::instance().scheduleLater(this, [widget=mImpl->tooltipWidget] {
-            delete widget;
-        });
-        mImpl->tooltipWidget = nullptr;
-    }
+    mImpl->clearTooltip(this);
+}
+
+void Window::setMouseoverWidget(Widget *widget)
+{
+    mImpl->mouseoverWidget = widget;
+}
+
+Widget* Window::mouseoverWidget() const
+{
+    return mImpl->mouseoverWidget;
 }
 
 IPopupWindow* Window::popupWindow() const { return mImpl->activePopup; }

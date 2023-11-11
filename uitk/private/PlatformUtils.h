@@ -29,7 +29,7 @@
 
 namespace uitk {
 
-template <typename W>  // W must by (efficiently) copyable
+template <typename W>  // W must be (efficiently) copyable
 class DeferredFunctions // has it's own lock
 {
 public:
