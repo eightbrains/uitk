@@ -225,7 +225,7 @@ struct X11Application::Impl
     // iterators.
     std::list<std::function<void()>> postedFunctions;
 
-    DeferredFunctions postedLater;  // note: has its own lock
+    DeferredFunctions<::Window> postedLater;  // note: has its own lock
 };
 
 X11Application::X11Application()
@@ -336,7 +336,7 @@ bool X11Application::isOriginInUpperLeft() const { return true; }
 // window managers may do this differently, which will be a disaster for us.
 bool X11Application::isWindowBorderInsideWindowFrame() const { return true; }
 
-bool X11Appliaction::windowsMightUseSameDrawContext() const { return false; }
+bool X11Application::windowsMightUseSameDrawContext() const { return false; }
 
 bool X11Application::shouldHideScrollbars() const { return false; }
 
