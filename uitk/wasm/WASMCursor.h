@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2022 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -20,26 +20,33 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_EMPIRE_THEME_H
-#define UITK_EMPIRE_THEME_H
+#ifndef UITK_WASM_CURSOR_H
+#define UITK_WASM_CURSOR_H
 
-#include "VectorBaseTheme.h"
+#include "../OSCursor.h"
+
+#include <memory>
 
 namespace uitk {
 
-class EmpireTheme : public VectorBaseTheme
+class WASMCursor : public OSCursor
 {
 public:
-    static Theme::Params defaultParams();
-    static Theme::Params darkModeParams(const Color& accent);
-    static Theme::Params lightModeParams(const Color& accent);
-    static Theme::Params customParams(const Color& bgColor, const Color& fgColor,
-                                      const Color& accent);
+    WASMCursor(OSCursor::System id);
+    ~WASMCursor();
 
-    EmpireTheme();
-    explicit EmpireTheme(const Params& params);
+    void set(OSWindow *oswindow = nullptr, void *windowSystem = nullptr) const override;
+    void getHotspotPx(float *x, float *y) const override;
+    void getSizePx(float *width, float *height) const override;
+    Rect rectForPosition(OSWindow *oswindow, const Point& pos) const override;
+
+    bool isSystemCursor() const;
+    OSCursor::System systemCursorId() const;
+
+private:
+    struct Impl;
+    std::unique_ptr<Impl> mImpl;
 };
 
 }  // namespace uitk
-#endif // UITK_EMPIRE_THEME_H
-
+#endif // UITK_WASM_CURSOR_H

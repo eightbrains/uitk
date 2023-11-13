@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2023 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -20,8 +20,8 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_WIN32_APPLICATION_H
-#define UITK_WIN32_APPLICATION_H
+#ifndef UITK_WASM_APPLICATION_H
+#define UITK_WASM_APPLICATION_H
 
 #include "../OSApplication.h"
 
@@ -29,13 +29,16 @@
 
 namespace uitk {
 
-class Win32Window;
+struct OSScreen;
+class TextEditorLogic;
+class WASMCursor;
+class WASMWindow;
 
-class Win32Application : public OSApplication
+class WASMApplication : public OSApplication
 {
 public:
-    Win32Application();
-    ~Win32Application();
+    WASMApplication();
+    ~WASMApplication();
 
     void setExitWhenLastWindowCloses(bool exits) override;
     int run() override;
@@ -65,9 +68,21 @@ public:
     Theme::Params themeParams() const override;
 
 public:
-    // HWND is void* to keep Windows headers out
-    void registerWindow(void* hwnd, Win32Window* w);
-    void unregisterWindow(void* hwnd);
+    // This is roughly equivalent to the OS API
+    void registerWindow(WASMWindow *w);
+    void unregisterWindow(WASMWindow *w);
+    void setWindowFrame(WASMWindow *w, const Rect& frame);
+    void showWindow(WASMWindow *w, bool show);
+    void raiseWindow(const WASMWindow *w);
+    void postRedraw(const WASMWindow *w);
+    const OSScreen& screenOfWindow(const WASMWindow *w);
+    DrawContext* getDrawContext(WASMWindow *w);
+    const Point& currentMouseLocation() const;
+    void setCursor(const WASMWindow *w, const WASMCursor& cursor);
+    void setTextEditing(TextEditorLogic *te, const Rect& frame);
+
+    // Called each frame browser
+    static void onTick();
 
 private:
     struct Impl;
@@ -75,4 +90,4 @@ private:
 };
 
 } // namespace uitk
-#endif // UITK_WIN32_APPLICATION_H
+#endif // UITK_WASM_APPLICATION_H

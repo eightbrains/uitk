@@ -30,6 +30,7 @@
 #include <nativedraw.h>
 
 #include <limits>
+#include <list>
 #include <optional>
 
 namespace uitk {
@@ -92,6 +93,9 @@ Widget::Widget()
 
 Widget::~Widget()
 {
+    if (mImpl->parent) {
+        mImpl->parent->removeChild(this);
+    }
     mImpl->clearTooltip();
     clearAllChildren();
 }
@@ -280,6 +284,11 @@ Widget* Widget::removeChild(Widget *w)
 {
     for (auto it = mImpl->children.begin();  it != mImpl->children.end();  ++it) {
         if (*it == w) {
+            if (auto *win = window()) {
+                if (win->mouseoverWidget() == w) {
+                    win->setMouseoverWidget(nullptr);
+                }
+            }
             mImpl->children.erase(it);
             w->mImpl->parent = nullptr;
             setNeedsLayout();
@@ -294,20 +303,26 @@ void Widget::removeAllChildren()
     // Since we are returning these widgets to ownership of the caller,
     // clear their state, in case the mouse was over one. (For instance,
     // selecting an item in a combobox.)
+    auto *win = window();
+    auto *mw = (win ? win->mouseoverWidget() : nullptr);
     for (auto *child : mImpl->children) {
+        if (win && mw == child) {
+            win->setMouseoverWidget(nullptr);
+        }
         child->setState(MouseState::kNormal);
         child->resetThemeState();
         child->mImpl->parent = nullptr;
     }
     mImpl->children.clear();
     // Do not need a layout, technically: there's nothing left to layout
-    if (auto *win = window()) {
+    if (win) {
         win->setNeedsAccessibilityUpdate();
     }
 }
 
 void Widget::clearAllChildren()
 {
+    removeAllChildren();
     for (auto *child : mImpl->children) {
         delete child;
     }
@@ -441,11 +456,10 @@ void Widget::setState(MouseState state, bool fromExited /*= false*/)
         mImpl->state = MouseState::kDisabled;
         return;
     }
-    
-    if (mImpl->state == MouseState::kNormal && state == MouseState::kMouseDown) {
-        state = state;
+    if (mImpl->state == state) {
+        return;
     }
-    
+
     auto oldState = mImpl->state;
     mImpl->state = state;
 
@@ -455,9 +469,7 @@ void Widget::setState(MouseState state, bool fromExited /*= false*/)
         mouseExited();
     }
 
-    if (oldState != state) {
-        setNeedsDraw();
-    }
+    setNeedsDraw();
 }
 
 void Widget::setThemeState(Theme::WidgetState state)
@@ -524,18 +536,48 @@ Widget::EventResult Widget::mouse(const MouseEvent& e)
         return EventResult::kIgnored;
     }
 
+    auto *win = window();
     if (e.type == MouseEvent::Type::kButtonDown) {
         mImpl->clearTooltip();
-        if (auto *w = window()) {
-            w->clearTooltip();
+        if (win) {
+            win->clearTooltip();
         }
     }
+
+    auto *oldMouseoverWidget = (win ? win->mouseoverWidget() : nullptr);
 
     auto result = EventResult::kIgnored;
     for (auto *child : mImpl->children) {
         result = mouseChild(e, child, result);
         if (result == EventResult::kConsumed) {
             break;
+        }
+    }
+
+    if (win && oldMouseoverWidget) {
+        auto *mw = win->mouseoverWidget();
+        if (oldMouseoverWidget != mw && oldMouseoverWidget->state() != MouseState::kNormal) {
+            auto calcParents = [](Widget *w) -> std::list<Widget*> {
+                std::list<Widget*> parents; // list, because will always insert
+                auto *p = w;
+                do {
+                    p = p->parent();
+                    parents.push_front(p);
+                } while (p);
+                return parents;
+             };
+
+            auto oldParents = calcParents(oldMouseoverWidget);
+            auto newParents = calcParents(mw);
+            auto oit = oldParents.begin();
+            auto nit = newParents.begin();
+            while (oit != oldParents.end() && nit != newParents.end() && *nit == *oit) {
+                ++oit;
+                ++nit;
+            }
+            for (; oit != oldParents.end();  ++oit) {
+                (*oit)->mouseExited();
+            }
         }
     }
 
@@ -552,9 +594,13 @@ Widget::EventResult Widget::mouseChild(const MouseEvent& e, Widget *child, Event
         // Mouse is in child, check if we just entered
         switch (e.type) {
             case MouseEvent::Type::kMove:
-            case MouseEvent::Type::kScroll:
+            case MouseEvent::Type::kScroll: {
                 child->setState(MouseState::kMouseOver);
+                if (auto *win = child->window()) {
+                    win->setMouseoverWidget(child);
+                }
                 break;
+            }
             case MouseEvent::Type::kButtonDown:
             case MouseEvent::Type::kDrag:
                 child->setState(MouseState::kMouseDown);
@@ -594,11 +640,12 @@ Widget::EventResult Widget::mouseChild(const MouseEvent& e, Widget *child, Event
 
 void Widget::mouseEntered()
 {
+    auto *w = window();
     if (hasTooltip()) {
         assert(mImpl->tooltipTimer == Application::kInvalidScheduledId);
         mImpl->lastTooltipPreventingActivityTime = Application::instance().microTime();
         auto tooltipDelay = Application::instance().tooltipDelaySecs();
-        mImpl->tooltipTimer = Application::instance().scheduleLater(window(), 0.1f,
+        mImpl->tooltipTimer = Application::instance().scheduleLater(w, 0.1f,
                                                                     Application::ScheduleMode::kRepeating,
                                                                     [this,tooltipDelay](Application::ScheduledId id) {
             assert(state() != MouseState::kNormal);
@@ -609,7 +656,7 @@ void Widget::mouseEntered()
             }
         });
     } else {
-        if (auto *w = window()) {
+        if (w) {
             w->clearTooltip();
         }
     }
@@ -617,9 +664,10 @@ void Widget::mouseEntered()
 
 void Widget::mouseExited()
 {
+    auto *w = window();
     if (hasTooltip()) {
         mImpl->clearTooltip();
-        if (auto *w = window()) {
+        if (w) {
             w->clearTooltip();
         }
     }
@@ -636,8 +684,11 @@ void Widget::mouseExited()
         if (child->state() == MouseState::kMouseOver
             || child->state() == MouseState::kMouseDown) {
             child->mouseExited();
+            setState(MouseState::kNormal, true);
         }
     }
+
+    assert(state() == MouseState::kNormal);
 }
 
 void Widget::onTooltip() const

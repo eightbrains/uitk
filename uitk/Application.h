@@ -150,6 +150,14 @@ public:
     /// border). This is useful for positioning popup windows.
     bool isWindowBorderInsideWindowFrame() const;
 
+    /// Returns true if the platform does not have real windows and we are
+    /// drawing into a framebuffer (for instance, HTML/Canvas with WebAssembly).
+    /// Returns false otherwise. This is used by Window to properly clip to the
+    /// window bounds and to restore the context after drawing, but should not
+    /// be needed generally, as the drawing context is provided to the widget
+    /// already configured.
+    bool windowsMightUseSameDrawContext() const;
+
     /// Returns true if the operating system hides scrollbars when not
     /// scrolling (e.g. macOS), false otherwise.
     bool shouldHideScrollbars() const;

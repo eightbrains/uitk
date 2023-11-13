@@ -28,6 +28,8 @@
 #include "macos/MacOSCursor.h"
 #elif defined(_WIN32) || defined(_WIN64)
 #include "win32/Win32Cursor.h"
+#elif (__EMSCRIPTEN__)
+#include "wasm/WASMCursor.h"
 #else
 #include "x11/X11Cursor.h"
 #endif
@@ -68,6 +70,8 @@ public:
                 newCursor = new MacOSCursor(id);
 #elif defined(_WIN32) || defined(_WIN64)
                 newCursor = new Win32Cursor(id);
+#elif defined(__EMSCRIPTEN__)
+                newCursor = new WASMCursor(id);
 #else
                 newCursor = new X11Cursor(id);
 #endif

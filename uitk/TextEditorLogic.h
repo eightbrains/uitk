@@ -196,6 +196,7 @@ public:
     virtual void moveOneLineUp(SelectionMode mode);
     virtual void moveOneLineDown(SelectionMode mode);
     virtual void moveToLocation(Index i, SelectionMode mode);
+    virtual void commit();
 
     bool canCopyNow() const override;
     void copyToClipboard() override;

@@ -1,0 +1,29 @@
+<html>
+  <div style="display: flex; flex-direction: column; height: 100%">
+  <canvas id="canvas" style="flex-grow: 1;"></canvas>
+  <textarea id="output" rows="8" style="margin-top: 1em; border: 1px solid #888;"></textarea>
+  </div>
+  <script type="text/javascript">
+    var Module = {
+        preRun: [],
+        postRun: [],
+        print: (function() {
+            var e = document.getElementById("output");
+            if (e) {
+                e.value = '';  // clear browser cache
+            }
+            return function(text) {
+                if (arguments.length > 1) {
+                    text = Array.prototype.slice.call(arguments).join(' ');
+                }
+                console.log(text);
+                if (e) {
+                    e.value += text + '\n';
+                    e.scrollTop = e.scrollHeight;  // scroll to bottom
+                }
+            };
+        })(),
+    };
+  </script>
+  <script type="text/javascript" src="test-widgets.js"></script>
+</html>

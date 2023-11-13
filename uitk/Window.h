@@ -257,6 +257,14 @@ public:
     void setFocusWidget(Widget *w, ShowFocusRing show = ShowFocusRing::kYes);
     Widget* focusWidget() const;
 
+    /// Sets the widget that is currently moused-over. Does not take ownership.
+    /// This is internal, just stores the currently moused-over widget so
+    /// that Widget can ensure that exit events are delivered, even when the
+    /// cursor moves too quickly. (This is not generally a problem exept in
+    /// the browser.)
+    void setMouseoverWidget(Widget *widget);
+    Widget* mouseoverWidget() const;
+
     /// Moves key focus to the next focusable widget if dir is positive,
     /// previous if negative.
     void moveKeyFocus(int dir);

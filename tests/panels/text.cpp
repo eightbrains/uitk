@@ -186,7 +186,7 @@ public:
         mSimple = new TextTestWidget(t, TextTestWidget::kShowSizeSlider);
         addChild(mSimple);
 
-        t = Text("single double dotted wavy\ndotdot wavywavy strike\nsuperstrikeonetwodotwavy\nsubstrikeonetwodotwavy", Font(), Color::kTextDefault);
+        t = Text("single double dotted wavy\ndotdot wavywavy strike\nsuperTstrikeonetwodotwavy\nsubgstrikeonetwodotwavy", Font(), Color::kTextDefault);
         t.setUnderlineStyle(kUnderlineSingle, 0, 6);
         t.setUnderlineStyle(kUnderlineDouble, 7, 6);
         t.setUnderlineStyle(kUnderlineDotted, 14, 6);
@@ -201,18 +201,18 @@ public:
         t.setUnderlineStyle(kUnderlineWavy, 37, 4);
         t.setUnderlineColor(Color(0.0f, 0.8f, 0.2f), 37, 4);
         t.setStrikethrough(42, 6);
-        t.setSuperscript(54, 19);
-        t.setStrikethrough(54, 6);
-        t.setUnderlineStyle(kUnderlineSingle, 60, 3);
-        t.setUnderlineStyle(kUnderlineDouble, 63, 3);
-        t.setUnderlineStyle(kUnderlineDotted, 66, 3);
-        t.setUnderlineStyle(kUnderlineWavy, 69, 4);
-        t.setSubscript(77, 19);
-        t.setStrikethrough(77, 6);
-        t.setUnderlineStyle(kUnderlineSingle, 83, 3);
-        t.setUnderlineStyle(kUnderlineDouble, 86, 3);
-        t.setUnderlineStyle(kUnderlineDotted, 89, 3);
-        t.setUnderlineStyle(kUnderlineWavy, 92, 4);
+        t.setSuperscript(55, 19);
+        t.setStrikethrough(55, 6);
+        t.setUnderlineStyle(kUnderlineSingle, 61, 3);
+        t.setUnderlineStyle(kUnderlineDouble, 64, 3);
+        t.setUnderlineStyle(kUnderlineDotted, 67, 3);
+        t.setUnderlineStyle(kUnderlineWavy, 70, 4);
+        t.setSubscript(79, 19);
+        t.setStrikethrough(79, 6);
+        t.setUnderlineStyle(kUnderlineSingle, 85, 3);
+        t.setUnderlineStyle(kUnderlineDouble, 88, 3);
+        t.setUnderlineStyle(kUnderlineDotted, 91, 3);
+        t.setUnderlineStyle(kUnderlineWavy, 94, 4);
         mUnderline = new TextTestWidget(t, TextTestWidget::kShowSizeSlider);
         addChild(mUnderline);
 
@@ -230,6 +230,7 @@ public:
         t.setPointSize(PicaPt(18), 7, 3);
         t.setSuperscript(15, 1);
         t.setSubscript(19, 1);
+        t.setSubscript(21, 1);
         mGlyphs = new TextTestWidget(t, TextTestWidget::kShowGlyphsRects);
         addChild(mGlyphs);
 
@@ -259,7 +260,7 @@ public:
         t = Text("Lorem ipsum dolor\nsit amet consectetur\nadipiscing elit sed do\neiusmod tempor\nincididunt ut labore\net dolore magna aliqua.\nUt enim ad minim\nveniam quis nostrud\nexercitation ullamco\nlaboris nisi ut aliquip\nex ea commodo\nconsequat.", Font(), Color::kTextDefault);
         t.setStrikethrough(22, 4);
         t.setStrikethrough(159, 12);
-        t.setStrikethrough(219, 9);
+        t.setStrikethrough(218, 9);
         mTallSpacings = new TextTestWidget(t, TextTestWidget::kNone);
         addChild(mTallSpacings);
         mTallLineHeightSlider = new Slider();

@@ -73,6 +73,8 @@ public:
         Color editableBackgroundColor;
         Color disabledBackgroundColor;
         Color borderColor; // if a border is used, this is the color to use
+        PicaPt borderRadius;
+        PicaPt borderWidth;
         Color textColor;
         Color disabledTextColor;
         Color accentedBackgroundTextColor;  // for when accentColor is bg of text

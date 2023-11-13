@@ -312,7 +312,7 @@ public:
                     popup->cancel();
                 }
                 if (menu) {
-                    menu->show(w, convertToWindowFromLocal(bounds().upperRight()));
+                    menu->show(w, convertToWindowFromLocal(bounds().upperRight() - Point(PicaPt::kZero, mSubmenuVerticalMargin)));
                 }
             }
         }
@@ -329,6 +329,13 @@ public:
                                                        Theme::MenuItemAttribute::kSubmenu, nullptr);
     }
 
+    void layout(const LayoutContext& context) override
+    {
+        Super::layout(context);
+
+        mSubmenuVerticalMargin = context.theme.calcPreferredMenuVerticalMargin();
+    }
+
     void mouseEntered() override
     {
         Widget::mouseEntered();  // skip parent: don't necessary want to close an open menu
@@ -341,6 +348,9 @@ public:
         context.theme.drawMenuItem(context, bounds(), mShortcutWidth, text(), shortcut(),
                                    Theme::MenuItemAttribute::kSubmenu, style(s), s);
     }
+
+private:
+    PicaPt mSubmenuVerticalMargin;
 };
 
 class MenuListView : public ListView
@@ -1230,14 +1240,14 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord,
     osUL.x = int(std::round(osUL.x));
     osUL.y = int(std::round(osUL.y));
 #else
-    // I'm not sure why X11 needs to be truncated and macOS/Win32 do not
+    // I'm not sure why X11/Emscripten needs to be truncated and macOS/Win32 do not
     osUL.x = int(osUL.x);
     osUL.y = int(osUL.y);
 #endif
     // The window title will appear on the accessibility window list, so it is useful to have one
     mImpl->menuWindow = new Window("Popup menu", int(osUL.x), int(osUL.y), 0, 0,
                                    (Window::Flags::Value)(Window::Flags::kPopup | extraWindowFlags));
-    // The window border is inside the window area on macOS and X11
+    // The window border is inside the window area on macOS, X11, HTML/Canvas.
     // (But, if X11 draws the border on the outside and the window manager
     // treats a request to move to (x, y) as pertaining to the corner of the
     // border not the corner of the window, it will be the same thing is the

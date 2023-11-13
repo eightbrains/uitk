@@ -30,8 +30,7 @@ namespace uitk {
 class VectorBaseTheme : public Theme
 {
 public:
-    explicit VectorBaseTheme(const Params& params, const PicaPt& borderWidth,
-                             const PicaPt& borderRadius);
+    explicit VectorBaseTheme(const Params& params);
 
     const Params& params() const override;
     void setParams(const Params& params) override;
@@ -147,8 +146,6 @@ protected:
 
 protected:
     Params mParams;
-    PicaPt mBorderWidth;
-    PicaPt mBorderRadius;
 
     WidgetStyle mLabelStyles[6];
     WidgetStyle mButtonStyles[6];

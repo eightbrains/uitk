@@ -67,9 +67,8 @@ inline int paramsIndex(const UIContext& context, Theme::WidgetState ws)
 
 }  // namespace
 
-VectorBaseTheme::VectorBaseTheme(const Params& params, const PicaPt& borderWidth,
-                                 const PicaPt& borderRadius)
-    : mParams(params), mBorderWidth(borderWidth), mBorderRadius(borderRadius)
+VectorBaseTheme::VectorBaseTheme(const Params& params)
+    : mParams(params)
 {
     // Cannot call setParams() since it is virtual and we are in the constructor
     setVectorParams(params);
@@ -116,8 +115,8 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     } else {
         mButtonStyles[NORMAL].borderColor = params.nonEditableBackgroundColor.darker(0.2f);
     }
-    mButtonStyles[NORMAL].borderWidth = mBorderWidth;
-    mButtonStyles[NORMAL].borderRadius = mBorderRadius;
+    mButtonStyles[NORMAL].borderWidth = params.borderWidth;
+    mButtonStyles[NORMAL].borderRadius = params.borderRadius;
     mButtonStyles[DISABLED] = mButtonStyles[NORMAL];
     mButtonStyles[DISABLED].bgColor = params.disabledBackgroundColor;
     mButtonStyles[DISABLED].fgColor = params.disabledTextColor;
@@ -152,7 +151,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mButtonUndecoratedStyles[NORMAL].fgColor = params.textColor;
     mButtonUndecoratedStyles[NORMAL].borderColor = Color::kTransparent;
     mButtonUndecoratedStyles[NORMAL].borderWidth = PicaPt::kZero;
-    mButtonUndecoratedStyles[NORMAL].borderRadius = mBorderRadius;
+    mButtonUndecoratedStyles[NORMAL].borderRadius = params.borderRadius;
     mButtonUndecoratedStyles[DISABLED] = mButtonUndecoratedStyles[NORMAL];
     mButtonUndecoratedStyles[DISABLED].fgColor = params.disabledTextColor;
     mButtonUndecoratedStyles[OVER] = mButtonUndecoratedStyles[NORMAL];
@@ -313,13 +312,10 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     // Slider
     copyStyles(mButtonStyles, mSliderTrackStyles);
     mSliderTrackStyles[NORMAL].fgColor = params.accentColor;
-    mSliderTrackStyles[DISABLED].fgColor = params.accentColor.toGrey();
+    mSliderTrackStyles[DISABLED].fgColor = params.accentColor.blend(params.windowBackgroundColor, 0.5f);
     mSliderTrackStyles[OVER] = mSliderTrackStyles[NORMAL];
     mSliderTrackStyles[DOWN] = mSliderTrackStyles[NORMAL];
-    // Note that text colors can be alpha on macOS, and we need the thumb's background
-    // colors to be solid to hide everything underneath.
     copyStyles(mButtonStyles, mSliderThumbStyles);
-    mSliderThumbStyles[DISABLED].bgColor = Color(0.5f, 0.5f, 0.5f);
     if (isDarkMode) {
         mSliderThumbStyles[NORMAL].bgColor = Color(0.85f, 0.85f, 0.85f);
         mSliderThumbStyles[OVER].bgColor = Color(0.9f, 0.9f, 0.9f);
@@ -328,7 +324,14 @@ void VectorBaseTheme::setVectorParams(const Params &params)
         mSliderThumbStyles[NORMAL].bgColor = Color(1.0f, 1.0f, 1.0f);
         mSliderThumbStyles[OVER].bgColor = Color(0.975f, 0.975f, 0.975f);
         mSliderThumbStyles[DOWN].bgColor = Color(0.95f, 0.95f, 0.95f);
+        mSliderThumbStyles[NORMAL].borderColor = Color(0.5f, 0.5f, 0.5f);
+        mSliderThumbStyles[OVER].borderColor = mSliderThumbStyles[NORMAL].borderColor;
+        mSliderThumbStyles[DOWN].borderColor = mSliderThumbStyles[NORMAL].borderColor;
+        mSliderThumbStyles[INACTIVE_WIN].borderColor = mSliderThumbStyles[NORMAL].borderColor;
     }
+    // Note that colors can be alpha on macOS, and we need the thumb's background
+    // color to be solid to hide everything underneath.
+    mSliderThumbStyles[DISABLED].bgColor = mSliderThumbStyles[NORMAL].bgColor.blend(params.windowBackgroundColor, 0.5f).colorWithAlpha(1.0f);
     mSliderThumbStyles[INACTIVE_WIN] = mSliderThumbStyles[NORMAL];
 
     // Scrollbar
@@ -339,7 +342,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
         mScrollbarTrackStyles[NORMAL].borderWidth = PicaPt::kZero;
     } else {
         mScrollbarTrackStyles[NORMAL].borderColor = params.borderColor;
-        mScrollbarTrackStyles[NORMAL].borderWidth = mBorderWidth;
+        mScrollbarTrackStyles[NORMAL].borderWidth = params.borderWidth;
     }
     mScrollbarTrackStyles[NORMAL].borderRadius = PicaPt::kZero;
     mScrollbarTrackStyles[DISABLED] = mScrollbarTrackStyles[NORMAL];
@@ -363,7 +366,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mScrollbarThumbStyles[NORMAL].fgColor = params.textColor;
     mScrollbarThumbStyles[NORMAL].borderColor = Color::kTransparent;
     mScrollbarThumbStyles[NORMAL].borderWidth = PicaPt::kZero;
-    mScrollbarThumbStyles[NORMAL].borderRadius = mBorderRadius;
+    mScrollbarThumbStyles[NORMAL].borderRadius = params.borderRadius;
     mScrollbarThumbStyles[DISABLED] = mScrollbarThumbStyles[NORMAL];
     mScrollbarThumbStyles[OVER] = mScrollbarThumbStyles[NORMAL];
     mScrollbarThumbStyles[DOWN] = mScrollbarThumbStyles[NORMAL];
@@ -389,7 +392,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mTextEditStyles[NORMAL].bgColor = params.editableBackgroundColor;
     mTextEditStyles[NORMAL].fgColor = params.textColor;
     mTextEditStyles[NORMAL].borderColor = params.borderColor;
-    mTextEditStyles[NORMAL].borderWidth = mBorderWidth;
+    mTextEditStyles[NORMAL].borderWidth = params.borderWidth;
     mTextEditStyles[NORMAL].borderRadius = PicaPt::kZero;
     mTextEditStyles[DISABLED] = mTextEditStyles[NORMAL];
     mTextEditStyles[DISABLED].fgColor = params.disabledTextColor;
@@ -400,10 +403,10 @@ void VectorBaseTheme::setVectorParams(const Params &params)
 
     // SearchBar
     copyStyles(mTextEditStyles, mSearchBarStyles);
-    mSearchBarStyles[NORMAL].borderRadius = mBorderRadius;
-    mSearchBarStyles[DISABLED].borderRadius = mBorderRadius;
-    mSearchBarStyles[OVER].borderRadius = mBorderRadius;
-    mSearchBarStyles[DOWN].borderRadius = mBorderRadius;
+    mSearchBarStyles[NORMAL].borderRadius = params.borderRadius;
+    mSearchBarStyles[DISABLED].borderRadius = params.borderRadius;
+    mSearchBarStyles[OVER].borderRadius = params.borderRadius;
+    mSearchBarStyles[DOWN].borderRadius = params.borderRadius;
 
     // Splitter
     mSplitterStyles[NORMAL].bgColor = params.splitterColor;
@@ -417,7 +420,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     mScrollViewStyles[NORMAL].bgColor = Color::kTransparent;
     mScrollViewStyles[NORMAL].fgColor = params.textColor;
     mScrollViewStyles[NORMAL].borderColor = params.borderColor;
-    mScrollViewStyles[NORMAL].borderWidth = mBorderWidth;
+    mScrollViewStyles[NORMAL].borderWidth = params.borderWidth;
     mScrollViewStyles[NORMAL].borderRadius = PicaPt::kZero;
     mScrollViewStyles[DISABLED] = mScrollViewStyles[NORMAL];
     mScrollViewStyles[OVER] = mScrollViewStyles[NORMAL];
@@ -473,7 +476,7 @@ void VectorBaseTheme::setVectorParams(const Params &params)
         mTooltipStyle.bgColor = params.windowBackgroundColor;  // gets too dark if we use darker()
         mTooltipStyle.borderColor = mTooltipStyle.bgColor.darker();
     }
-    mTooltipStyle.borderWidth = mBorderWidth;
+    mTooltipStyle.borderWidth = params.borderWidth;
 }
 
 const Theme::Params& VectorBaseTheme::params() const { return mParams; }
@@ -486,7 +489,6 @@ void VectorBaseTheme::setParams(const Params& params)
 Size VectorBaseTheme::calcPreferredTextMargins(const DrawContext& dc, const Font& font) const
 {
     auto fm = dc.fontMetrics(font);
-    auto em = fm.ascent + fm.descent;
     auto margin = dc.ceilToNearestPixel(1.5 * fm.descent);
     return Size(margin, margin);
 }
@@ -571,10 +573,10 @@ Rect VectorBaseTheme::calcTextEditRectForFrame(const Rect& frame, const DrawCont
                                                const Font& font) const
 {
     auto textMargins = calcPreferredTextMargins(dc, font);
-    auto fm = dc.fontMetrics(mParams.labelFont);
+    auto fm = dc.fontMetrics(font);
     auto baseline = dc.ceilToNearestPixel(frame.y + 0.5f * (frame.height + fm.capHeight));
     return Rect(frame.x + textMargins.width,
-                baseline - fm.ascent,
+                baseline - fm.capHeight,
                 frame.width - 2.0f * textMargins.width,
                 fm.ascent + fm.descent);
 }
@@ -1299,6 +1301,7 @@ void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaP
     textRect.width -= 2.0f * textMargins.width;
 
     PicaPt caretWidth = ui.dc.ceilToNearestPixel(0.05f * textRect.height);
+    caretWidth = std::max(caretWidth, ui.dc.onePixel());
 
     ui.dc.save();
     // Outset textRect by the caret width for the clip rect so that cursor is visible at edges
@@ -1324,7 +1327,7 @@ void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaP
         // The layout incorporates the color, so we cannot set it.
         auto textRect = calcTextEditRectForFrame(frame, ui.dc, font);
         if (editor.layout()) {
-            ui.dc.drawText(*editor.layout(), textRect.upperLeft() + Point(scrollOffset, textMargins.height));
+            ui.dc.drawText(*editor.layout(), textRect.upperLeft() + Point(scrollOffset, PicaPt::kZero));
         }
     }
 
