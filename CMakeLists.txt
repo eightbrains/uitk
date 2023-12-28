@@ -6,7 +6,11 @@ project(uitk)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_CMD_FOR_EXTERNAL_PROJECT cmake)
+# WebAssembly needs a different command, but as far as I can tell we cannot
+# get the path to the cmake executable. If we pass an empty string here
+# then ExternalProject_Add's CMAKE_COMMAND gets an empty string, which it
+# fortunately interprets to mean "run the normal command".
+set(CMAKE_CMD_FOR_EXTERNAL_PROJECT "")
 
 if (APPLE)
     # Clang doesn't even warn about forgetting to return a value!
