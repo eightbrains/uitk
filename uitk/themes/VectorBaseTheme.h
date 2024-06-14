@@ -110,7 +110,7 @@ public:
     void drawIncDec(UIContext& ui, const Rect& frame, WidgetState incState, WidgetState decState) const override;
     WidgetStyle textEditStyle(UIContext& ui, const WidgetStyle& style,
                               WidgetState state) const override;
-    void drawTextEdit(UIContext& ui, const Rect& frame, const PicaPt& scrollOffset,
+    void drawTextEdit(UIContext& ui, const Rect& frame, const Point& scrollOffset,
                       const std::string& placeholder, TextEditorLogic& editor, int horizAlign, 
                       const WidgetStyle& style, WidgetState state, bool hasFocus) const override;
     void drawSearchBar(UIContext& ui, const Rect& frame, const WidgetStyle& style,

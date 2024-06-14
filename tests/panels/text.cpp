@@ -119,26 +119,30 @@ public:
 
     void draw(UIContext& context) override
     {
-        Super::draw(context);
-
         // This is pretty inefficient, generating glyphs every draw, but it shouldn't be a problem,
         // and it's a lot simpler.
         if (mFlags & kShowGlyphsRects) {
-            auto labelMetrics = context.theme.params().labelFont.metrics(context.dc);
-            auto margin = context.dc.ceilToNearestPixel(labelMetrics.descent);
-            auto layout = context.dc.createTextLayout(mLabel->richText(), mLabel->frame().size(),
-                                                      mLabel->alignment());
+            auto font = context.theme.params().labelFont;
+            auto labelMetrics = font.metrics(context.dc);
+            auto margin = context.theme.calcPreferredTextMargins(context.dc, font);
+            // Since we are recreating Label's text, we must do it exactly how Label does it.
+            // In particular, we need to provide a replacement font for Font().
+            auto layout = context.dc.createTextLayout(mLabel->richText(), font,
+                                                      context.theme.params().textColor,
+                                                      mLabel->frame().size(), mLabel->alignment());
             auto glyphs = layout->glyphs();
+            auto ul = Point(margin.width, margin.height) + mLabel->frame().upperLeft();
 
             context.dc.save();
             context.dc.setStrokeColor(Color(0.5f, 0.5f, 0.5f));
             context.dc.setStrokeWidth(context.dc.onePixel());
             for (auto &g : glyphs) {
-                context.dc.drawRect(g.frame + Point(margin, margin) + mLabel->frame().upperLeft(),
-                                    kPaintStroke);
+                context.dc.drawRect(g.frame + ul, kPaintStroke);
             }
             context.dc.restore();
         }
+
+        Super::draw(context);
     }
 
 private:
@@ -330,7 +334,7 @@ private:
 
     void updateSpacingText()
     {
-        Text t("lorem ipsum dolor\nsit amet consectetur\nadipiscing elit", Font(), Color::kTextDefault);
+        Text t("lorem ipsum dolor\nsit amet consectetur\nadipiscing elit\n星垂平野闊Egyptदेवनागरी", Font(), Color::kTextDefault);
         t.setStrikethrough(22, 4);  // all platforms draw their own strikethrough
         t.setCharacterSpacing(PicaPt(float(mCharSpacingSlider->doubleValue())));
         t.setLineHeightMultiple(float(mLineHeightSlider->doubleValue()));

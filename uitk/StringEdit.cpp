@@ -30,6 +30,7 @@
 #include "UIContext.h"
 #include "Window.h"
 #include "private/Utils.h"
+#include "themes/Theme.h"
 
 namespace uitk {
 
@@ -59,8 +60,8 @@ public:
 
 }  // namespace
 
-PicaPt calcScrollOffset(const StringEditorLogic& editor, const Size& viewSize,
-                        int horizAlign, const PicaPt& currentScrollX)
+Point calcScrollOffset(const DrawContext& dc, const Font& font, const StringEditorLogic& editor,
+                       const Size& viewSize, int horizAlign, const Size& margins, const Point& currentScroll)
 {
     auto sel = editor.selection();
     auto idx = sel.cursorIndex(0);
@@ -68,11 +69,11 @@ PicaPt calcScrollOffset(const StringEditorLogic& editor, const Size& viewSize,
         idx += editor.imeConversion().cursorOffset;
     }
     auto r = Rect(PicaPt::kZero, PicaPt::kZero, viewSize.width, viewSize.height);
-    auto textWidth = editor.layout()->metrics().width;
-    if (textWidth <= r.width) {
-        return PicaPt::kZero;
-    }
+    auto textMetrics = editor.layout()->metrics();
+    auto textWidth = textMetrics.width;
+    auto textHeight = textMetrics.height;
     PicaPt textStartX;
+    PicaPt textStartY = margins.height;
     switch (horizAlign) {
         default:
         case Alignment::kLeft:
@@ -85,34 +86,85 @@ PicaPt calcScrollOffset(const StringEditorLogic& editor, const Size& viewSize,
             textStartX = r.maxX() - textWidth;
             break;
     }
-    auto cursorPt = Point(textStartX, PicaPt::kZero) +
-                    Point(editor.pointAtIndex(idx).x, 0.5f * viewSize.height);
-    if (r.contains(cursorPt + Point(currentScrollX, PicaPt::kZero))) {
-        // If we deleted characters from the right (subtract off 1 pt in case of roundoff errors)
-        if (textWidth > r.width && textStartX + textWidth + currentScrollX < r.maxX() - PicaPt(1)) {
-            return r.width - textWidth;
+    auto glyphRect = editor.glyphRectAtIndex(idx);
+    // Add an extra line to the bottom if there is a trailing empty line
+    if (!editor.isEmpty() && editor.string().back() == '\n') {
+        auto ag = dc.createTextLayout(Text("Ag\nAg", font, Color::kGrey),
+                                      Size(Button::kDimGrow, Button::kDimGrow));
+        auto &glyph3 = ag->glyphs()[3];
+        auto extraHeight = glyph3.frame.y - ag->glyphs()[0].frame.y;
+        textHeight += extraHeight;
+        if (idx == editor.size()) {
+            glyphRect = Rect(glyph3.frame.x, textHeight - extraHeight, PicaPt::kZero, glyph3.frame.height);
         }
-        // If we deleted characters from the left (subtract off 1 pt in case of roundoff errors)
-        if (textWidth > r.width && textStartX + currentScrollX > r.minX() + PicaPt(1)) {
-            return PicaPt::kZero;
-        }
-        // Otherwise, no change is needed
-        return currentScrollX;
-    } else {
-        if (sel.start == sel.end) {
-            if (cursorPt.x + currentScrollX < r.x) {
-                return -cursorPt.x;
-            } else {
-                return -(cursorPt.x - viewSize.width);
+    }
+
+    auto cursorPt = Point(textStartX + glyphRect.x, textStartY + glyphRect.y);
+    Point offset = currentScroll;
+    // Horizontal offset
+    if (textWidth > r.width) {
+        if (r.contains(Point(cursorPt.x + currentScroll.x, PicaPt::kZero))) {
+            // If we deleted characters from the right (subtract off 1 pt in case of roundoff errors)
+            if (textWidth > r.width && textStartX + textWidth + currentScroll.x < r.maxX() - PicaPt(1)) {
+                offset.x = r.width - textWidth;
+            }
+            // If we deleted characters from the left (subtract off 1 pt in case of roundoff errors)
+            else if (textWidth > r.width && textStartX + currentScroll.x > r.minX() + PicaPt(1)) {
+                offset.x = PicaPt::kZero;
+            }
+            // Otherwise, no change is needed
+            else {
+                offset.x = currentScroll.x;
             }
         } else {
-            if (sel.cursorLoc == TextEditorLogic::Selection::CursorLocation::kStart) {
-                return -cursorPt.x;
+            if (sel.start == sel.end) {
+                if (cursorPt.x + currentScroll.x < r.x) {
+                    offset.x = -cursorPt.x;
+                } else {
+                    offset.x = -(cursorPt.x - viewSize.width);
+                }
             } else {
-                return -(cursorPt.x - viewSize.width);
+                if (sel.cursorLoc == TextEditorLogic::Selection::CursorLocation::kStart) {
+                    offset.x = -cursorPt.x;
+                } else {
+                    offset.x = -(cursorPt.x - viewSize.width);
+                }
             }
         }
     }
+    // Vertical offset
+    if (textHeight > r.height) {
+        if (r.contains(Point(PicaPt::kZero, cursorPt.y + currentScroll.y)) &&
+            r.contains(Point(PicaPt::kZero, cursorPt.y + currentScroll.y + glyphRect.height)))
+        {
+            // If we deleted characters from the bottom
+            if (textStartY + textHeight + currentScroll.y < r.maxY()) {
+//                offset.y = r.height - textHeight;
+                // TODO: we need to figure out where the top is, then scroll up by a line
+                // until we get to the right y value.
+            } else {
+                offset.y = currentScroll.y;
+            }
+        } else {
+            if (sel.start == sel.end) {
+                if (cursorPt.y + currentScroll.y < r.y) {
+                    offset.y = -cursorPt.y;
+                } else {
+                    offset.y = -(cursorPt.y + glyphRect.height - viewSize.height);
+                }
+            } else {
+                if (sel.cursorLoc == TextEditorLogic::Selection::CursorLocation::kStart) {
+                    offset.y = -cursorPt.y;
+                } else {
+                    offset.y = -(cursorPt.y + glyphRect.height - viewSize.height);
+                }
+            }
+        }
+    } else {
+        offset.y = PicaPt::kZero;  // may have deleted text up from bottom
+    }
+
+    return offset;
 }
 
 Point calcAlignmentOffset(const StringEditorLogic& editor, const Rect& textEditRect, int horizAlign)
@@ -149,12 +201,13 @@ struct StringEdit::Impl
     std::string placeholder;
     int alignment = Alignment::kLeft | Alignment::kVCenter;
     Rect editorTextRect;
-    PicaPt scrollOffset = PicaPt::kZero;
+    Point scrollOffset = Point::kZero;
     UseClearButton useClearButton = UseClearButton::kTheme;
     Button *clearButton = nullptr;  // we do not own this; this will be a child
     MenuUITK *popup = nullptr;  // we own this
     std::function<void(const std::string&)> onTextChanged;
     std::function<void(StringEdit*)> onValueChanged;
+    bool isSingleLine = true;
     bool textHasChanged = false;
     bool themeWantsClearButton = false;
     bool windowWasActiveLastDraw = false;
@@ -179,6 +232,11 @@ struct StringEdit::Impl
             vis = !editor.isEmpty();
         }
         this->clearButton->setVisible(vis);
+    }
+
+    const Font& font(const Theme& theme)
+    {
+        return theme.params().labelFont;
     }
 };
 
@@ -270,6 +328,15 @@ StringEdit* StringEdit::setAlignment(int alignment)
     return this;
 }
 
+bool StringEdit::isMultiline() const { return !mImpl->isSingleLine; }
+
+StringEdit* StringEdit::setMultiline(bool multiline)
+{
+    mImpl->isSingleLine = !multiline;
+    setNeedsDraw();
+    return this;
+}
+
 StringEdit::UseClearButton StringEdit::useClearButton() const { return mImpl->useClearButton; }
 
 StringEdit* StringEdit::setUseClearButton(UseClearButton use)
@@ -325,7 +392,11 @@ AccessibilityInfo StringEdit::accessibilityInfo()
 
 Size StringEdit::preferredSize(const LayoutContext& context) const
 {
-    return context.theme.calcPreferredTextEditSize(context.dc, context.theme.params().labelFont);
+    if (mImpl->isSingleLine) {
+        return context.theme.calcPreferredTextEditSize(context.dc, mImpl->font(context.theme));
+    } else {
+        return Size(Widget::kDimGrow, Widget::kDimGrow);
+    }
 }
 
 void StringEdit::layout(const LayoutContext& context)
@@ -343,7 +414,7 @@ void StringEdit::layout(const LayoutContext& context)
     }
     mImpl->editorTextRect = context.theme.calcTextEditRectForFrame(
                                     Rect(r.x, r.y, mImpl->clearButton->frame().x, r.height), context.dc,
-                                    context.theme.params().labelFont);
+                                    mImpl->font(context.theme));
 
     Super::layout(context);
 }
@@ -372,12 +443,12 @@ Widget::EventResult StringEdit::mouse(const MouseEvent& e)
     auto me = e;
     me.pos = e.pos - mImpl->editorTextRect.upperLeft() -
              calcAlignmentOffset(mImpl->editor, mImpl->editorTextRect, mImpl->alignment) -
-             Point(mImpl->scrollOffset, PicaPt::kZero);
+             mImpl->scrollOffset;
     auto *editor = &mImpl->editor;
     if (mImpl->passwordDisplay) {
         me.pos = e.pos - mImpl->editorTextRect.upperLeft() -
                  calcAlignmentOffset(*mImpl->passwordDisplay, mImpl->editorTextRect, mImpl->alignment) -
-                 Point(mImpl->scrollOffset, PicaPt::kZero);
+                 mImpl->scrollOffset;
         editor = mImpl->passwordDisplay.get();
     }
 
@@ -456,7 +527,9 @@ Widget::EventResult StringEdit::mouse(const MouseEvent& e)
 
 Widget::EventResult StringEdit::key(const KeyEvent& e)
 {
-    if (mImpl->editor.handleKeyEvent(e)) {
+    const auto rkMode = mImpl->isSingleLine ? TextEditorLogic::ReturnKeyMode::kCommits
+                                            : TextEditorLogic::ReturnKeyMode::kNewline;
+    if (mImpl->editor.handleKeyEvent(e, rkMode)) {
         setNeedsDraw();
         return EventResult::kConsumed;
     }
@@ -487,8 +560,9 @@ void StringEdit::keyFocusEnded()
     }
 }
 
-void StringEdit::themeChanged()
+void StringEdit::themeChanged(const Theme& theme)
 {
+    Super::themeChanged(theme);
     mImpl->editor.setNeedsLayout();
 }
 
@@ -508,8 +582,14 @@ void StringEdit::draw(UIContext& context)
     // layout until the draw.
     if (mImpl->editor.needsLayout() || mImpl->editor.layoutDPI() != context.dc.dpi()) {
         auto s = context.theme.textEditStyle(context, style(themeState()), themeState());
-        mImpl->editor.layoutText(context.dc, context.theme.params().labelFont, s.fgColor,
-                                 context.theme.params().accentedBackgroundTextColor, PicaPt(1e6));
+        auto w = kDimGrow;
+        if (!mImpl->isSingleLine) {
+            auto margin = context.theme.calcPreferredTextMargins(context.dc,
+                                                                 mImpl->font(context.theme)).width;
+            w = bounds().width - 2.0f * margin;
+        }
+        mImpl->editor.layoutText(context.dc, mImpl->font(context.theme), s.fgColor,
+                                 context.theme.params().accentedBackgroundTextColor, w);
     }
 
     // If we are in password mode, update the display StringEditorLogic to display
@@ -533,8 +613,8 @@ void StringEdit::draw(UIContext& context)
         mImpl->passwordDisplay->setSelection(sel);
 
         auto s = context.theme.textEditStyle(context, style(themeState()), themeState());
-        mImpl->passwordDisplay->layoutText(context.dc, context.theme.params().labelFont, s.fgColor,
-                                           context.theme.params().accentedBackgroundTextColor, PicaPt(1e6));
+        mImpl->passwordDisplay->layoutText(context.dc, mImpl->font(context.theme), s.fgColor,
+                                           context.theme.params().accentedBackgroundTextColor, kDimGrow);
     }
     auto *editor = &mImpl->editor;
     if (mImpl->passwordDisplay) {
@@ -546,13 +626,15 @@ void StringEdit::draw(UIContext& context)
     // until afterwards. If we have focus, assume that any draw is because of a
     // change from user input.
     if (focused()) {
-        mImpl->scrollOffset = calcScrollOffset(*editor, mImpl->editorTextRect.size(),
+        mImpl->scrollOffset = calcScrollOffset(context.dc, mImpl->font(context.theme),
+                                               *editor, bounds().size(),
                                                (mImpl->alignment & Alignment::kHorizMask),
+                                               context.theme.calcPreferredTextMargins(context.dc, mImpl->font(context.theme)),
                                                mImpl->scrollOffset);
     }
 
     auto alignOffset = calcAlignmentOffset(*editor, mImpl->editorTextRect, mImpl->alignment).x;
-    context.theme.drawTextEdit(context, bounds(), alignOffset + mImpl->scrollOffset,
+    context.theme.drawTextEdit(context, bounds(), Point(alignOffset, PicaPt::kZero) + mImpl->scrollOffset,
                                mImpl->placeholder, *editor, mImpl->alignment,
                                style(themeState()), themeState(), focused());
 

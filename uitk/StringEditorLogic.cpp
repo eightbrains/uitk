@@ -79,6 +79,11 @@ bool StringEditorLogic::isEmpty() const
     return mImpl->stringUTF8.empty();
 }
 
+StringEditorLogic::Index StringEditorLogic::size() const
+{
+    return Index(mImpl->stringUTF8.size());
+}
+
 std::string StringEditorLogic::textForRange(Index start, Index end) const
 {
     return mImpl->stringUTF8.substr(size_t(start), size_t(end - start));
@@ -162,8 +167,23 @@ TextEditorLogic::Index StringEditorLogic::startOfLine(Index i) const
         return 0;
     }
 
-    while (i > 0 && mImpl->stringUTF8[i - 1] != '\n') {
-        i--;
+    PicaPt epsilon(0.001f);
+    auto &glyphs = mImpl->layout->glyphs();
+    auto glyphIdx = mImpl->layout->glyphIndexAtIndex(i);
+    if (glyphIdx == 0) {  // i must be in middle of first glyph (i.e. invalid i), so SOL is 0
+        return 0;
+    }
+    assert(glyphIdx != 0 && glyphIdx < long(glyphs.size()));
+    PicaPt x;
+    if (glyphIdx >= 0) {
+        x = glyphs[glyphIdx].frame.x;
+    } else {
+        x = glyphs.back().frame.maxX();
+        glyphIdx = long(glyphs.size()) - 1;  // will always be decremented before using, so size() is okay
+    }
+    while (i > 0 && mImpl->stringUTF8[i - 1] != '\n' && (glyphs[glyphIdx - 1].frame.x - x) < epsilon) {
+        i = glyphs[--glyphIdx].index;
+        x = glyphs[glyphIdx].frame.x;
     }
     return i;
 }
@@ -175,20 +195,16 @@ TextEditorLogic::Index StringEditorLogic::endOfLine(Index i) const
         return end;
     }
 
-    while (i < end && mImpl->stringUTF8[i + 1] != '\n') {
-        i++;
+    PicaPt epsilon(0.001f);
+    auto &glyphs = mImpl->layout->glyphs();
+    auto glyphIdx = mImpl->layout->glyphIndexAtIndex(i);
+    assert(glyphIdx >= 0 && glyphIdx < long(glyphs.size()));
+    auto x = glyphs[glyphIdx].frame.x;
+    while (i < end && mImpl->stringUTF8[i] != '\n' && (glyphs[glyphIdx].frame.x - x) > -epsilon) {
+        x = glyphs[glyphIdx].frame.x;
+        i = glyphs[glyphIdx++].indexOfNext;
     }
     return i;
-}
-
-TextEditorLogic::Index StringEditorLogic::lineAbove(Index i) const
-{
-    return startOfText();
-}
-
-TextEditorLogic::Index StringEditorLogic::lineBelow(Index i) const
-{
-    return endOfText();
 }
 
 bool StringEditorLogic::needsLayout() const
@@ -238,13 +254,17 @@ Rect StringEditorLogic::glyphRectAtIndex(Index i) const
     }
 
     if (mImpl->layout) {
-        if (i == 0) {
-            return mImpl->layout->glyphs()[0].frame;
-        } else if (i < mImpl->layout->glyphs().size()) {
-            return mImpl->layout->glyphs()[i].frame;
+        auto *glyph = mImpl->layout->glyphAtIndex(long(i));
+        if (glyph) {
+            return glyph->frame;
         } else {
-            return Rect(mImpl->layout->glyphs().back().frame.maxX(), PicaPt::kZero,
-                        PicaPt::kZero, mImpl->layoutLineHeight);
+            auto &glyphs = mImpl->layout->glyphs();
+            if (!glyphs.empty()) {
+                return Rect(glyphs.back().frame.maxX(), glyphs.back().frame.y,
+                            PicaPt::kZero, glyphs.back().frame.height);
+            } else {
+                return Rect(PicaPt::kZero, PicaPt::kZero, PicaPt::kZero, mImpl->layoutLineHeight);
+            }
         }
     }
 

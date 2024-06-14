@@ -237,9 +237,9 @@ AccessibilityInfo Label::accessibilityInfo()
     return info;
 }
 
-void Label::themeChanged()
+void Label::themeChanged(const Theme& theme)
 {
-    Super::themeChanged();
+    Super::themeChanged(theme);
 
     // Clear both preferred size and layout, since text size may have changed.
     mImpl->clearPreferredSize();

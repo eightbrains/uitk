@@ -836,7 +836,12 @@ const Rect& Window::contentRect() const { return mImpl->rootWidget->frame(); }
 
 Widget* Window::addChild(Widget *child)
 {
+    if (!child) {
+        return child;
+    }
+
     mImpl->rootWidget->addChild(child);
+    child->themeChanged(*mImpl->theme);
     setNeedsDraw();
     return child;
 }
@@ -1632,7 +1637,7 @@ void Window::onMenuActivated(MenuId id)
 
 void Window::onThemeChanged()
 {
-    mImpl->rootWidget->themeChanged();
+    mImpl->rootWidget->themeChanged(*mImpl->theme);
     setNeedsDraw();
 }
 

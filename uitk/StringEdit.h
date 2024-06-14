@@ -50,6 +50,9 @@ public:
     /// single line widgets.
     StringEdit* setAlignment(int alignment);
 
+    bool isMultiline() const;
+    StringEdit* setMultiline(bool multiline);
+
     enum UseClearButton {
         kNo = 0,
         kYes,
@@ -74,7 +77,7 @@ public:
     void text(const TextEvent& e) override;
     void keyFocusEnded() override;
 
-    void themeChanged() override;
+    void themeChanged(const Theme& theme) override;
     void draw(UIContext& context) override;
 
     /// Called whenever the text changes in response to user input.

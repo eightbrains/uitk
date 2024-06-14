@@ -46,6 +46,54 @@ TextEditorLogic::~TextEditorLogic()
 {
 }
 
+TextEditorLogic::Index TextEditorLogic::lineAbove(Index i) const
+{
+    // If at end of blank line at bottom: our effective currX is ~0, but since the \n glyph
+    // is at the end of the line it ends, this last \n glyph is in the wrong line, so special case it.
+    if (i > 0 && i == size() && textForRange(i - 1, i) == "\n") {
+        return startOfLine(prevChar(i));
+    }
+
+    const auto aboveLineEndIdx = prevChar(startOfLine(i));
+    const auto aboveLineStartIdx = startOfLine(aboveLineEndIdx);
+    const auto currX = glyphRectAtIndex(i).x;
+    i = aboveLineEndIdx;
+    while (i >= aboveLineStartIdx) {
+        auto glyphRect = glyphRectAtIndex(i);
+        if (glyphRect.x <= currX) {
+            if (currX > glyphRect.midX() && i != aboveLineEndIdx) { // i == lineEnd is going to shorter line
+                i = nextChar(i);
+            }
+            break;
+        }
+        i = prevChar(i);
+    }
+    return i;
+}
+
+TextEditorLogic::Index TextEditorLogic::lineBelow(Index i) const
+{
+    const auto eolIdx = endOfLine(i);
+    auto belowLineStartIdx = eolIdx;
+    if (textForRange(belowLineStartIdx, nextChar(belowLineStartIdx)) == "\n") {
+        belowLineStartIdx = nextChar(belowLineStartIdx);
+    }
+    const auto belowLineEndIdx = endOfLine(belowLineStartIdx);
+    const auto currX = glyphRectAtIndex(i).x;
+    i = belowLineStartIdx;
+    while (i < belowLineEndIdx) {  // need 'i <' here
+        auto glyphRect = glyphRectAtIndex(i);
+        if (glyphRect.maxX() >= currX) {
+            if (currX >= glyphRect.midX() && currX <= glyphRect.maxX()) {
+                i = nextChar(i);
+            }
+            break;
+        }
+        i = nextChar(i);
+    }
+    return i;
+}
+
 void TextEditorLogic::handleMouseEntered(Window *w)
 {
     w->pushCursor(Cursor::iBeam());
@@ -61,12 +109,24 @@ bool TextEditorLogic::handleMouseEvent(const MouseEvent& e, bool isInFrame)
     auto calcIndex = [this](const Point& p) {
         auto idx = indexAtPoint(p);
         if (idx == kInvalidIndex) {
-            idx = indexAtPoint(Point(p.x, PicaPt::kZero));
-            if (idx == TextEditorLogic::kInvalidIndex) {
-                if (p.x <= PicaPt::kZero) {
-                    idx = startOfText();
-                } else {
-                    idx = endOfText();
+            auto sotIdx = startOfText();
+            auto eotIdx = endOfText();  // note that eotIdx is not indexable, like std::string::end()
+            auto firstGlyph = glyphRectAtIndex(sotIdx);
+            if (p.y < firstGlyph.y) {
+                idx = sotIdx;
+            } else {
+                idx = sotIdx;
+                while (idx < eotIdx) {
+                    auto r = glyphRectAtIndex(idx);
+                    if (p.y >= r.y && p.y <= r.maxY()) {
+                        if (p.x <= r.x) {
+                            break;  // idx is already at start of line
+                        } else {
+                            idx = endOfLine(idx);
+                            break;
+                        }
+                    }
+                    idx = nextChar(idx);
                 }
             }
         }
@@ -152,7 +212,7 @@ bool TextEditorLogic::handleMouseEvent(const MouseEvent& e, bool isInFrame)
     return false;
 }
 
-bool TextEditorLogic::handleKeyEvent(const KeyEvent& e)
+bool TextEditorLogic::handleKeyEvent(const KeyEvent& e, ReturnKeyMode rkMode)
 {
     if (e.type != KeyEvent::Type::kKeyDown) {  // we do not need to process key up events
         return false;
@@ -245,7 +305,15 @@ bool TextEditorLogic::handleKeyEvent(const KeyEvent& e)
                 break;
             case Key::kEnter:
             case Key::kReturn:
-                commit();
+                if (e.keymods & KeyModifier::kShift) {
+                    insertText("\n");
+                } else {
+                    if (rkMode == ReturnKeyMode::kCommits) {  // usually single-line mode
+                        commit();
+                    } else {
+                        insertText("\n");
+                    }
+                }
                 break;
             default:
                 break;

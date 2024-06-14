@@ -719,10 +719,10 @@ void Widget::text(const TextEvent& e)
 {
 }
 
-void Widget::themeChanged()
+void Widget::themeChanged(const Theme& theme)
 {
     for (auto *child : mImpl->children) {
-        child->themeChanged();
+        child->themeChanged(theme);
     }
 }
 

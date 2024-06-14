@@ -121,6 +121,7 @@ public:
     virtual ~TextEditorLogic();
 
     virtual bool isEmpty() const = 0;
+    virtual Index size() const = 0;
 
     /// Returns the text in the range [start, end).
     virtual std::string textForRange(Index start, Index end) const = 0;
@@ -139,9 +140,10 @@ public:
     virtual Index startOfWord(Index i) const = 0;
     virtual Index endOfWord(Index i) const = 0;
     virtual Index startOfLine(Index i) const = 0;
+    /// Returns the index after the last character (or space) in the line.
     virtual Index endOfLine(Index i) const = 0;
-    virtual Index lineAbove(Index i) const = 0;
-    virtual Index lineBelow(Index i) const = 0;
+    virtual Index lineAbove(Index i) const;
+    virtual Index lineBelow(Index i) const;
 
     virtual bool needsLayout() const = 0;
     /// Marks the text as needing to be re-created. This is normally only called
@@ -172,7 +174,8 @@ public:
     virtual void handleMouseEntered(Window *w);
     virtual void handleMouseExited(Window *w);
     virtual bool handleMouseEvent(const MouseEvent& e, bool isInFrame);
-    virtual bool handleKeyEvent(const KeyEvent& e);  // returns true if consumed event
+    enum ReturnKeyMode { kNewline, kCommits };
+    virtual bool handleKeyEvent(const KeyEvent& e, ReturnKeyMode rkMode);  // returns true if consumed event
     virtual void handleTextEvent(const TextEvent& e);
     enum class SelectionMode { kReplace, kExtend };
     virtual void insertText(const std::string& utf8);

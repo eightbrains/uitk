@@ -715,12 +715,17 @@ public:
         mShowPassword->setOnClicked([this](Button *b) {
             mPassword->setIsPassword(!b->isOn());
         });
+
+        mArea = new StringEdit();
+        mArea->setMultiline(true);
+        mArea->setPlaceholderText("Multiline text");
+        addChild(mArea);
     }
 
     Size preferredSize(const LayoutContext& context) const override
     {
         auto pref = mString->preferredSize(context);
-        return Size(PicaPt(200.0), 3.0f * pref.height);
+        return Size(PicaPt(200.0), 6.0f * pref.height);
     }
 
     void layout(const LayoutContext& context) override
@@ -739,8 +744,10 @@ public:
         y = mSearch->frame().maxY() + spacing;
         pref = mPassword->preferredSize(context);
         mPassword->setFrame(Rect(PicaPt::kZero, y, w, pref.height));
-
         mShowPassword->setFrame(Rect(mPassword->frame().maxX() + spacing, y, pref.height, pref.height));
+        y = mPassword->frame().maxY() + spacing;
+
+        mArea->setFrame(Rect(PicaPt::kZero, y, w, bounds().height - y));
 
         Super::layout(context);
     }
@@ -750,6 +757,7 @@ private:
     SearchBar *mSearch;
     StringEdit *mPassword;
     Button *mShowPassword;
+    StringEdit *mArea;
 };
 
 class ScrollTest : public Widget

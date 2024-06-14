@@ -574,10 +574,9 @@ Rect VectorBaseTheme::calcTextEditRectForFrame(const Rect& frame, const DrawCont
 {
     auto textMargins = calcPreferredTextMargins(dc, font);
     auto fm = dc.fontMetrics(font);
-    auto baseline = dc.ceilToNearestPixel(frame.y + 0.5f * (frame.height + fm.capHeight));
     return Rect(frame.x + textMargins.width,
-                baseline - fm.capHeight,
-                frame.width - 2.0f * textMargins.width,
+                frame.y + textMargins.height,
+                frame.width - 2.0f * textMargins.height,
                 fm.ascent + fm.descent);
 }
 
@@ -1270,7 +1269,7 @@ Theme::WidgetStyle VectorBaseTheme::textEditStyle(UIContext& ui, const WidgetSty
     return mTextEditStyles[paramsIndex(ui, state)].merge(style);
 }
 
-void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaPt& scrollOffset,
+void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const Point& scrollOffset,
                                    const std::string& placeholder, TextEditorLogic& editor,
                                    int horizAlign, const WidgetStyle& style, WidgetState state,
                                    bool hasFocus) const
@@ -1281,67 +1280,113 @@ void VectorBaseTheme::drawTextEdit(UIContext& ui, const Rect& frame, const PicaP
     drawFrame(ui, frame, s);
 
     auto font = mParams.labelFont;
+    auto fm = font.metrics(ui.dc);
+    auto preferredOneLineHeight = calcPreferredTextEditSize(ui.dc, font).height;
     auto textMargins = calcPreferredTextMargins(ui.dc, font);
-    auto selectionStart = PicaPt::kZero;
+    auto selectionStart = Point::kZero;
     auto selectionEnd = selectionStart;
+    TextEditorLogic::Index selStartIdx = 0;
+    TextEditorLogic::Index selEndIdx = 0;
     if (hasFocus) {
         auto imeConversion = editor.imeConversion();
         if (imeConversion.isEmpty()) {
             auto sel = editor.selection();
-            selectionStart = editor.pointAtIndex(sel.start).x + textMargins.width + scrollOffset;
-            selectionEnd = editor.pointAtIndex(sel.end).x + textMargins.width + scrollOffset;
+            selectionStart = editor.pointAtIndex(sel.start) + textMargins + scrollOffset;
+            selectionEnd = editor.pointAtIndex(sel.end) + textMargins + scrollOffset;
+            selStartIdx = sel.start;
+            selEndIdx = sel.end;
+
+            // The glyphs() array has the \n at the end of the line, but in the special
+            // case where we are at a blank line, cursor should be on the next line.
+            if (selStartIdx == selEndIdx && selStartIdx == editor.size() && selStartIdx > 0
+                && editor.textForRange(selStartIdx - 1, selStartIdx) == "\n")
+            {
+                auto ag = ui.dc.createTextLayout(Text("Ag\nAg", font, Color::kGrey),
+                                                 Size(Widget::kDimGrow, Widget::kDimGrow));
+                selectionStart = Point(ag->glyphs()[3].frame.x + textMargins.width + scrollOffset.x,
+                                       selectionStart.y + ag->glyphs()[3].frame.y - ag->glyphs()[0].frame.y);
+                selectionEnd = selectionStart;
+            }
         } else {
-            selectionStart = editor.pointAtIndex(imeConversion.start + imeConversion.cursorOffset).x + textMargins.width + scrollOffset;
+            selStartIdx = imeConversion.start + imeConversion.cursorOffset;
+            selEndIdx = selStartIdx;
+            selectionStart = editor.pointAtIndex(selStartIdx) + textMargins + scrollOffset;
             selectionEnd = selectionStart;
         }
     }
+    auto textRect = frame.insetted(textMargins.width, PicaPt::kZero);
 
-    auto textRect = frame;
-    textRect.x += textMargins.width;
-    textRect.width -= 2.0f * textMargins.width;
-
-    PicaPt caretWidth = ui.dc.ceilToNearestPixel(0.05f * textRect.height);
+    PicaPt caretHeight = std::min(textRect.height - 2.0f * s.borderWidth,
+                                  ui.dc.ceilToNearestPixel(fm.capHeight + 2.0f * fm.descent));
+    PicaPt caretWidth = ui.dc.ceilToNearestPixel(0.05f * caretHeight);
     caretWidth = std::max(caretWidth, ui.dc.onePixel());
 
     ui.dc.save();
     // Outset textRect by the caret width for the clip rect so that cursor is visible at edges
-    ui.dc.clipToRect(textRect.insetted(-caretWidth, PicaPt::kZero));
+    ui.dc.clipToRect(textRect.insetted(-caretWidth, s.borderWidth));
 
-    if (hasFocus && ui.isWindowActive && selectionStart != selectionEnd) {
-        auto selectionRect = Rect(ui.dc.roundToNearestPixel(selectionStart),
-                                  textRect.y,
-                                  PicaPt::kZero,
-                                  textRect.height);
-        selectionRect.width = ui.dc.roundToNearestPixel(selectionEnd) - selectionRect.x;
-        ui.dc.setFillColor(mParams.selectionColor);
-        ui.dc.drawRect(selectionRect, kPaintFill);
+    // Because of rounding, fm.capHeight + 2.0f * textMargins.height != textRect.height.
+    // Put the extra space on the top, it looks better.
+    PicaPt dy = textRect.height - (fm.capHeight + textMargins.height);
+    if (textRect.height - preferredOneLineHeight > ui.dc.onePixel()) {
+        dy = textMargins.height;
     }
 
+    if (hasFocus && ui.isWindowActive && selStartIdx < selEndIdx) {
+        Rect r(ui.dc.roundToNearestPixel(selectionStart.x), textRect.y + selectionStart.y, PicaPt::kZero, caretHeight);
+        Point lastPt = editor.pointAtIndex(selStartIdx) + textMargins + scrollOffset;
+        ui.dc.setFillColor(mParams.selectionColor);
+        for (auto i = selStartIdx;  i <= selEndIdx;  ++i) {  // need <= so we get the end of last glyph (start of next)
+            auto p = editor.pointAtIndex(i) + textMargins + scrollOffset;
+            if (p.y - lastPt.y < fm.ascent) {
+                r.width = p.x - r.x;
+            } else {
+                r.width = textRect.maxX() - r.x;  // textRect now includes x-margins
+                ui.dc.drawRect(r, kPaintFill);
+                r = Rect(ui.dc.roundToNearestPixel(p.x), r.maxY(), PicaPt::kZero, p.y + caretHeight - r.maxY());
+            }
+            lastPt = p;
+        }
+        ui.dc.drawRect(r, kPaintFill);
+    }
+
+    // Draw placeholder/text
     if (editor.isEmpty() && editor.imeConversion().isEmpty()) {
         if (!placeholder.empty()) {
             ui.dc.setFillColor(mTextEditStyles[paramsIndex(ui, WidgetState::kDisabled)].fgColor);
-            ui.dc.drawText(placeholder.c_str(), textRect, horizAlign | Alignment::kVCenter,
-                           kWrapNone, mParams.labelFont, kPaintFill);
+            ui.dc.drawText(placeholder.c_str(),
+                           textRect.translated(PicaPt::kZero, dy),
+                           horizAlign | Alignment::kTop, kWrapNone, mParams.labelFont, kPaintFill);
         }
     } else {
         // The layout incorporates the color, so we cannot set it.
-        auto textRect = calcTextEditRectForFrame(frame, ui.dc, font);
         if (editor.layout()) {
-            ui.dc.drawText(*editor.layout(), textRect.upperLeft() + Point(scrollOffset, PicaPt::kZero));
+            ui.dc.drawText(*editor.layout(), textRect.upperLeft() + Point(PicaPt::kZero, dy) + scrollOffset);
         }
     }
 
-    ui.dc.restore();
-
-    if (hasFocus && ui.isWindowActive && selectionStart == selectionEnd) {
-        PicaPt x = ui.dc.roundToNearestPixel(selectionStart) - std::floor(0.5f * caretWidth / ui.dc.onePixel());
-
+    // Draw caret
+    if (hasFocus && ui.isWindowActive && selStartIdx == selEndIdx) {
+        auto x = ui.dc.roundToNearestPixel(selectionStart.x) - std::floor(0.5f * caretWidth / ui.dc.onePixel());
+        auto y = selectionStart.y;
+        if (editor.isEmpty()) {
+            // We do not know what the glyph offset is with text when we have none, so make some.
+            // Note that the size parameter needs to be specified. At least on macOS, having a y size
+            // of zero (the default parameter) and kDimGrow produces slightly different results,
+            // which makes the cursor offset when there is no text, which looks bad.
+            auto ag = ui.dc.createTextLayout(Text("Ag", font, Color::kGrey),
+                                             Size(Widget::kDimGrow, Widget::kDimGrow));
+            y = ag->glyphs()[0].frame.y + textMargins.height + scrollOffset.y;
+            // ag is a shared_ptr, so will auto-destruct
+        }
         // On macOS, text caret is same color as text. Usually there is no need to change
-        // the fill color, but in the case we have drew placeholder text the color will
+        // the fill color, but in the case we drew placeholder text the color will
         // be wrong.
         ui.dc.setFillColor(s.fgColor);
-        ui.dc.drawRect(Rect(x, textRect.y, caretWidth, textRect.height), kPaintFill);
+        ui.dc.drawRect(Rect(x, textRect.y + y, caretWidth, caretHeight), kPaintFill);
     }
+
+    ui.dc.restore();
 }
 
 void VectorBaseTheme::drawSearchBar(UIContext& ui, const Rect& frame, const WidgetStyle& style,

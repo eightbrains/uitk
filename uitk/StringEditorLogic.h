@@ -37,6 +37,7 @@ public:
     void setString(const std::string& utf8);
 
     bool isEmpty() const override;
+    Index size() const override;
     std::string textForRange(Index start, Index end) const override;
 
     void insertText(Index i, const std::string& utf8) override;
@@ -50,8 +51,6 @@ public:
     Index endOfWord(Index i) const override;
     Index startOfLine(Index i) const override;
     Index endOfLine(Index i) const override;
-    Index lineAbove(Index i) const override;
-    Index lineBelow(Index i) const override;
 
     bool needsLayout() const override;
     void setNeedsLayout() const override;

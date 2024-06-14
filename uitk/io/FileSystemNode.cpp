@@ -73,7 +73,7 @@ std::string FileSystemNode::parentPath() const
         if (idx == 0) {
             return "/";
         } else {
-            return mPath.substr(0, idx - 1);
+            return mPath.substr(0, idx);
         }
     } else {
         return "";

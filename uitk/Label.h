@@ -79,7 +79,7 @@ public:
     // ----
 
     Widget* setFrame(const Rect& frame) override;
-    void themeChanged() override;
+    void themeChanged(const Theme& theme) override;
     AccessibilityInfo accessibilityInfo() override;
     Size preferredSize(const LayoutContext& context) const override;
     void layout(const LayoutContext& context) override;

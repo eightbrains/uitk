@@ -332,7 +332,7 @@ public:
     virtual void drawIncDec(UIContext& ui, const Rect& frame, WidgetState incState, WidgetState decState) const = 0;
     virtual WidgetStyle textEditStyle(UIContext& ui, const WidgetStyle& style,
                                       WidgetState state) const = 0;
-    virtual void drawTextEdit(UIContext& ui, const Rect& frame, const PicaPt& scrollOffset,
+    virtual void drawTextEdit(UIContext& ui, const Rect& frame, const Point& scrollOffset,
                               const std::string& placeholder, TextEditorLogic& editor, int horizAlign, 
                               const WidgetStyle& style, WidgetState state, bool hasFocus) const = 0;
     // It's not clear if we should draw the search icon here, or have SearchBar have an
