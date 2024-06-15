@@ -360,6 +360,10 @@ void Application::removeWindow(Window *w)
     if (it != mImpl->windows.end()) {
         mImpl->windows.erase(it);
     }
+
+    if (mImpl->activeWindow == w) {
+        mImpl->activeWindow = nullptr;
+    }
 }
 
 Window* Application::activeWindow() const { return mImpl->activeWindow; }
