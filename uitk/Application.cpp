@@ -74,7 +74,20 @@ Application::ScheduledId Application::kInvalidScheduledId = OSApplication::kInva
 
 Application& Application::instance()
 {
-    assert(Application::Impl::instance);  // make sure you created an Application
+    if (!Application::Impl::instance) {
+        Application app;
+        app.debugPrint("Need to create an instance of Application before doing");
+        app.debugPrint("anything that interacts with the operating system");
+        app.debugPrint("(e.g. creating a Window).");
+        app.debugPrint("");
+        app.debugPrint("int main(int argc, char *argv[])");
+        app.debugPrint("{");
+        app.debugPrint("    Application app;");
+        app.debugPrint("    ...");
+        app.debugPrint("    app.run();");
+        app.debugPrint("}");
+    }
+    assert(Application::Impl::instance);  // assert so debugger goes somehwere useful
     return *Application::Impl::instance;
 }
 
