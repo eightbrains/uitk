@@ -130,6 +130,26 @@ void Application::setExitWhenLastWindowCloses(bool exits)
 
 int Application::run()
 {
+#if defined(__APPLE__)
+    // If we are on macOS and the app has not set any menus yet, we
+    // have an empty menu (except for an empty Application menu).
+    // This will behave strangely, so add the standard items.
+    if (menubar().menus().size() == 1) {
+        // Exclude undo/redo, since presumably that app is too simple
+        // to handle that, too. We do want the edit menu, though,
+        // in case there are text boxes or number editing (which handle
+        // the menu internally).
+        menubar().addStandardItems(nullptr, nullptr, nullptr, nullptr,
+                                   { OSMenubar::StandardItem::kAbout,
+                                     OSMenubar::StandardItem::kPreferences,
+                                     OSMenubar::StandardItem::kUndo,
+                                     OSMenubar::StandardItem::kRedo });
+        // If the only way the code expects to quit is closing the
+        // window, then we'd better exit after the last one closes.
+        setExitWhenLastWindowCloses(true);
+    }
+#endif // __APPLE__
+
     return mImpl->osApp->run();
 }
 
