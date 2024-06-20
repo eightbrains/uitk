@@ -371,6 +371,7 @@ bool widgetCanAcceptKeyFocus(Widget *w, Application::KeyFocusCandidates candidat
     return false;
 }
 
+//-----------------------------------------------------------------------------
 class TooltipWidget : public Widget
 {
     using Super = Widget;
@@ -480,6 +481,7 @@ struct Window::Impl
     std::function<bool(Window&)> onShouldClose;
     std::function<void(Window&)> onWillClose;
     bool drawContextMightBeShared;
+    bool shouldAutoDelete = false;  // should only set this in static Window constructors
     bool showFocusRing = false;
     bool isActive = false;
     bool inResize = false;
@@ -527,6 +529,33 @@ struct Window::Impl
         }
     }
 };
+
+Window& Window::create(const std::string& title,
+                       const PicaPt& width, const PicaPt& height,
+                       Window::Flags::Value flags /*= Flags::kNormal*/)
+{
+    auto *newWin = new Window(title, width, height, flags);
+    // Q: Why have a special flag instead of automatically adding an onWindowWillClose callback
+    //    which does this?
+    // A: The callbacks are "owned" by the caller; they might reassign the callback
+    //    and then we would leak. But this is essentially an implementation detail
+    //    (that is, how we handle cleaning up the resources), so it should be internal.
+    //    Also, we do not want to expose a setDeleteOnClose() or something, because
+    //    this is an implementation detail. If the caller wants control, they should
+    //    control its lifetime like any other C++ object.
+    newWin->mImpl->shouldAutoDelete = true;
+    return *newWin;
+}
+
+Window& Window::create(const std::string& title,
+                       const PicaPt& x, const PicaPt& y,
+                       const PicaPt& width, const PicaPt& height,
+                       Window::Flags::Value flags /*= Flags::kNormal*/)
+{
+    auto *newWin = new Window(title, x, y, width, height, flags);
+    newWin->mImpl->shouldAutoDelete = true;
+    return *newWin;
+}
 
 Window::Window(const std::string& title, const PicaPt& width, const PicaPt& height,
                Flags::Value flags /*= Flags::kNone*/)
@@ -1667,6 +1696,10 @@ void Window::onWindowWillClose()
     mImpl->cancelPopup();
     if (mImpl->onWillClose) {
         mImpl->onWillClose(*this);
+    }
+
+    if (mImpl->shouldAutoDelete) {
+        deleteLater();
     }
 }
 

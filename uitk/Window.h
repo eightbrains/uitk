@@ -68,15 +68,43 @@ public:
     };
 
     /// Creates a window with default (x, y) position. The window is not shown.
+    /// Returns: a reference to the window. This reference is valid until the
+    ///   window is closed, but the intent of this function is that the caller
+    ///   set up the window and shows it, and does not keep the reference.
+    ///   The resources will be deleted when the window is closed.
+    static Window& create(const std::string& title,
+                          const PicaPt& width, const PicaPt& height,
+                          Flags::Value flags = Flags::kNormal);
+    /// Creates a window. x, y, width, height are in operating-system
+    /// coordinates. The window is not shown.
+    /// Returns: a reference to the window. This reference is valid until the
+    ///   window is closed, but the intent of this function is that the caller
+    ///   set up the window and shows it, and does not keep the reference.
+    ///   The resources will be deleted when the window is closed.
+    static Window& create(const std::string& title,
+                          const PicaPt& x, const PicaPt& y,
+                          const PicaPt& width, const PicaPt& height,
+                          Flags::Value flags = Flags::kNormal);
+
+    /// Creates a window with default (x, y) position. The window is not shown.
+    /// Note that caller must manage the lifetime of the resulting pointer;
+    /// this is most easily done with
+    /// `win->setOnWindowWillClose([](Window& w) { w.deleteLater(); });`
     Window(const std::string& title, const PicaPt& width, const PicaPt& height,
            Flags::Value flags = Flags::kNormal);
     /// Creates a window with give frame. The window is not shown.
+    /// Note that caller must manage the lifetime of the resulting pointer;
+    /// this is most easily done with
+    /// `win->setOnWindowWillClose([](Window& w) { w.deleteLater(); });`
     Window(const std::string& title,
            const PicaPt& x, const PicaPt& y,
            const PicaPt& width, const PicaPt& height,
            Flags::Value flags = Flags::kNormal);
     /// Creates a window. x, y, width, height are in operating-system
     /// coordinates. The window is not shown.
+    /// Note that caller must manage the lifetime of the resulting pointer;
+    /// this is most easily done with
+    /// `win->setOnWindowWillClose([](Window& w) { w.deleteLater(); });`
     Window(const std::string& title, int x, int y, int width, int height,
            Flags::Value flags = Flags::kNormal);
     virtual ~Window();
