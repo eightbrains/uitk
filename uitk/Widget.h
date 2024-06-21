@@ -175,6 +175,27 @@ public:
         Constraints(const PicaPt& w, const PicaPt& h) : width(w), height(h) {}
     };
 
+    // Q: Why not have a LayoutParams struct or something like that?
+    // A: That is an option, but it needs further thought. Would
+    //    such a struct use ems or PicaPts? If the latter, would
+    //    it need to recalculate based on theme changes? It might
+    //    worth considering refactoring if/when we add a minimum
+    //    and maximum size, and/or a weighting factor.
+
+    static constexpr float kNotFixed = -1.0f;
+
+    /// Sets width in layouts to be the specified number of ems
+    /// (subject to constraints such the maximum size of the layout).
+    /// Set to kNotFixed to unset.
+    Widget* setFixedWidthEm(float ems);
+    float fixedWidthEm() const;
+
+    /// Sets width in layouts to be the specified number of ems
+    /// (subject to constraints such the maximum size of the layout).
+    /// Set to kNotFixed to unset.
+    Widget* setFixedHeightEm(float ems);
+    float fixedHeightEm() const;
+
     /// Returns the preferred size of the widget. If a dimension is
     /// >= kDimGrow, the widget wants as much space as it can get in that
     /// dimension. The prefered size of most widgets is always the same,

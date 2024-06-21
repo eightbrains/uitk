@@ -32,6 +32,20 @@ namespace uitk {
 
 namespace {
 
+Size getRequestedSize(Widget *w, const LayoutContext& context)
+{
+    auto pref = w->preferredSize(context);
+    float fixedWidthEm = w->fixedWidthEm();
+    float fixedHeightEm = w->fixedHeightEm();
+    if (fixedWidthEm > 0.0f) {
+        pref.width = fixedWidthEm * context.theme.params().labelFont.pointSize();
+    }
+    if (fixedHeightEm > 0.0f) {
+        pref.height = fixedHeightEm * context.theme.params().labelFont.pointSize();
+    }
+    return pref;
+}
+
 enum class FitMajorAxis { kNo = 0, kYes, kYesIfPositive };
 std::vector<PicaPt> calcSizes(Dir dir, const PicaPt& majorAxisSize,
                               const PicaPt& onePx, const std::vector<PicaPt>& sizes,
@@ -346,7 +360,7 @@ Size Layout1D::preferredSize(const LayoutContext &context) const
     PicaPt maxFixedTransverse, maxTransverse;
     if (mImpl->dir == Dir::kHoriz) {
         for (auto *child : children()) {
-            auto pref = child->preferredSize(context);
+            auto pref = getRequestedSize(child, context);
             size.width += pref.width;
             maxTransverse = std::max(maxTransverse, pref.height);
             if (pref.height < kDimGrow) {
@@ -362,7 +376,7 @@ Size Layout1D::preferredSize(const LayoutContext &context) const
         size.height += margins[1] + margins[3];
     } else {
         for (auto *child : children()) {
-            auto pref = child->preferredSize(context);
+            auto pref = getRequestedSize(child, context);
             maxTransverse = std::max(maxTransverse, pref.width);
             if (pref.width < kDimGrow) {
                 maxFixedTransverse = std::max(maxFixedTransverse, pref.width);
@@ -402,7 +416,7 @@ void Layout1D::layout(const LayoutContext& context)
     prefComponent.reserve(childs.size());
 
     for (auto *child : childs) {
-        prefs.push_back(child->preferredSize(context));
+        prefs.push_back(getRequestedSize(child, context));
     }
 
     int halign = (alignment() & Alignment::kHorizMask);
@@ -542,7 +556,7 @@ struct GridLayout::Impl
             for (size_t x = 0;  x < row.size();  ++x) {
                 Size pref;
                 if (row[x]) {
-                    pref = row[x]->preferredSize(context);
+                    pref = getRequestedSize(row[x], context);
                 }
                 (*colSizes)[x] = std::max((*colSizes)[x], pref.width);
                 (*rowSizes)[y] = std::max((*rowSizes)[y], pref.height);
@@ -667,7 +681,7 @@ void GridLayout::layout(const LayoutContext& context)
         auto x = rect.x;
         for (size_t c = 0;  c < row.size();  ++c) {
             if (row[c]) {
-                Size pref = ((halign || valign) ? row[c]->preferredSize(context) : Size::kZero);
+                Size pref = ((halign || valign) ? getRequestedSize(row[c], context) : Size::kZero);
                 Rect f(x, y, cols[c], rows[r]);
                 if (halign == 0) {
                     ; // nothing to do, but be clear about that

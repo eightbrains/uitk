@@ -50,6 +50,10 @@ struct Widget::Impl {
     std::optional<Theme::WidgetState> forcedThemeState = kUnsetThemeState;
     std::string tooltip;
     std::string accessibilityText;
+    struct {
+        float fixedWidthEm = kNotFixed;
+        float fixedHeightEm = kNotFixed;
+    } layout;
     double lastTooltipPreventingActivityTime = std::numeric_limits<double>::max();
     Application::ScheduledId tooltipTimer = Application::kInvalidScheduledId;
     bool drawsFrame = false;
@@ -516,6 +520,30 @@ void Widget::updateKeyFocusOnVisibilityOrEnabledChange()
             }
         }
     }
+}
+
+Widget* Widget::setFixedWidthEm(float ems)
+{
+    mImpl->layout.fixedWidthEm = ems;
+    setNeedsLayout();
+    return this;
+}
+
+float Widget::fixedWidthEm() const
+{
+    return mImpl->layout.fixedWidthEm;
+}
+
+Widget* Widget::setFixedHeightEm(float ems)
+{
+    mImpl->layout.fixedHeightEm = ems;
+    setNeedsLayout();
+    return this;
+}
+
+float Widget::fixedHeightEm() const
+{
+    return mImpl->layout.fixedHeightEm;
 }
 
 Size Widget::preferredSize(const LayoutContext& context) const
