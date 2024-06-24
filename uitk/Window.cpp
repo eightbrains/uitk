@@ -630,7 +630,6 @@ Window::Window(const std::string& title, int x, int y, int width, int height,
 
     if (!(flags & Flags::kPopup) && !(flags & Flags::kDialog)) {
         Application::instance().addWindow(this);
-        updateWindowList();
     }
 
     mImpl->needsLayout = true;
@@ -676,6 +675,7 @@ Window* Window::show(bool show)
         }
     };
     mImpl->window->show(show, onWillShow);
+    updateWindowList();
     return this;
 }
 
@@ -1564,6 +1564,20 @@ void Window::onDraw(DrawContext& dc)
 
 void Window::onActivated(const Point& currentMousePos)
 {
+    // If the standard menu items--in particular, the window list--were added
+    // after the window was created and show()n, we need to update the window
+    // list. This happens if one does not change the menu, and it gets
+    // automatically fixed up in Application::run(). In this situation, we
+    // will not have an active window yet (the show message has not been
+    // processed, since the message loop does not run until run() is called),
+    // so a check for a null active window will suffice. (A null window also
+    // happens on macOS if there is no window and the user does File >> New,
+    // but this is rare and updating the window list will still result in
+    // correct behavior.)
+    if (!Application::instance().activeWindow()) {
+        updateWindowList();
+    }
+
     // Some platforms, like Windows, do not allow a window as a dialog, so we
     // have to force the modality ourselves. Note that we need to check both
     // dialog.dialog and dialog.window, since we will get an onActivated() call
