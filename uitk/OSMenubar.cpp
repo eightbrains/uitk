@@ -41,6 +41,7 @@ void OSMenubar::addStandardItems(Menu **file, Menu **edit, Menu **window, Menu *
 {
     auto vItems = { StandardItem::kAbout,
 #if !defined(__EMSCRIPTEN__)
+                    StandardItem::kCloseWindow,
                     StandardItem::kQuit,
 #endif // !__EMSCRIPTEN__
                     StandardItem::kCopy, StandardItem::kCut, StandardItem::kPaste,
@@ -98,6 +99,23 @@ void OSMenubar::addStandardItems(Menu **file, Menu **edit, Menu **window, Menu *
         addSeparator(app, &idx);
     }
 
+    if (itemsHas(StandardItem::kCloseWindow)) {  // if not File menu and not adding this, don't create one
+        Menu *fileMenu = nullptr;
+        if (!file) {
+            file = &fileMenu;
+        }
+        if (!*file) {
+            *file = newMenu("&File");
+        }
+        idx = (*file)->size();
+        if (addItem(*file, StandardItem::kCloseWindow, &idx)) {
+            if (idx > 0) {  // menu didn't have Cmd-W and there was something in it
+                --idx;
+                addSeparator(*file, &idx);
+            }
+        }
+    }
+
     idx = 0;
     Menu *editMenu = nullptr;
     if (!edit) {
@@ -143,6 +161,12 @@ void OSMenubar::addStandardItems(Menu **file, Menu **edit, Menu **window, Menu *
         *file = newMenu("&File");
     }
     idx = (*file)->size();
+    if (addItem(*file, StandardItem::kCloseWindow, &idx)) {
+        if (idx > 0) {  // menu didn't have Cmd-W and there was something in it
+            --idx;
+            addSeparator(*file, &idx);
+        }
+    }
     if (addItem(*file, StandardItem::kQuit, &idx)) {
         --idx;
         addSeparator(*file, &idx);
@@ -196,6 +220,11 @@ void OSMenubar::addStandardItems(Menu **file, Menu **edit, Menu **window, Menu *
 
 void OSMenubar::addStandardItem(Menu *menu, StandardItem item, int index)
 {
+    // NOTE: When adding a new standard item:
+    //   - add a case here,
+    //   - add to the menus on macOS / Win+Linux in addStandardItems()
+    //   - add the callback in ::addStandardMenuHandlers in Window.cpp
+
     switch (item) {
         case StandardItem::kAbout:
 #if defined(__APPLE__)
@@ -205,6 +234,18 @@ void OSMenubar::addStandardItem(Menu *menu, StandardItem item, int index)
             menu->insertItem(index, "&About...", MenuId(item), ShortcutKey::kNone);
 #endif
             break;
+        case StandardItem::kCloseWindow: {
+            Key k = Key::kW;
+#if defined(_WIN32) || defined(_WIN64)
+            k = Key::kF4;
+#endif
+            KeyEvent e = { KeyEvent::Type::kKeyDown, k, 0, int(KeyModifier::kCtrl), false };
+            if (!Application::instance().keyboardShortcuts().hasShortcut(e, nullptr)) {
+                menu->insertItem(index, "&Close", MenuId(item),
+                                 ShortcutKey(KeyModifier::kCtrl, k));
+            }
+            break;
+        }
         case StandardItem::kQuit:
 #if defined(_WIN32) || defined(_WIN64)
             menu->insertItem(index, "E&xit", MenuId(item),

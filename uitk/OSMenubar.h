@@ -42,6 +42,7 @@ public:
 
     enum class StandardItem : MenuId {
         kAbout = 65000,  // can increase this if MenuId becomes 32-bit
+        kCloseWindow,
         kQuit,
         kCut, kCopy, kPaste,
         kUndo, kRedo,

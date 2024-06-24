@@ -75,6 +75,11 @@ void onMenuRaiseWindow(int n)
 void addStandardMenuHandlers(Window &w)
 {
     auto onAbout = [](){};
+    auto onCloseWindow = []() {
+        if (auto *w = Application::instance().activeWindow()) {
+            w->close(Window::CloseBehavior::kAllowCancel);
+        }
+    };
     auto onQuit = [](){ Application::instance().quit(); };
     auto onCut = [&w](){
         if (auto *focus = w.focusWidget()) {
@@ -110,6 +115,7 @@ void addStandardMenuHandlers(Window &w)
     // We can set all the handlers; if they are not in the menu then their
     // identifiers will never get referenced.
     w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kAbout), onAbout);
+    w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kCloseWindow), onCloseWindow);
     w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kQuit), onQuit);
     w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kCut), onCut);
     w.setOnMenuActivated(MenuId(OSMenubar::StandardItem::kCopy), onCopy);
