@@ -32,6 +32,7 @@
 #include <limits>
 #include <list>
 #include <optional>
+#include <typeinfo>
 
 namespace uitk {
 
@@ -553,8 +554,35 @@ Size Widget::preferredSize(const LayoutContext& context) const
 
 void Widget::layout(const LayoutContext& context)
 {
+    static bool showBaseWarning = true;
+
     for (auto *child : mImpl->children) {
         child->layout(context);
+    }
+
+    // It is tempting, especially for Qt users, to put a Layout in a widget,
+    // instead of inheriting from the desired Layout. A base Widget actually
+    // does no sizing, so putting children in a base Widget requires manually
+    // calling setFrame() on each child. This is not a good idea, so we warn
+    // and assert in development mode.
+    // Q: Is there a way to get a layout in a Widget to work?
+    // A: I could not think of one. We want base Widget to not size the objects
+    //    as that is the job of a layout, and if we resized for layouts but
+    //    not other things it would be inconsistent, and if we only resized
+    //    if the size is zero we would fail to resize when the widget is
+    //    resized (for instance, if the window is resized by the user), which
+    //    would introduce a subtle bug. So we keep the behavior and warn the
+    //    programmer.
+    // (Note that comparison using typeid() is fast, much more than dynamic_cast())
+    bool isRealWidget = (typeid(*this) == typeid(Widget));  // typeid(id) is always Widget*
+    if (isRealWidget && showBaseWarning) {
+        for (auto *child : mImpl->children) {
+            if (child->bounds().isEmpty()) {
+                Application::instance().debugPrint("[uitk] Assert: children of a base-class Widget will always be sized to 0x0 and must be sized manually. You should inherit from Widget and override layout() or inherit from a Layout directly (instead of inheriting from Widget and then adding a Layout as a child).");
+                showBaseWarning = false;
+                assert(false);
+            }
+        }
     }
 }
 
