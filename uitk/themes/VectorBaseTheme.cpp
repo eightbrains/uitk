@@ -655,6 +655,11 @@ PicaPt VectorBaseTheme::calcPreferredMenubarItemHorizMargin(const DrawContext& d
     return dc.ceilToNearestPixel(0.5f * calcStandardHeight(dc, mParams.labelFont));
 }
 
+PicaPt VectorBaseTheme::calcLayoutSpacing(const DrawContext& dc) const
+{
+    return dc.roundToNearestPixel(0.5f * mParams.labelFont.pointSize());
+}
+
 void VectorBaseTheme::drawCheckmark(UIContext& ui, const Rect& r, const WidgetStyle& style) const
 {
     const auto strokeWidth = PicaPt::fromPixels(2.0f, 96.0f);

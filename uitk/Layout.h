@@ -140,10 +140,10 @@ public:
 protected:
     /// Returns the actual PicaPt of the spacing, computed from spacing or
     /// spacingEm as applicable.
-    PicaPt calcSpacing(const DrawContext& dc, const PicaPt& em) const;
+    PicaPt calcSpacing(const LayoutContext& context, const PicaPt& em) const;
     /// Returns the actual PicaPts of the margins, computed from margins or
     /// marginsEm as applicable.
-    std::array<PicaPt, 4> calcMargins(const DrawContext& dc, const PicaPt& em) const;
+    std::array<PicaPt, 4> calcMargins(const LayoutContext& context, const PicaPt& em) const;
 
 private:
     struct Impl;

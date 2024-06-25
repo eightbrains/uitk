@@ -113,6 +113,8 @@ public:
         { return mTheme->calcPreferredMenuVerticalMargin(); }
     PicaPt calcPreferredMenubarItemHorizMargin(const DrawContext& dc, const PicaPt& height) const override
         { return mTheme->calcPreferredMenubarItemHorizMargin(dc, height); }
+    PicaPt calcLayoutSpacing(const DrawContext& dc) const override
+        { return mTheme->calcLayoutSpacing(dc); }
 
     void drawCheckmark(UIContext& ui, const Rect& r, const WidgetStyle& style) const override {}
     void drawSubmenuIcon(UIContext& ui, const Rect& frame, const WidgetStyle& style) const override {}

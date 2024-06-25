@@ -116,11 +116,14 @@ private:
     NumberEdit *mFloatValue;
 };
 
-class ColorPicker : public VLayout  // TODO: if this is Widget and we add a VLayout, nothing shows up
+class ColorPicker : public VLayout
 {
 public:
     ColorPicker()
     {
+        // The default layout margin is PicaPt::kZero so that nested layouts work
+        // like you expect. Since this is the outer layout, though, we want some
+        // margins between the edge of the window and the content.
         setMarginsEm(1.0);  // 1.0 em
 
         addChild((mRGB[0] = new ColorChannel(0)));
@@ -141,9 +144,11 @@ public:
         
         for (auto *channel : mRGB) {
             channel->setOnValueChanged([this](ColorChannel *cc){
+                // Set the model value
                 mColor.setRed(mRGB[0]->value());
                 mColor.setGreen(mRGB[1]->value());
                 mColor.setBlue(mRGB[2]->value());
+                // Update the view
                 update();
             });
         }
@@ -156,8 +161,8 @@ public:
             if (hex[0] != '#') {
                 hex = "#" + hex;
             }
-            mColor = Color::fromCSS(hex.c_str());
-            update();
+            mColor = Color::fromCSS(hex.c_str());  // set the model value
+            update();                              // update the view
         });
 
         update();

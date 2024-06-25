@@ -271,6 +271,8 @@ public:
     virtual MenubarMetrics calcPreferredMenuItemMetrics(const DrawContext& dc, const PicaPt& height) const = 0;
     virtual PicaPt calcPreferredMenuVerticalMargin() const = 0;
     virtual PicaPt calcPreferredMenubarItemHorizMargin(const DrawContext& dc, const PicaPt& height) const = 0;
+    virtual PicaPt calcLayoutSpacing(const DrawContext& dc) const = 0;
+    // Why no calcLayoutMargin? Because it should be 0, otherwise nested layouts are ugly by default
 
     virtual void drawCheckmark(UIContext& ui, const Rect& r, const WidgetStyle& style) const = 0;
     virtual void drawSubmenuIcon(UIContext& ui, const Rect& frame, const WidgetStyle& style) const = 0;

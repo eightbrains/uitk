@@ -62,6 +62,7 @@ public:
     MenubarMetrics calcPreferredMenuItemMetrics(const DrawContext& dc, const PicaPt& height) const override;
     PicaPt calcPreferredMenuVerticalMargin() const override;
     PicaPt calcPreferredMenubarItemHorizMargin(const DrawContext& dc, const PicaPt& height) const override;
+    PicaPt calcLayoutSpacing(const DrawContext& dc) const override;
 
     void drawCheckmark(UIContext& ui, const Rect& r, const WidgetStyle& style) const override;
     void drawSubmenuIcon(UIContext& ui, const Rect& frame, const WidgetStyle& style) const override;

@@ -199,34 +199,39 @@ Layout::SpacingEm* Layout::SpacingEm::setEms(float ems)
 struct Layout::Impl
 {
     int align = 0;
-    float spacingEm = 1.0f;
+    float spacingEm = 0.0f;
     PicaPt spacing = PicaPt::kZero;
     std::array<float, 4> marginsEm = { 0.0f, 0.0f, 0.0f, 0.0f };
     std::array<PicaPt, 4> margins = { PicaPt::kZero, PicaPt::kZero, PicaPt::kZero, PicaPt::kZero};
+    bool spacingUnset = true;
+    // No marginsUnset because we want the default margin to be zero (otherwise
+    // nested layouts have lots of extra spacing).
 
-    PicaPt calcSpacing(const DrawContext& dc, const PicaPt& em) const
+    PicaPt calcSpacing(const LayoutContext& context, const PicaPt& em) const
     {
-        if (this->spacingEm > 0.0f) {
-            return dc.roundToNearestPixel(this->spacingEm * em);
+        if (spacingUnset) {
+            return context.theme.calcLayoutSpacing(context.dc);  // already rounded by Theme
+        } else if (this->spacingEm > 0.0f) {
+            return context.dc.roundToNearestPixel(this->spacingEm * em);
         } else {
-            return dc.roundToNearestPixel(this->spacing);
+            return context.dc.roundToNearestPixel(this->spacing);
         }
 
     }
-    std::array<PicaPt, 4> calcMargins(const DrawContext& dc, const PicaPt& em) const
+
+    std::array<PicaPt, 4> calcMargins(const LayoutContext& context, const PicaPt& em) const
     {
-        std::array<PicaPt, 4> actual;
         if (this->marginsEm[0] != 0.0f || this->marginsEm[1] != 0.0f ||
             this->marginsEm[2] != 0.0f || this->marginsEm[3] != 0.0f) {
-            return std::array<PicaPt, 4>{ dc.roundToNearestPixel(this->marginsEm[0] * em),
-                                          dc.roundToNearestPixel(this->marginsEm[1] * em),
-                                          dc.roundToNearestPixel(this->marginsEm[2] * em),
-                                          dc.roundToNearestPixel(this->marginsEm[3] * em) };
+            return std::array<PicaPt, 4>{ context.dc.roundToNearestPixel(this->marginsEm[0] * em),
+                                          context.dc.roundToNearestPixel(this->marginsEm[1] * em),
+                                          context.dc.roundToNearestPixel(this->marginsEm[2] * em),
+                                          context.dc.roundToNearestPixel(this->marginsEm[3] * em) };
         } else {
-            return std::array<PicaPt, 4>{ dc.roundToNearestPixel(this->margins[0]),
-                                          dc.roundToNearestPixel(this->margins[1]),
-                                          dc.roundToNearestPixel(this->margins[2]),
-                                          dc.roundToNearestPixel(this->margins[3]) };
+            return std::array<PicaPt, 4>{ context.dc.roundToNearestPixel(this->margins[0]),
+                                          context.dc.roundToNearestPixel(this->margins[1]),
+                                          context.dc.roundToNearestPixel(this->margins[2]),
+                                          context.dc.roundToNearestPixel(this->margins[3]) };
         }
     }
 };
@@ -293,6 +298,7 @@ float Layout::spacingEm() const { return mImpl->spacingEm; }
 
 Layout* Layout::setSpacingEm(float em)
 {
+    mImpl->spacingUnset = false;
     mImpl->spacingEm = em;
     mImpl->spacing = PicaPt::kZero;
     setNeedsLayout();
@@ -303,20 +309,21 @@ const PicaPt& Layout::spacing() const { return mImpl->spacing; }
 
 Layout* Layout::setSpacing(const PicaPt& s)
 {
+    mImpl->spacingUnset = false;
     mImpl->spacing = s;
     mImpl->spacingEm = 0.0f;
     setNeedsLayout();
     return this;
 }
 
-PicaPt Layout::calcSpacing(const DrawContext& dc, const PicaPt& em) const
+PicaPt Layout::calcSpacing(const LayoutContext& context, const PicaPt& em) const
 {
-    return mImpl->calcSpacing(dc, em);
+    return mImpl->calcSpacing(context, em);
 }
 
-std::array<PicaPt, 4> Layout::calcMargins(const DrawContext& dc, const PicaPt& em) const
+std::array<PicaPt, 4> Layout::calcMargins(const LayoutContext& context, const PicaPt& em) const
 {
-    return mImpl->calcMargins(dc, em);
+    return mImpl->calcMargins(context, em);
 }
 
 //-----------------------------------------------------------------------------
@@ -350,8 +357,8 @@ Dir Layout1D::dir() const { return mImpl->dir; }
 Size Layout1D::preferredSize(const LayoutContext &context) const
 {
     auto em = context.theme.params().labelFont.pointSize();
-    auto spacing = calcSpacing(context.dc, em);
-    auto margins = calcMargins(context.dc, em);
+    auto spacing = calcSpacing(context, em);
+    auto margins = calcMargins(context, em);
 
     // dir: preferred size is max of all the elements (so if one is kDimGrow, the result is kDimGrow)
     // transverse: preferred size is the max non-grow size. (This may prove to be insufficient, in
@@ -406,8 +413,8 @@ Size Layout1D::preferredSize(const LayoutContext &context) const
 void Layout1D::layout(const LayoutContext& context)
 {
     auto em = context.theme.params().labelFont.pointSize();
-    auto spacing = calcSpacing(context.dc, em);
-    auto margins = calcMargins(context.dc, em);
+    auto spacing = calcSpacing(context, em);
+    auto margins = calcMargins(context, em);
 
     std::vector<Size> prefs;
     std::vector<PicaPt> prefComponent;
@@ -625,8 +632,8 @@ void GridLayout::addChild(Widget *child, int row, int column)
 Size GridLayout::preferredSize(const LayoutContext &context) const
 {
     auto em = context.theme.params().labelFont.pointSize();
-    auto spacing = calcSpacing(context.dc, em);
-    auto margins = calcMargins(context.dc, em);
+    auto spacing = calcSpacing(context, em);
+    auto margins = calcMargins(context, em);
     auto border = PicaPt::kZero;
     if (borderColor().alpha() > 1e-5f && borderWidth() > PicaPt::kZero) {
         border = context.dc.roundToNearestPixel(borderWidth());
@@ -651,8 +658,8 @@ Size GridLayout::preferredSize(const LayoutContext &context) const
 void GridLayout::layout(const LayoutContext& context)
 {
     auto em = context.theme.params().labelFont.pointSize();
-    auto spacing = calcSpacing(context.dc, em);
-    auto margins = calcMargins(context.dc, em);
+    auto spacing = calcSpacing(context, em);
+    auto margins = calcMargins(context, em);
     auto border = PicaPt::kZero;
     if (borderColor().alpha() > 1e-5f && borderWidth() > PicaPt::kZero) {
         border = context.dc.roundToNearestPixel(borderWidth());
