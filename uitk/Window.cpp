@@ -643,7 +643,9 @@ Window::~Window()
     mImpl->rootWidget.reset();
 
     Application::instance().removeWindow(this);
-    updateWindowList();
+    if (!(mImpl->flags & Flags::kPopup)) {  // popups are not in the list, and
+        updateWindowList();                 // updating the list is problematic
+    }                                       // if moving to the window menu (Linux)
     mImpl->cancelPopup();
     // clear out refs that are sometimes referenced, in case deleting code
     // refers to them after they have been deleted.
@@ -675,7 +677,9 @@ Window* Window::show(bool show)
         }
     };
     mImpl->window->show(show, onWillShow);
-    updateWindowList();
+    if (!(mImpl->flags & Flags::kPopup)) {  // popups are never in window list,
+        updateWindowList();                 // also, prevents problems if 'this'
+    }                                       // is the "Window" menu (Linux)
     return this;
 }
 

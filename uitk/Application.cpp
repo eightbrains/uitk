@@ -135,6 +135,9 @@ int Application::run()
     // have an empty menu (except for an empty Application menu).
     // This will behave strangely, so add the standard items.
     if (menubar().menus().size() == 1) {
+#else
+    if (menubar().menus().size() == 0) {
+#endif // __APPLE__
         // Exclude undo/redo, since presumably that app is too simple
         // to handle that, too. We do want the edit menu, though,
         // in case there are text boxes or number editing (which handle
@@ -148,7 +151,6 @@ int Application::run()
         // window, then we'd better exit after the last one closes.
         setExitWhenLastWindowCloses(true);
     }
-#endif // __APPLE__
 
     return mImpl->osApp->run();
 }

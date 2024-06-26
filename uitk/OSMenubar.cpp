@@ -162,11 +162,10 @@ void OSMenubar::addStandardItems(Menu **file, Menu **edit, Menu **window, Menu *
     }
     idx = (*file)->size();
     if (addItem(*file, StandardItem::kCloseWindow, &idx)) {
-        if (idx > 0) {  // menu didn't have Cmd-W and there was something in it
-            --idx;
-            addSeparator(*file, &idx);
-        }
+        --idx;
+        addSeparator(*file, &idx, (idx > 0));
     }
+    idx = (*file)->size();
     if (addItem(*file, StandardItem::kQuit, &idx)) {
         --idx;
         addSeparator(*file, &idx);
@@ -193,15 +192,17 @@ void OSMenubar::addStandardItems(Menu **file, Menu **edit, Menu **window, Menu *
     addSeparator(*edit, &idx, itemsHas(StandardItem::kPreferences) && idx > ccpIdx);
     addItem(*edit, StandardItem::kPreferences, &idx);
 
-    idx = 0;
-    Menu *helpMenu = nullptr;
-    if (!help) {
-        help = &helpMenu;
+    if (itemsHas(StandardItem::kAbout)) {
+        idx = 0;
+        Menu *helpMenu = nullptr;
+        if (!help) {
+            help = &helpMenu;
+        }
+        if (!*help) {
+            *help = newMenu("&Help");
+        }
+        addItem(*help, StandardItem::kAbout, &idx);
     }
-    if (!*help) {
-        *help = newMenu("&Help");
-    }
-    addItem(*help, StandardItem::kAbout, &idx);
 
     idx = 0;
     Menu* windowMenu = nullptr;
