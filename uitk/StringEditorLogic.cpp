@@ -179,7 +179,7 @@ TextEditorLogic::Index StringEditorLogic::startOfLine(Index i) const
         x = glyphs[glyphIdx].frame.x;
     } else {
         x = glyphs.back().frame.maxX();
-        glyphIdx = long(glyphs.size()) - 1;  // will always be decremented before using, so size() is okay
+        glyphIdx = long(glyphs.size());  // will always be decremented before using, so size() is okay
     }
     while (i > 0 && mImpl->stringUTF8[i - 1] != '\n' && (glyphs[glyphIdx - 1].frame.x - x) < epsilon) {
         i = glyphs[--glyphIdx].index;

@@ -187,7 +187,13 @@ private:
     Widget *mSwatch;
 };
 
+#if defined(_WIN32) || defined(_WIN64)
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd)
+#else
 int main(int argc, char *argv[])
+#endif // windows
 {
     // We need to create the application before anything else.
     // This initializes the UITK library with the operating system.

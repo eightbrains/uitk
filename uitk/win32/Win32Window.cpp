@@ -1027,13 +1027,12 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
             w->onKey(makeKeyEvent(KeyEvent::Type::kKeyUp, false, wParam));
             return 0;
         case WM_CHAR: {
-            // Backspace, tab, escape are sent as WM_CHAR, even though they are really
-            // special keys, not text entry keys.
-            if (wParam < 32 /* space */ && wParam != 13 /* \r */) {
+            // Backspace, tab, escape, enter are sent as WM_CHAR, even though they are really
+            // special keys, not text entry keys. (Enter is a "control key" in our case, because
+            // WM_KEYDOWN already handles it, and it adds a new line, not a '\r' (13), which
+            // is what Windows sends us.)
+            if (wParam < 32 /* space */) {
                 return 0;
-            }
-            if (wParam == 13) {  // convert Windows' silly \r into \n
-                wParam = 10;
             }
 
             WCHAR utf16bytes[] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
