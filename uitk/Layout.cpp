@@ -131,6 +131,26 @@ std::vector<PicaPt> calcSizes(Dir dir, const PicaPt& majorAxisSize,
     return outSizes;
 }
 
+LayoutContext contextWithMargins(const LayoutContext& context, Dir dir,
+                                 const Size& widgetSize, const std::array<PicaPt, 4>& margins)
+{
+    if (dir == Dir::kHoriz) {
+        auto h = std::min(context.constraints.height, widgetSize.height);
+        if (h < Widget::kDimGrow) {
+            return context.withHeight(h - margins[1] - margins[3]);
+        } else {
+            return context;
+        }
+    } else {
+        auto w = std::min(context.constraints.width, widgetSize.width);
+        if (w < Widget::kDimGrow) {
+            return context.withWidth(w - margins[0] - margins[2]);
+        } else {
+            return context;
+        }
+    }
+}
+
 } // namespace
 
 //-----------------------------------------------------------------------------
@@ -354,11 +374,12 @@ Layout1D::~Layout1D()
 
 Dir Layout1D::dir() const { return mImpl->dir; }
 
-Size Layout1D::preferredSize(const LayoutContext &context) const
+Size Layout1D::preferredSize(const LayoutContext &origContext) const
 {
-    auto em = context.theme.params().labelFont.pointSize();
-    auto spacing = calcSpacing(context, em);
-    auto margins = calcMargins(context, em);
+    auto em = origContext.theme.params().labelFont.pointSize();
+    auto spacing = calcSpacing(origContext, em);
+    auto margins = calcMargins(origContext, em);
+    auto context = contextWithMargins(origContext, mImpl->dir, Size(kDimGrow, kDimGrow), margins);
 
     // dir: preferred size is max of all the elements (so if one is kDimGrow, the result is kDimGrow)
     // transverse: preferred size is the max non-grow size. (This may prove to be insufficient, in
@@ -410,11 +431,12 @@ Size Layout1D::preferredSize(const LayoutContext &context) const
     return size;
 }
 
-void Layout1D::layout(const LayoutContext& context)
+void Layout1D::layout(const LayoutContext& origContext)
 {
-    auto em = context.theme.params().labelFont.pointSize();
-    auto spacing = calcSpacing(context, em);
-    auto margins = calcMargins(context, em);
+    auto em = origContext.theme.params().labelFont.pointSize();
+    auto spacing = calcSpacing(origContext, em);
+    auto margins = calcMargins(origContext, em);
+    auto context = contextWithMargins(origContext, mImpl->dir, bounds().size(), margins);
 
     std::vector<Size> prefs;
     std::vector<PicaPt> prefComponent;

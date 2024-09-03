@@ -199,7 +199,7 @@ public:
         return "";
     }
 
-    virtual std::string runLayout(Dir dir)
+    virtual TestLayout1D* setupLayout(Dir dir)
     {
         auto subdir = dir;
         if (mSublayoutDir == SublayoutDir::kOpposite) {
@@ -250,12 +250,20 @@ public:
             }
         }
 
+        return layout;
+    }
+
+    virtual std::string runLayout(Dir dir)
+    {
+        TestLayout1D *layout = setupLayout(dir);
+
         Window window("UITK test", layout->frame().width, layout->frame().height);
         Widget *root = new Widget();
         // Put layout in a child, so that the window will resize the root, but we can manually size the layout
         root->addChild(layout);
         window.addChild(root);
-        window.setOnWindowLayout([layout, this](Window &, const LayoutContext &context) {
+        window.setOnWindowLayout([layout, this, root](Window &, const LayoutContext &context) {
+            root->setFrame(Rect(PicaPt::kZero, PicaPt::kZero, PicaPt(10.0f), PicaPt(10.0f)));
             auto pref = layout->preferredSize(context);
             layout->setFrame(Rect(PicaPt::kZero, PicaPt::kZero, pref.width, pref.height));
             auto onePx = context.dc.onePixel();
@@ -579,6 +587,67 @@ public:
     }
 };
 
+class TransverseConstraintLayoutTest : public LayoutTest
+{
+    using Super = LayoutTest;
+
+    class WordWrapWidget : public TestWidget
+    {
+    public:
+        WordWrapWidget(Dir dir, float baseSize)
+            : TestWidget(SizePx(0.0f, 0.0f))
+            , mDir(dir), mBaseSize(baseSize)
+        {
+        }
+
+        Size preferredSize(const LayoutContext& context) const
+        {
+            auto onePx = context.dc.onePixel();
+            auto zero = PicaPt::kZero;
+            if (mDir == Dir::kHoriz) {
+                return Size(mBaseSize + std::max(zero, context.constraints.height - mBaseSize),
+                            context.constraints.height);
+            } else {
+                return Size(context.constraints.width,
+                            mBaseSize + std::max(zero, context.constraints.width - mBaseSize));
+            }
+        }
+
+    private:
+        Dir mDir;
+        float mBaseSize;
+    };
+
+public:
+    float kMarginPx;
+    TestLayout1D *mLayout = nullptr;
+
+    TransverseConstraintLayoutTest() : LayoutTest("layout (transverse constraint)", 0)
+    {
+        kMarginPx = 20;
+        mSizePx = SizePx(100, 100);
+        mExpectedPxSizes = { SizePx(60, 60), SizePx(40, 60) };
+    }
+
+    TestLayout1D* setupLayout(Dir dir) override
+    {
+        mLayout = new TestLayout1D(dir, mSizePx);
+        if (dir == Dir::kHoriz) {
+            mMarginsPx = { 0.0f, kMarginPx, 0.0f, kMarginPx };
+        } else {
+            mMarginsPx = { kMarginPx, 0.0f, kMarginPx, 0.0f };
+        }
+        mLayout->addChild(new WordWrapWidget(dir, 20));
+        if (dir == Dir::kHoriz) {
+            mLayout->addChild(new TestWidget(SizePx(Widget::kDimGrow.asFloat(), 60)));
+        } else {
+            mLayout->addChild(new TestWidget(SizePx(60, Widget::kDimGrow.asFloat())));
+        }
+
+        return mLayout;
+    }
+};
+
 //-----------------------------------------------------------------------------
 class GridTest : public TestCase
 {
@@ -630,7 +699,12 @@ public:
         // Put layout in a child, so that the window will resize the root, but we can manually size the layout
         root->addChild(layout);
         window.addChild(root);
-        window.setOnWindowLayout([layout, this](Window &, const LayoutContext &context) {
+        window.setOnWindowLayout([layout, this, root](Window &w, const LayoutContext &context) {
+            // Set the root widget with some size so that layout() doesn't assert
+            // (since we shouldn't be doing what we are doing, that is, resizing the
+            // layout independently).
+            root->setFrame(Rect(PicaPt::kZero, PicaPt::kZero, PicaPt(10.0f), PicaPt(10.0f)));
+
             auto pref = layout->preferredSize(context);
             layout->setFrame(Rect(PicaPt::kZero, PicaPt::kZero, pref.width, pref.height));
             auto onePx = context.dc.onePixel();
@@ -932,6 +1006,7 @@ int main(int argc, char* argv[])
         std::make_shared<NestedGrow2LayoutTest>(),
         std::make_shared<MarginsLayoutTest>(),
         std::make_shared<TransverseFixedLayoutTest>(),
+        std::make_shared<TransverseConstraintLayoutTest>(),
         std::make_shared<NoItemsGridTest>(),
         std::make_shared<OneItemGridTest>(),
         std::make_shared<OneItemNonDefaultExpandGridTest>(),
