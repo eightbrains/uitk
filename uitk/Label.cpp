@@ -140,7 +140,8 @@ const std::string& Label::text() const { return mImpl->text.text(); }
 
 Label* Label::setText(const std::string& text)
 {
-    return setRichText(Text(text, Font(), Color::kTextDefault));
+    auto font = (mImpl->usesThemeFont ? Font() : mImpl->customFont);
+    return setRichText(Text(text, font, Color::kTextDefault));
 }
 
 const Text& Label::richText() const { return mImpl->text; }
@@ -189,8 +190,16 @@ Label* Label::setFont(const Font& font)
 {
     mImpl->usesThemeFont = false;
     mImpl->customFont = font;
+    // The Text stores the previous font in the runs, so we need
+    // to update that. If the label has rich text with different
+    // font faces this will set them all to use the new font
+    // (although the point size, bold, and italic will remain).
+    // This could be construed as a bug, but seems like reasonable
+    // behavior for a call named "setFont".
+    mImpl->text.setFont(font);
     mImpl->clearPreferredSize();
     mImpl->clearLayout();
+    setNeedsDraw();
     return this;
 }
 
