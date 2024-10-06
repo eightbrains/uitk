@@ -44,7 +44,7 @@ public:
         for (auto len : lengths) {
             total += len;
         }
-        auto inc = 0.01 * total;
+        auto inc = 0.01f * total;
 
         auto info = Super::accessibilityInfo();
         info.type = AccessibilityInfo::Type::kSplitterThumb;
@@ -402,7 +402,7 @@ void Splitter::layout(const LayoutContext& context)
             // of the first and last panel (for example) without needing to know the
             // size the middle panel(s), which is useful if you are setting by
             // PicaPt or Em.
-            auto extra = (hundredPercent - len) / (nPanels - nLengths);
+            auto extra = (hundredPercent - len) / float(nPanels - nLengths);
             for (auto &l : lengths) {
                 if (l < PicaPt::kZero) {
                     l = extra;

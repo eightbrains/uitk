@@ -139,7 +139,7 @@ Theme::Params EmpireTheme::customParams(const Color& bgColor,
         params.editableBackgroundColor = bgColor.blend(Color::kBlack, 0.5f);
         }
     }
-    params.disabledBackgroundColor = params.nonEditableBackgroundColor.blend(fgColor, 0.1667);
+    params.disabledBackgroundColor = params.nonEditableBackgroundColor.blend(fgColor, 0.1667f);
     params.borderColor = fgColor.colorWithAlpha(0.2f);
     params.borderWidth = PicaPt::fromStandardPixels(kBorderWidthStdPx);
     params.borderRadius = PicaPt::fromStandardPixels(kBorderRadiusStdPx); 
