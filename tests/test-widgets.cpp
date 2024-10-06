@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 - 2023 Eight Brains Studios, LLC
+// Copyright 2021 - 2024 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
     // just the timer measurement takes less than a microsecond.
     // This will give us a hint what the actual accuracy of the timer is
     // for this platform:
-    //     0.0:  worse than microsecond accuracy (should take a dozen or to usec)
+    //     0.0:  worse than microsecond accuracy (should take one or two dozen usec)
     //    nn.0:  microsecong accuracy
     //  nn.nnn:  nanosecond accuracy
     auto t0 = app.microTime();

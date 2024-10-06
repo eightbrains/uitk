@@ -389,6 +389,7 @@ Theme::Params Win32Application::themeParams() const
         params.textColor = getElementColor(abi_vm::UIElementType_WindowText);
         params.disabledTextColor = getElementColor(abi_vm::UIElementType_GrayText);  // not gray in high contrast
     }
+    params.scrollbarColor = params.textColor;
 
     return params;
 }

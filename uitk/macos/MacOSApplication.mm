@@ -143,6 +143,7 @@ Theme::Params MacOSApplication::themeParams() const
     params.editableBackgroundColor = toUITKColor(NSColor.controlColor);
     params.nonEditableBackgroundColor = toUITKColor(NSColor.controlColor);
     params.textColor = textColor;
+    params.scrollbarColor = textColor;
     params.disabledTextColor = toUITKColor(NSColor.disabledControlTextColor);
     params.disabledBackgroundColor = Color(params.nonEditableBackgroundColor.red(),
                                            params.nonEditableBackgroundColor.green(),

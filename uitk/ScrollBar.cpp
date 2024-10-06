@@ -120,7 +120,31 @@ void ScrollBar::drawThumb(UIContext& context, Widget *thumb)
         mImpl->thumbNeedsResize = false;
     }
 
-    context.theme.drawScrollbarThumb(context, thumb->frame(), style(themeState()), themeState());
+    bool alreadyDrew = false;
+    auto *parent = this->parent();
+    if (parent && (parent->style(Theme::WidgetState::kNormal).flags & Theme::WidgetStyle::Flags::kBGColorSet)) {
+        float bgLightness = parent->style(Theme::WidgetState::kNormal).bgColor.toGrey().red();
+        Color thumbColor = context.theme.params().scrollbarColor;
+        float thumbLightness;
+        if (style(themeState()).flags & Theme::WidgetStyle::Flags::kFGColorSet) {
+            thumbColor = style(themeState()).bgColor;
+        }
+        thumbLightness = thumbColor.toGrey().red();
+        if (std::abs(thumbLightness - bgLightness) < 0.2f) {
+            auto s = style(themeState());  // copy
+            if (bgLightness < 0.5f) {
+                s.bgColor = Color(1.0f, 1.0f, 1.0f, thumbColor.alpha());
+            } else {
+                s.bgColor = Color(0.0f, 0.0f, 0.0f, thumbColor.alpha());
+            }
+            s.flags |= Theme::WidgetStyle::Flags::kBGColorSet;
+            context.theme.drawScrollbarThumb(context, thumb->frame(), s, themeState());
+            alreadyDrew = true;
+        }
+    }
+    if (!alreadyDrew) {
+        context.theme.drawScrollbarThumb(context, thumb->frame(), style(themeState()), themeState());
+    }
 }
 
 }  // namespace uitk

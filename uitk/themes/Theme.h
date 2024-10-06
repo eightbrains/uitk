@@ -81,6 +81,7 @@ public:
         Color accentColor;
         Color selectionColor;
         Color keyFocusColor;
+        Color scrollbarColor;
         Color splitterColor;
         Color nonNativeMenuSeparatorColor;
         Color nonNativeMenuBackgroundColor;
