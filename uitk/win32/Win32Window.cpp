@@ -255,6 +255,8 @@ Win32Window::Win32Window(IWindowCallbacks& callbacks,
     DWORD exStyle = 0;
     if (flags & Window::Flags::kDialog) {
         // Note that WS_DLGFRAME is used by normal windows (part of WS_CAPTION)
+        // Also, we do not use WS_EX_TOPMOST because that would make the dialog
+        // system-modal, which is not what we want.
         exStyle |= WS_EX_DLGMODALFRAME;
     }
 

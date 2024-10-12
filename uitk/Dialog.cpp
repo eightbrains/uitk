@@ -222,6 +222,11 @@ Dialog::Dialog()
 
 Dialog::~Dialog()
 {
+    if (mImpl->ourWindow) {  // really shouldn't get here
+        mImpl->ourWindow->removeChild(this);  // we own ourselves now
+        mImpl->ourWindow->close();
+        mImpl->ourWindow->deleteLater();
+    }
 }
 
 const std::string& Dialog::title() const { return mImpl->title; }
@@ -245,6 +250,17 @@ void Dialog::showModal(Window *w, std::function<void(Result, int)> onDone)
         if (w->beginModalDialog(this)) {
             mImpl->owningWindow = w;
         }
+    } else {
+        auto title = mImpl->title;
+        if (title.empty()) {
+            title = Application::instance().applicationName();
+        }
+        mImpl->ourWindow = new Window(title, 0, 0, 640, 480, Window::Flags::kDialog);
+        mImpl->ourWindow->addChild(this);  // we do not own ourselves now, the window does
+        mImpl->ourWindow->setOnWindowWillClose([this](Window &w) { w.removeChild(this); });
+        mImpl->ourWindow->resizeToFit();
+        mImpl->ourWindow->centerInScreen();
+        mImpl->ourWindow->show(true);
     }
 }
 
@@ -252,6 +268,11 @@ void Dialog::finish(int value)
 {
     if (mImpl->owningWindow) {
         mImpl->owningWindow->endModalDialog();
+    }
+    if (mImpl->ourWindow) {
+        mImpl->ourWindow->close();
+        mImpl->ourWindow->deleteLater();
+        mImpl->ourWindow = nullptr;
     }
     if (mImpl->onDone) {
         // We are probably in an event handler (of a button, most likely),
@@ -267,6 +288,11 @@ void Dialog::cancel()
 {
     if (mImpl->owningWindow) {
         mImpl->owningWindow->endModalDialog();
+    }
+    if (mImpl->ourWindow) {
+        mImpl->ourWindow->close();
+        mImpl->ourWindow->deleteLater();
+        mImpl->ourWindow = nullptr;
     }
     if (mImpl->onDone) {
         Application::instance().scheduleLater(nullptr, [this]() {

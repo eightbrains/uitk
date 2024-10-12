@@ -465,7 +465,18 @@ public:
 
     void addWindow(WASMWindow *w)
     {
-        mWindows.push_back(WindowInfo{ w, { 0.0f, 0.0f, 0.0f, 0.0f }, w->isShowing() });
+        if (!mWindows.empty()) {
+        }
+
+        auto insertAt = mWindows.rbegin();
+        if (!mWindows.empty()) {
+            if (!(w->flags() & Window::Flags::kDialog)) {
+                while (insertAt != mWindows.rend() && (insertAt->window->flags() & Window::Flags::kDialog)) {
+                    ++insertAt;
+                }
+            }
+        }
+        mWindows.insert(insertAt.base(), WindowInfo{ w, { 0.0f, 0.0f, 0.0f, 0.0f }, w->isShowing() });
     }
 
     void removeWindow(WASMWindow *w)
@@ -480,17 +491,28 @@ public:
             }
             mWindows.erase(it);
         }
+        if (!mWindows.empty()) {
+            mWindows.back().window->onActivated();
+        }
     }
 
     void showWindow(WASMWindow *w, bool show)
     {
+        auto *prevActiveInfo = activeWindowInfo();
+
         auto it = findWindow(w);
         if (it != mWindows.end()) {
             bool wasVisible = it->isVisible;
             it->isVisible = show;
             if (wasVisible != show) {
                 if (show) {
-                    it->window->onActivated();
+                    auto *currentActiveInfo = activeWindowInfo();
+                    if (currentActiveInfo && currentActiveInfo->window == w) {
+                        if (prevActiveInfo) {
+                            prevActiveInfo->window->onDeactivated();
+                        }
+                        it->window->onActivated();
+                    }
                 } else {
                     it->window->onDeactivated();
                 }
@@ -616,12 +638,18 @@ public:
 
     void raiseWindow(const WASMWindow *w)
     {
+        if (auto *active = activeWindowInfo()) {
+            active->window->onDeactivated();
+        }
         // HACK: cast away constness, but this is okay because we are not
         //       actually calling anything with the pointer, just using it
         //       for comparison. The const is only so that const functions
         //       can all this.
         removeWindow((WASMWindow*)w);
         addWindow((WASMWindow*)w);
+        if (auto *active = activeWindowInfo()) {  // w might not be at back()
+            active->window->onActivated();        // if dialog is showing
+        }
     }
 
     void postResize()

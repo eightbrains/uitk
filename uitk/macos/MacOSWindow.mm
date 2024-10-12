@@ -857,6 +857,9 @@ MacOSWindow::MacOSWindow(IWindowCallbacks& callbacks,
         nsflags = NSWindowStyleMaskBorderless;
         mImpl->userCanClose = false;
     }
+    if (flags & Window::Flags::kDialog) {
+        nsflags = NSWindowStyleMaskTitled;
+    }
     mImpl->window = [[NSWindow alloc]
                      initWithContentRect:NSMakeRect(x, y, width, height)
                      styleMask:nsflags backing:NSBackingStoreBuffered defer:NO];
@@ -885,6 +888,9 @@ MacOSWindow::MacOSWindow(IWindowCallbacks& callbacks,
         mImpl->contentView.layer.borderWidth = CGFloat(kPopopBorderWidth);
         mImpl->contentView.layer.borderColor = NSColor.separatorColor.CGColor;
         mImpl->window.backgroundColor = NSColor.clearColor;
+    }
+    if (flags & Window::Flags::kDialog) {
+        mImpl->window.level = NSModalPanelWindowLevel;
     }
 
     setTitle(title);
@@ -926,18 +932,24 @@ void MacOSWindow::show(bool show, std::function<void(const DrawContext&)> onWill
         onWillShow(*[mImpl->contentView createContext]);
     }
     [mImpl->window setIsVisible:(show ? YES : NO)];
-    if (mImpl->flags & Window::Flags::kPopup) {
-        // If we use -makeKeyAndOrderFront:, it works except when click-dragging, in
-        // which case the popup pops-behind (presumably because it cannot be made key),
-        // which is bad.
-        // Note that -orderFront: sometimes doesn't put it in front, but
-        // -orderFrontRegardless seems to.
-        [mImpl->window orderFrontRegardless];
-        // TODO: it would be ideal to have VoiceOver move to the first item.
-        // Unfortunately, it does not appear to be possible to set the VO cursor.
-        // At least the user can navigate to the popup window with VO-F1.
-    } else {
-        [mImpl->window makeKeyAndOrderFront:nil];
+    if (show) {
+        // We could do NSApp.runModalForWindow: and NSApp.stopModalWithCode: on show/hide,
+        // but this prevents new windows from being created. Since our dialog model
+        // is asynchronous, it is a mismatch for the modal's synchronous model.
+
+        if (mImpl->flags & Window::Flags::kPopup) {
+            // If we use -makeKeyAndOrderFront:, it works except when click-dragging, in
+            // which case the popup pops-behind (presumably because it cannot be made key),
+            // which is bad.
+            // Note that -orderFront: sometimes doesn't put it in front, but
+            // -orderFrontRegardless seems to.
+            [mImpl->window orderFrontRegardless];
+            // TODO: it would be ideal to have VoiceOver move to the first item.
+            // Unfortunately, it does not appear to be possible to set the VO cursor.
+            // At least the user can navigate to the popup window with VO-F1.
+        } else {
+            [mImpl->window makeKeyAndOrderFront:nil];
+        }
     }
 }
 

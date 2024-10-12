@@ -91,42 +91,55 @@ void MacOSDialog::showAlert(Window *w,
                             const std::vector<std::string>& buttons,
                             std::function<void(Dialog::Result, int)> onDone)
 {
-    auto *macWin = dynamic_cast<MacOSWindow*>(w->nativeWindow());
-    assert(macWin);
+    NSAlert *dlg = [[NSAlert alloc] init];
+    if (!message.empty()) {
+        dlg.messageText = [NSString stringWithUTF8String:message.c_str()];
+    }
+    if (!info.empty()) {
+        dlg.informativeText = [NSString stringWithUTF8String:info.c_str()];
+    }
+    for (auto &b : buttons) {
+        [dlg addButtonWithTitle: [NSString stringWithUTF8String:b.c_str()]];
+    }
 
-    if (macWin) {
-        NSAlert *dlg = [[NSAlert alloc] init];
-        if (!message.empty()) {
-            dlg.messageText = [NSString stringWithUTF8String:message.c_str()];
+    auto handleDone = [onDone](NSModalResponse returnCode) {
+        switch (returnCode) {
+            case NSModalResponseCancel:
+                onDone(Dialog::Result::kCancelled, 0);
+                break;
+            case NSModalResponseOK:
+            case NSAlertFirstButtonReturn:
+                onDone(Dialog::Result::kFinished, 0);
+                break;
+            case NSAlertSecondButtonReturn:
+                onDone(Dialog::Result::kFinished, 1);
+                break;
+            case NSAlertThirdButtonReturn:
+                onDone(Dialog::Result::kFinished, 2);
+                break;
+            default:
+                assert(returnCode > NSAlertThirdButtonReturn);
+                onDone(Dialog::Result::kFinished, 2 + returnCode - NSAlertThirdButtonReturn);
+                break;
         }
-        if (!info.empty()) {
-            dlg.informativeText = [NSString stringWithUTF8String:info.c_str()];
+    };
+
+    if (w) {
+        auto *macWin = dynamic_cast<MacOSWindow*>(w->nativeWindow());
+        assert(macWin);
+        if (macWin) {
+            [dlg beginSheetModalForWindow:(__bridge NSWindow*)w->nativeHandle()
+                        completionHandler:^ (NSModalResponse returnCode) {
+                handleDone(returnCode);
+            } ];
         }
-        for (auto &b : buttons) {
-            [dlg addButtonWithTitle: [NSString stringWithUTF8String:b.c_str()]];
+    } else {
+        if (dlg.window != nil) {
+            dlg.window.level = NSModalPanelWindowLevel;
         }
-        [dlg beginSheetModalForWindow:(__bridge NSWindow*)w->nativeHandle()
-                    completionHandler:^ (NSModalResponse returnCode) {
-            switch (returnCode) {
-                case NSModalResponseCancel:
-                    onDone(Dialog::Result::kCancelled, 0);
-                    break;
-                case NSModalResponseOK:
-                case NSAlertFirstButtonReturn:
-                    onDone(Dialog::Result::kFinished, 0);
-                    break;
-                case NSAlertSecondButtonReturn:
-                    onDone(Dialog::Result::kFinished, 1);
-                    break;
-                case NSAlertThirdButtonReturn:
-                    onDone(Dialog::Result::kFinished, 2);
-                    break;
-                default:
-                    assert(returnCode > NSAlertThirdButtonReturn);
-                    onDone(Dialog::Result::kFinished, 2 + returnCode - NSAlertThirdButtonReturn);
-                    break;
-            }
-        } ];
+        [NSApplication.sharedApplication activateIgnoringOtherApps:YES];
+        auto returnCode = [dlg runModal];
+        handleDone(returnCode);
     }
 }
 
@@ -136,58 +149,69 @@ void MacOSDialog::showSave(Window *w,
                            const std::vector<FileType>& extensions,
                            std::function<void(Dialog::Result, const std::string&)> onDone)
 {
-    auto *macWin = dynamic_cast<MacOSWindow*>(w->nativeWindow());
-    assert(macWin);
-
-    if (macWin) {
-        NSSavePanel *dlg = [[NSSavePanel alloc] init];
-        // Don't set dlg.directoryURL, NSSavePanel already handles this itself.
-        if (extensions.empty()) {
-            dlg.allowsOtherFileTypes = YES;
-        } else {
-            NSMutableArray *nsexts = [[NSMutableArray alloc] init];
-            for (auto &e : extensions) {
-                if (!e.ext.empty()) {
-                    [nsexts addObject:[NSString stringWithUTF8String:e.ext.c_str()]];
-                } else {
-                    dlg.allowsOtherFileTypes = YES;
-                }
+    NSSavePanel *dlg = [[NSSavePanel alloc] init];
+    // Don't set dlg.directoryURL, NSSavePanel already handles this itself.
+    if (extensions.empty()) {
+        dlg.allowsOtherFileTypes = YES;
+    } else {
+        NSMutableArray *nsexts = [[NSMutableArray alloc] init];
+        for (auto &e : extensions) {
+            if (!e.ext.empty()) {
+                [nsexts addObject:[NSString stringWithUTF8String:e.ext.c_str()]];
+            } else {
+                dlg.allowsOtherFileTypes = YES;
             }
-            if (nsexts.count > 0) {  // exception if nsexts has nothing ({FileType{""}} passed in)
-                dlg.allowedFileTypes = nsexts;
+        }
+        if (nsexts.count > 0) {  // exception if nsexts has nothing ({FileType{""}} passed in)
+            dlg.allowedFileTypes = nsexts;
 
 /*                NSPopUpButton *fileTypeChooser = [[NSPopUpButton alloc] init];
-                for (auto &e : extensions) {
-                    std::string text;
-                    if (!e.ext.empty()) {
-                        text = e.description + " (*." + e.ext + ")";
-                    } else {
-                        text = e.description;
-                    }
-                    [fileTypeChooser addItemWithTitle:[NSString stringWithUTF8String:text.c_str()]];
+            for (auto &e : extensions) {
+                std::string text;
+                if (!e.ext.empty()) {
+                    text = e.description + " (*." + e.ext + ")";
+                } else {
+                    text = e.description;
                 }
-                [fileTypeChooser sizeToFit];
-                // We want some vertical spacing; conveniently, Cocoa widgets will center themselves
-                // vertically if they have more vertical space than they want.
-                fileTypeChooser.frame = NSMakeRect(0, 0, fileTypeChooser.frame.size.width, 2.0 * fileTypeChooser.frame.size.height);
-                dlg.accessoryView = fileTypeChooser; */
-                dlg.accessoryView = [[FileTypeChooser alloc]
-                                     initWithDialog:dlg types:extensions];
+                [fileTypeChooser addItemWithTitle:[NSString stringWithUTF8String:text.c_str()]];
             }
+            [fileTypeChooser sizeToFit];
+            // We want some vertical spacing; conveniently, Cocoa widgets will center themselves
+            // vertically if they have more vertical space than they want.
+            fileTypeChooser.frame = NSMakeRect(0, 0, fileTypeChooser.frame.size.width, 2.0 * fileTypeChooser.frame.size.height);
+            dlg.accessoryView = fileTypeChooser; */
+            dlg.accessoryView = [[FileTypeChooser alloc]
+                                 initWithDialog:dlg types:extensions];
         }
-        NSWindow *parent = (__bridge NSWindow*)w->nativeHandle();
-        if (parent == nil) {
-            parent = dlg;  // this is same as [dlg runModal], according to docs
+    }
+    NSWindow *parent = nil;
+    if (w) {
+        auto *macWin = dynamic_cast<MacOSWindow*>(w->nativeWindow());
+        assert(macWin);
+        if (macWin) {
+            parent = (__bridge NSWindow*)w->nativeHandle();
         }
+    }
+
+    auto handleDone = [onDone, dlg](NSModalResponse result) {
+        // NSModalResponseCancel == NSFileHandlingPanelCancelButton; docs say the latter,
+        // but that turns out to be deprecated.
+        if (result != NSModalResponseCancel) {
+            onDone(Dialog::Result::kFinished, dlg.URL.filePathURL.absoluteString.UTF8String);
+        } else {
+            onDone(Dialog::Result::kCancelled, "");
+        }
+    };
+
+    if (parent) {
         [dlg beginSheetModalForWindow:parent completionHandler:^(NSModalResponse result) {
-            // NSModalResponseCancel == NSFileHandlingPanelCancelButton; docs say the latter,
-            // but that turns out to be deprecated.
-            if (result != NSModalResponseCancel) {
-                onDone(Dialog::Result::kFinished, dlg.URL.filePathURL.absoluteString.UTF8String);
-            } else {
-                onDone(Dialog::Result::kCancelled, "");
-            }
+            handleDone(result);
         }];
+    } else {
+        dlg.level = NSModalPanelWindowLevel;
+        [NSApplication.sharedApplication activateIgnoringOtherApps:YES];
+        auto result = [dlg runModal];
+        handleDone(result);
     }
 }
 
@@ -199,47 +223,59 @@ void MacOSDialog::showOpen(Window *w,
                            bool canSelectMultipleFiles,
                            std::function<void(Dialog::Result, const std::vector<std::string>&)> onDone)
 {
-    auto *macWin = dynamic_cast<MacOSWindow*>(w->nativeWindow());
-    assert(macWin);
-
-    if (macWin) {
-        NSOpenPanel *dlg = [[NSOpenPanel alloc] init];
-        // Don't set dlg.directoryURL, NSOpenPanel already handles this itself.
-        dlg.canChooseDirectories = (canSelectDirectories ? YES : NO);
-        dlg.allowsMultipleSelection = (canSelectMultipleFiles ? YES : NO);
-        if (extensions.empty()) {
-            dlg.allowsOtherFileTypes = YES;
-        } else {
-            NSMutableArray *nsexts = [[NSMutableArray alloc] init];
-            for (auto &e : extensions) {
-                if (e.ext.empty()) {
-                    dlg.allowsOtherFileTypes = YES;
-                } else {
-                    [nsexts addObject:[NSString stringWithUTF8String:e.ext.c_str()]];
-                }
-            }
-            if (nsexts.count > 0) {  // exception if nsexts has nothing ({FileType{""}} passed in)
-                dlg.allowedFileTypes = nsexts;
-            }
-        }
-        NSWindow *parent = (__bridge NSWindow*)w->nativeHandle();
-        if (parent == nil) {
-            parent = dlg;  // this is same as [dlg runModal], according to docs
-        }
-        [dlg beginSheetModalForWindow:parent completionHandler:^(NSModalResponse result) {
-            // NSModalResponseCancel == NSFileHandlingPanelCancelButton; docs say the latter,
-            // but that turns out to be deprecated.
-            if (result != NSModalResponseCancel) {
-                std::vector<std::string> paths;
-                paths.reserve(dlg.URLs.count);
-                for (int i = 0;  i < dlg.URLs.count;  ++i) {
-                    paths.push_back([dlg.URLs objectAtIndex:i].fileSystemRepresentation);
-                }
-                onDone(Dialog::Result::kFinished, paths);
+    NSOpenPanel *dlg = [[NSOpenPanel alloc] init];
+    // Don't set dlg.directoryURL, NSOpenPanel already handles this itself.
+    dlg.canChooseDirectories = (canSelectDirectories ? YES : NO);
+    dlg.allowsMultipleSelection = (canSelectMultipleFiles ? YES : NO);
+    if (extensions.empty()) {
+        dlg.allowsOtherFileTypes = YES;
+    } else {
+        NSMutableArray *nsexts = [[NSMutableArray alloc] init];
+        for (auto &e : extensions) {
+            if (e.ext.empty()) {
+                dlg.allowsOtherFileTypes = YES;
             } else {
-                onDone(Dialog::Result::kCancelled, {});
+                [nsexts addObject:[NSString stringWithUTF8String:e.ext.c_str()]];
             }
+        }
+        if (nsexts.count > 0) {  // exception if nsexts has nothing ({FileType{""}} passed in)
+            dlg.allowedFileTypes = nsexts;
+        }
+    }
+
+    NSWindow *parent = nil;
+    if (w) {
+        auto *macWin = dynamic_cast<MacOSWindow*>(w->nativeWindow());
+        assert(macWin);
+        if (macWin) {
+            parent = (__bridge NSWindow*)w->nativeHandle();
+        }
+    }
+
+    auto handleDone = [onDone, dlg](NSModalResponse result) {
+        // NSModalResponseCancel == NSFileHandlingPanelCancelButton; docs say the latter,
+        // but that turns out to be deprecated.
+        if (result != NSModalResponseCancel) {
+            std::vector<std::string> paths;
+            paths.reserve(dlg.URLs.count);
+            for (int i = 0;  i < dlg.URLs.count;  ++i) {
+                paths.push_back([dlg.URLs objectAtIndex:i].fileSystemRepresentation);
+            }
+            onDone(Dialog::Result::kFinished, paths);
+        } else {
+            onDone(Dialog::Result::kCancelled, {});
+        }
+    };
+
+    if (parent) {
+        [dlg beginSheetModalForWindow:parent completionHandler:^(NSModalResponse result) {
+            handleDone(result);
         }];
+    } else {
+        dlg.level = NSModalPanelWindowLevel;
+        [NSApplication.sharedApplication activateIgnoringOtherApps:YES];
+        auto result = [dlg runModal];
+        handleDone(result);
     }
 }
 
