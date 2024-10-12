@@ -577,7 +577,10 @@ void Widget::layout(const LayoutContext& context)
     bool isRealWidget = (typeid(*this) == typeid(Widget));  // typeid(id) is always Widget*
     if (isRealWidget && showBaseWarning) {
         for (auto *child : mImpl->children) {
-            if (child->bounds().isEmpty()) {
+            // Note: child->bounds().isEmpty() does not work, because if the size is, say, (0, 10),
+            //       that shows that it actually *was* sized, just not to anything visible, and thus
+            //       it is being manually laid out.
+            if (child->bounds().width == PicaPt::kZero && child->bounds().height == PicaPt::kZero) {
                 Application::instance().debugPrint("[uitk] Assert: children of a base-class Widget will always be sized to 0x0 and must be sized manually. You should inherit from Widget and override layout() or inherit from a Layout directly (instead of inheriting from Widget and then adding a Layout as a child).");
                 showBaseWarning = false;
                 assert(false);
