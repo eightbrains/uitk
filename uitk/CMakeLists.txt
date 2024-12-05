@@ -34,6 +34,7 @@ set(UITK_PUBLIC_HEADERS
                  OSCursor.h
                  OSMenu.h
                  OSMenubar.h
+                 OSSound.h
                  OSWindow.h
                  PopupWindow.h
                  ProgressBar.h
@@ -144,6 +145,7 @@ if (APPLE)
                              macos/MacOSDialog.h
                              macos/MacOSMenu.h
                              macos/MacOSMenubar.h
+                             macos/MacOSSound.h
                              macos/MacOSWindow.h)
     list(APPEND UITK_SOURCES macos/MacOSAccessibility.mm
                              macos/MacOSApplication.mm
@@ -152,6 +154,7 @@ if (APPLE)
                              macos/MacOSDialog.mm
                              macos/MacOSMenu.mm
                              macos/MacOSMenubar.mm
+                             macos/MacOSSound.mm
                              macos/MacOSWindow.mm)
     find_library(CORE_GRAPHICS CoreGraphics)
     find_library(APPKIT AppKit)

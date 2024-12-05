@@ -23,6 +23,7 @@
 #include "MacOSApplication.h"
 
 #include "MacOSClipboard.h"
+#include "MacOSSound.h"
 
 #include "../Application.h"
 #include "../Window.h"
@@ -78,6 +79,7 @@ struct MacOSApplication::Impl
 
     AppDelegate *delegate;
     std::unique_ptr<MacOSClipboard> clipboard;
+    std::unique_ptr<MacOSSound> sound;
     std::unordered_map<SchedulingId, Timer> timers;
     bool isHidingOtherApplications = false;
 
@@ -96,6 +98,7 @@ MacOSApplication::MacOSApplication()
 {
     mImpl->delegate = [[AppDelegate alloc] init];
     mImpl->clipboard = std::make_unique<MacOSClipboard>();
+    mImpl->sound = std::make_unique<MacOSSound>();
 }
 
 MacOSApplication::~MacOSApplication()
@@ -119,6 +122,8 @@ bool MacOSApplication::canKeyFocusEverything() const
 bool MacOSApplication::platformHasMenubar() const { return true; }
 
 Clipboard& MacOSApplication::clipboard() const { return *mImpl->clipboard; }
+
+OSSound& MacOSApplication::sound() const { return *mImpl->sound; }
 
 Theme::Params MacOSApplication::themeParams() const
 {

@@ -42,6 +42,7 @@ using namespace uitk;
 #include "panels/images.cpp"
 #include "panels/gradients.cpp"
 #include "panels/layouts.cpp"
+#include "panels/sound.cpp"
 
 class RootWidget : public Widget
 {
@@ -173,6 +174,7 @@ public:
         root->addPanel("Dialogs", new dialogs::Panel());
         root->addPanel("Images", new images::Panel());
         root->addPanel("Gradients", new gradients::Panel());
+        root->addPanel("Sound", new sound::Panel());
         addChild(root);
 
         show(true);

@@ -24,6 +24,7 @@
 
 #include "MenubarUITK.h"
 #include "OSApplication.h"
+#include "OSSound.h"
 #include "ShortcutKey.h"
 #include "Window.h"
 #include "themes/EmpireTheme.h"
@@ -227,6 +228,11 @@ double Application::microTime() const
 void Application::beep()
 {
     mImpl->osApp->beep();
+}
+
+OSSound& Application::sound() const
+{
+    return mImpl->osApp->sound();
 }
 
 void Application::debugPrint(const std::string& s)
