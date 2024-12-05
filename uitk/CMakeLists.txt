@@ -166,6 +166,7 @@ elseif (WIN32)
                              win32/Win32Dialog.h
                              win32/Win32Menu.h
                              win32/Win32Menubar.h
+                             win32/Win32Sound.h
                              win32/Win32Utils.h
                              win32/Win32Window.h)
     list(APPEND UITK_SOURCES win32/Win32Application.cpp
@@ -174,9 +175,10 @@ elseif (WIN32)
                              win32/Win32Dialog.cpp
                              win32/Win32Menu.cpp
                              win32/Win32Menubar.cpp
+                             win32/Win32Sound.cpp
                              win32/Win32Utils.cpp
                              win32/Win32Window.cpp)
-    list(APPEND UITK_LIBS imm32 d3d11 d2d1 dwrite shcore comctl32 WindowsApp)
+    list(APPEND UITK_LIBS imm32 d3d11 d2d1 dwrite shcore comctl32 winmm WindowsApp)
 elseif (EMSCRIPTEN)
     list(APPEND UITK_HEADERS wasm/WASMApplication.h
                              wasm/WASMClipboard.h
