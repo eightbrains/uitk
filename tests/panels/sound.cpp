@@ -139,22 +139,28 @@ public:
 private:
 };
 
-class Panel : public Widget
+class Panel : public VLayout
 {
-    using Super = Widget;
+    using Super = VLayout;
 
 public:
     Panel()
     {
+        setMarginsEm(1.0f);
+        setSpacingEm(1.0f);
+
+        auto *beepButton = new Button("System beep");
+        addChild(new HLayout({ beepButton, new Layout::Stretch(Dir::kHoriz) }));
+        beepButton->setOnClicked([](Button *b) { Application::instance().beep(); });
+
         mPiano = new Piano();
-        addChild(mPiano);
+        addChild(new HLayout({ mPiano, new Layout::Stretch(Dir::kHoriz) }));
+
+        addStretch();
     }
 
     void layout(const LayoutContext& context) override
     {
-        const auto em = context.dc.roundToNearestPixel(context.theme.params().labelFont.pointSize());
-        auto prefSize = mPiano->preferredSize(context);
-        mPiano->setFrame(Rect(em, em, prefSize.width, prefSize.height));
         Super::layout(context);
     }
 

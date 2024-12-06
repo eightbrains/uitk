@@ -183,10 +183,12 @@ elseif (EMSCRIPTEN)
     list(APPEND UITK_HEADERS wasm/WASMApplication.h
                              wasm/WASMClipboard.h
                              wasm/WASMCursor.h
+                             wasm/WASMSound.h
                              wasm/WASMWindow.h)
     list(APPEND UITK_SOURCES wasm/WASMApplication.cpp
                              wasm/WASMClipboard.cpp
                              wasm/WASMCursor.cpp
+                             wasm/WASMSound.cpp
                              wasm/WASMWindow.cpp)
     list(APPEND UITK_LIBS embind)
 elseif (UNIX)  # note that APPLE and EMSCRIPTEN are UNIX, so check them first

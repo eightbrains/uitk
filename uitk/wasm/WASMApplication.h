@@ -54,6 +54,7 @@ public:
     std::vector<std::string> availableFontFamilies() const override;
 
     void beep() override;
+    OSSound& sound() const override;
     void debugPrint(const std::string& s) override;
 
     bool isOriginInUpperLeft() const override;

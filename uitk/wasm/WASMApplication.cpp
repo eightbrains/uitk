@@ -24,6 +24,7 @@
 
 #include "WASMClipboard.h"
 #include "WASMCursor.h"
+#include "WASMSound.h"
 #include "WASMWindow.h"
 #include "../Application.h"
 #include "../OSWindow.h"  // for OSScreen
@@ -1142,6 +1143,7 @@ struct WASMApplication::Impl
 {
     std::unique_ptr<WASMScreen> screen;
     std::unique_ptr<WASMClipboard> clipboard;
+    std::unique_ptr<WASMSound> sound;
     DeferredFunctions<WASMWindow*> postedLater;
     bool inTick = false;
 
@@ -1189,6 +1191,7 @@ WASMApplication::WASMApplication()
         std::cerr << "[error] first canvas element in document is not a valid object!" << std::endl;
     }
     mImpl->screen = std::make_unique<WASMScreen>(canvases[0]);
+    mImpl->sound = std::make_unique<WASMSound>();
 }
 
 WASMApplication::~WASMApplication()
@@ -1252,8 +1255,35 @@ std::vector<std::string> WASMApplication::availableFontFamilies() const
 
 void WASMApplication::beep()
 {
-    // TODO: implement this
-    std::cerr << "[error] WASMApplication::beep() not implemented" << std::endl;
+    const float twoPi = 2.0f * 3.141592f;
+    float rate = 44000.0f;
+    float lengthSec = 1.0f;
+    float masterVolume = 0.5f;
+
+    // Produces a digital piano sound for the given frequency
+
+    float freqHz = 220.0f;  // A3
+    std::vector<float> volumes = { 1.0f, 0.5f, 0.25f, 0.125f, 0.0625f, 0.03125f };
+
+    lengthSec = std::ceil(lengthSec * freqHz) / freqHz;  // force an integer number of cycles
+    std::vector<int16_t> samples((int)std::round(rate * lengthSec));
+    for (size_t i = 0;  i < samples.size();  ++i) {
+        const float sec = float(i) / rate;
+        float decay = std::exp(-7.0f * sec / lengthSec);
+        float v = 0.0f;
+        for (size_t i = 0;  i < volumes.size();  ++i) {
+            v += volumes[i] * decay * std::sin(float(i) * freqHz * twoPi * sec);
+        }
+        v *= masterVolume;
+        samples[i] = int16_t(std::round(float(INT16_MAX) * v));
+    }
+
+    sound().play(samples.data(), samples.size(), int(rate), 1);
+}
+
+OSSound& WASMApplication::sound() const
+{
+    return *mImpl->sound;
 }
 
 void WASMApplication::debugPrint(const std::string& s)
