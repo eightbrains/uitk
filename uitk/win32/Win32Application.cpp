@@ -290,7 +290,7 @@ void Win32Application::beep()
     MessageBeep(MB_OK);  // default beep
 }
 
-OSSound& Win32Application::sound() const
+Sound& Win32Application::sound() const
 {
     return *mImpl->sound;
 }

@@ -65,7 +65,7 @@ void Win32Sound::play(int16_t *samples, uint32_t count, int rateHz, int nChannel
     wav += 4;
     *(uint32_t*)wav = bytesPerSec;
     wav += 4;
-    *(uint16_t*)wav = nChannels * sizeof(uint16_t);
+    *(uint16_t*)wav = nChannels * uint16_t(sizeof(uint16_t));
     wav += 2;
     *(uint16_t*)wav = 8 * sizeof(uint16_t);
     wav += 2;
