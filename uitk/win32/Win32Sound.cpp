@@ -30,7 +30,7 @@
 
 namespace uitk {
 
-void Win32Sound::play(int16_t *samples, uint32_t count, int rateHz, int nChannels)
+void Win32Sound::play(int16_t *samples, uint32_t count, int rateHz, int nChannels, Sound::Loop loop /*= kNo*/)
 {    
     const int kWAVHeaderBytes = 44;
 
@@ -76,9 +76,18 @@ void Win32Sound::play(int16_t *samples, uint32_t count, int rateHz, int nChannel
     *wav++ = 'a';
     *(uint32_t*)wav = nSoundBytes;
 
-    PlaySound(wavBytes, NULL, SND_ASYNC | SND_MEMORY);
+    DWORD flags = SND_ASYNC | SND_MEMORY;
+    if (loop == Sound::Loop::kYes) {
+        flags |= SND_LOOP;
+    }
+    PlaySound(wavBytes, NULL, flags);
 
     delete [] wavBytes;
+}
+
+void Win32Sound::stop()
+{
+    PlaySound(NULL, NULL, SND_ASYNC);
 }
 
 } // namespace uitk

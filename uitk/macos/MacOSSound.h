@@ -20,14 +20,15 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#include "../OSSound.h"
+#include "../Sound.h"
 
 namespace uitk {
 
-class MacOSSound : public OSSound
+class MacOSSound : public Sound
 {
 public:
-    void play(int16_t *samples, uint32_t count, int rateHz, int nChannels) override;
+    void play(int16_t *samples, uint32_t count, int rateHz, int nChannels, Sound::Loop loop = Sound::Loop::kNo) override;
+    void stop() override;
 };
 
 } // namespace uitk

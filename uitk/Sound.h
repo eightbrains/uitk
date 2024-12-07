@@ -20,27 +20,27 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#include "../OSSound.h"
+#ifndef UITK_SOUND_H
+#define UITK_SOUND_H
 
-#include <list>
+#include <stdint.h>
 
 namespace uitk {
 
-class WASMSound : public OSSound
+class Sound
 {
 public:
-    ~WASMSound();
+    enum class Loop { kNo = 0, kYes = 1 };
+    /// Plays the given raw audio. The samples can be one or two channels
+    /// (interleaved). `count` is the length of the passed array,
+    /// not the number of bytes. If `loop` is Loop::kYes, the only way to
+    /// stop looping is to call stop(). (This is a limitation from the
+    /// Win32 PlaySound() function.)
+    virtual void play(int16_t *samples, uint32_t count, int rateHz, int nChannels, Loop loop = Loop::kNo) = 0;
 
-    void play(int16_t *samples, uint32_t count, int rateHz, int nChannels) override;
-
-private:
-    void *mContext = nullptr;
-    std::list<uint32_t> mActiveSources;
-
-    void openSound();
-    void closeSound();
-    void purgeCompletedSources();
+    /// Stops all sound playing.
+    virtual void stop() = 0;
 };
 
 } // namespace uitk
-
+#endif // UITK_SOUND_H

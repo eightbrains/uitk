@@ -30,6 +30,7 @@
 namespace uitk {
 
 struct OSScreen;
+class Sound;
 class TextEditorLogic;
 class WASMCursor;
 class WASMWindow;
@@ -54,7 +55,7 @@ public:
     std::vector<std::string> availableFontFamilies() const override;
 
     void beep() override;
-    OSSound& sound() const override;
+    Sound& sound() const override;
     void debugPrint(const std::string& s) override;
 
     bool isOriginInUpperLeft() const override;

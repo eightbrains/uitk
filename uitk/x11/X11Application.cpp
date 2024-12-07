@@ -26,6 +26,7 @@
 #include "X11Window.h"
 #include "../Application.h"
 #include "../Events.h"
+#include "../openal/OpenALSound.h"
 #include "../themes/EmpireTheme.h"
 #include "../private/PlatformUtils.h"
 
@@ -218,6 +219,7 @@ struct X11Application::Impl
     std::unordered_map<::Window, X11Window*> xwin2window;
     ClickCounter clickCounter;
     std::unique_ptr<X11Clipboard> clipboard;
+    std::unique_ptr<OpenALSound> sound;
 
     Atom postedFuncAtom;
     std::mutex postedFunctionsLock;
@@ -238,6 +240,7 @@ X11Application::X11Application()
     mImpl->display = XOpenDisplay(NULL);
 
     mImpl->clipboard = std::make_unique<X11Clipboard>(mImpl->display);
+    mImpl->sound = std::make_unique<OpenALSound>();
 
     mImpl->postedFuncAtom = XInternAtom(mImpl->display, "PostedFunction", False);
 
@@ -320,6 +323,11 @@ void X11Application::beep()
     if (mImpl->display) {
         XBell(mImpl->display, 0 /* base volume, ranges [-100, 100]*/);
     }
+}
+
+Sound& X11Application::sound() const
+{
+    return *mImpl->sound;
 }
 
 void X11Application::debugPrint(const std::string& s)

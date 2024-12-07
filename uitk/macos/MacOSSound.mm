@@ -28,7 +28,7 @@
 
 namespace uitk {
 
-void MacOSSound::play(int16_t *samples, uint32_t count, int rateHz, int nChannels)
+void MacOSSound::play(int16_t *samples, uint32_t count, int rateHz, int nChannels, Sound::Loop loop /* = kNo */)
 {
     const int kWAVHeaderBytes = 44;
 
@@ -79,6 +79,10 @@ void MacOSSound::play(int16_t *samples, uint32_t count, int rateHz, int nChannel
     [sound play];
 
     delete [] wavBytes;
+}
+
+void MacOSSound::stop()
+{
 }
 
 } // namespace uitk

@@ -20,18 +20,31 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_SOUND_H
-#define UITK_SOUND_H
+#include "../Sound.h"
 
-#include <stdint.h>
+#include <list>
 
 namespace uitk {
 
-class OSSound
+class OpenALSound : public Sound
 {
 public:
-    virtual void play(int16_t *samples, uint32_t count, int rateHz, int nChannels) = 0;
+    ~OpenALSound();
+
+    void play(int16_t *samples, uint32_t count, int rateHz, int nChannels,
+              Loop loop = Sound::Loop::kNo) override;
+
+    void stop() override;
+
+private:
+    void *mContext = nullptr;
+    std::list<uint32_t> mActiveSources;
+
+    void openSound();
+    void closeSound();
+    enum Purge { kCompleted = 0, kAll = 1 };
+    void purgeSources(Purge purge);
 };
 
 } // namespace uitk
-#endif // UITK_SOUND_H
+

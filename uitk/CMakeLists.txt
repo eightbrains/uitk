@@ -34,7 +34,6 @@ set(UITK_PUBLIC_HEADERS
                  OSCursor.h
                  OSMenu.h
                  OSMenubar.h
-                 OSSound.h
                  OSWindow.h
                  PopupWindow.h
                  ProgressBar.h
@@ -46,6 +45,7 @@ set(UITK_PUBLIC_HEADERS
                  ShortcutKey.h
                  Slider.h
                  SliderLogic.h
+                 Sound.h
                  Splitter.h
                  StackedWidget.h
                  StringEdit.h
@@ -184,22 +184,25 @@ elseif (EMSCRIPTEN)
                              wasm/WASMClipboard.h
                              wasm/WASMCursor.h
                              wasm/WASMSound.h
-                             wasm/WASMWindow.h)
+                             wasm/WASMWindow.h
+                             openal/OpenALSound.h)
     list(APPEND UITK_SOURCES wasm/WASMApplication.cpp
                              wasm/WASMClipboard.cpp
                              wasm/WASMCursor.cpp
-                             wasm/WASMSound.cpp
-                             wasm/WASMWindow.cpp)
+                             wasm/WASMWindow.cpp
+                             openal/OpenALSound.cpp)
     list(APPEND UITK_LIBS embind)
 elseif (UNIX)  # note that APPLE and EMSCRIPTEN are UNIX, so check them first
     list(APPEND UITK_HEADERS x11/X11Application.h
                              x11/X11Clipboard.h
                              x11/X11Cursor.h
-                             x11/X11Window.h)
+                             x11/X11Window.h
+                             openal/OpenALSound.h)
     list(APPEND UITK_SOURCES x11/X11Application.cpp
                              x11/X11Clipboard.cpp
                              x11/X11Cursor.cpp
-                             x11/X11Window.cpp)
+                             x11/X11Window.cpp
+                             openal/OpenALSound.cpp)
     find_package(X11)
     find_path(CAIRO_INCLUDE_DIRS
               NAMES cairo.h
@@ -267,7 +270,10 @@ elseif (UNIX)  # note that APPLE and EMSCRIPTEN are UNIX, so check them first
         message(FATAL_ERROR "Cannot find GIF library. (Install libgif7, libgif-dev on Ubuntu)")
     endif()
 
-    include_directories(${X11_INCLUDE_DIRS} ${CAIRO_INCLUDE_DIRS})
+    include_directories(${X11_INCLUDE_DIRS} ${CAIRO_INCLUDE_DIRS} ${OPENAL_INCLUDE_DIR})
+    # Do not link directly to OpenAL; we will dynamically open the library
+    # So that applications that do not require sound will not need to have
+    # OpenAL installed.
     list(APPEND UITK_LIBS ${CAIRO_LIBRARIES}
                           ${PANGO_LIBRARIES}
                           ${X11_Xcursor_LIB}
@@ -276,7 +282,8 @@ elseif (UNIX)  # note that APPLE and EMSCRIPTEN are UNIX, so check them first
                           ${X11_LIBRARIES}
                           ${JPEG_LIBRARIES}
                           ${PNG_LIBRARIES}
-                          ${GIF_LIBRARIES})
+                          ${GIF_LIBRARIES}
+                          -ldl)
 endif()
 
 add_library(uitk ${UITK_HEADERS} ${UITK_SOURCES})

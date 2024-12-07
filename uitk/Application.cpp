@@ -24,8 +24,8 @@
 
 #include "MenubarUITK.h"
 #include "OSApplication.h"
-#include "OSSound.h"
 #include "ShortcutKey.h"
+#include "Sound.h"
 #include "Window.h"
 #include "themes/EmpireTheme.h"
 #include "themes/StandardIconPainter.h"
@@ -230,7 +230,7 @@ void Application::beep()
     mImpl->osApp->beep();
 }
 
-OSSound& Application::sound() const
+Sound& Application::sound() const
 {
     return mImpl->osApp->sound();
 }

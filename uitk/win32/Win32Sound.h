@@ -20,14 +20,16 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#include "../OSSound.h"
+#include "../Sound.h"
 
 namespace uitk {
 
-class Win32Sound : public OSSound
+class Win32Sound : public Sound
 {
 public:
-    void play(int16_t *samples, uint32_t count, int rateHz, int nChannels) override;
+    void play(int16_t *samples, uint32_t count, int rateHz, int nChannels,
+              Sound::Loop loop = Sound::Loop::kNo) override;
+    void stop() override;
 };
 
 } // namespace uitk

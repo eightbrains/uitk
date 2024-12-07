@@ -153,6 +153,12 @@ public:
         addChild(new HLayout({ beepButton, new Layout::Stretch(Dir::kHoriz) }));
         beepButton->setOnClicked([](Button *b) { Application::instance().beep(); });
 
+        auto *loopButton = new Button("Stop sound");
+        addChild(new HLayout({ loopButton, new Layout::Stretch(Dir::kHoriz) }));
+        loopButton->setOnClicked([](Button *b) {
+            Application::instance().sound().stop();
+        });
+
         mPiano = new Piano();
         addChild(new HLayout({ mPiano, new Layout::Stretch(Dir::kHoriz) }));
 

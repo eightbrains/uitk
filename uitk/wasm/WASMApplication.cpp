@@ -24,11 +24,11 @@
 
 #include "WASMClipboard.h"
 #include "WASMCursor.h"
-#include "WASMSound.h"
 #include "WASMWindow.h"
 #include "../Application.h"
 #include "../OSWindow.h"  // for OSScreen
 #include "../TextEditorLogic.h"
+#include "../openal/OpenALSound.h"
 #include "../themes/EmpireTheme.h"
 #include "../private/PlatformUtils.h"
 
@@ -1143,7 +1143,7 @@ struct WASMApplication::Impl
 {
     std::unique_ptr<WASMScreen> screen;
     std::unique_ptr<WASMClipboard> clipboard;
-    std::unique_ptr<WASMSound> sound;
+    std::unique_ptr<OpenALSound> sound;
     DeferredFunctions<WASMWindow*> postedLater;
     bool inTick = false;
 
@@ -1281,7 +1281,7 @@ void WASMApplication::beep()
     sound().play(samples.data(), samples.size(), int(rate), 1);
 }
 
-OSSound& WASMApplication::sound() const
+Sound& WASMApplication::sound() const
 {
     return *mImpl->sound;
 }

@@ -34,8 +34,8 @@ class Clipboard;
 class IconPainter;
 class OSApplication;
 class OSMenubar;
-class OSSound;
 class Shortcuts;
+class Sound;
 class Theme;
 class Window;
 
@@ -131,8 +131,10 @@ public:
     /// item, and we are not using native OS menus.)
     void beep();
 
-    /// Gets the application's sound interface
-    OSSound& sound() const;
+    /// Gets the application's sound interface.
+    /// This is relatively simple to meet the limited needs of most apps.
+    /// For more complete control, use a third-party library such as OpenAL.
+    Sound& sound() const;
 
     /// Prints the string to the debug output. Normally this is std::cout,
     /// but Win32 applications entering from WinMain() do not have std::cout
