@@ -35,6 +35,34 @@ The interface design is strongly influenced by Cocoa (aka NextStep) with some in
 
 UITK uses a limited MVC approach. The `Widget` class joins the model and controller, while the theme implementation does the drawing and hit-testing. The controller controls layout of child widgets, where a widget requires them, but most layout is done by the view class. For reliability, the drawing code and the hit-test code need to be in the same module, in this case, the view. This is because drawing code essentially converts model (e.g. 3.141592f) into pixels, and the hit-test code needs to convert pixels into a location in an editable model (e.g. placing the cursor after "4").
 
+### Currently implemented
+- Platforms: macOS, Windows, Linux/X11 (might work with other Unixen), WebAssembly
+- Basic widgets one would expect
+- Internationalization:
+  - Displays text in all languages, but right-to-left may not work properly
+  - Supports VoiceOver on macOS
+- Basic sound playing (use OpenAL or similar if need something more thorough)
+
+### Not yet implemented
+- Printing
+- Gesture support
+- Multi-monitor may have bugs, probably mostly in moving between monitors
+- Drag-n-drop
+- Verify/implement emoji support, including correct delete / cursor moving especially if the DPI is different
+- Verify/implement newer macOS features like voice dictation
+- Full right-to-left support
+- Drawing drop shadows
+- Tab control (use SegmentedWidget + StackedWidget instead, like Mac apps do)
+- Native widget container (would allow using native OpenGL, video, WebView, etc.)
+- Swift, Python, Rust? bindings
+
+### Out of scope (at least for now)
+- Networking (use cURL or a C++ library)
+- WebView (infeasible to implement, and can't abstract native widget because Linux/WASM don't have one)
+- Video playback (not sure how support on Linux [especially] and WebAssembly would work)
+- OpenGL/Vulkan backend
+- OpenGL/Vulkan widget
+- VoiceOver equivalent in Windows (the frameworks supports it, but crashes in kernel32.dll with no information, and I really hate spending time on Windows; if someone opens an issue with information on how to resolve the crash I will implement the rest).
 
 ### Why a new toolkit?
 I am not aware of a toolkit that covers all of the following:
@@ -48,7 +76,7 @@ I am not aware of a toolkit that covers all of the following:
 
 Major toolkits that are available are:
 
-* [Qt](https://www.qt.io/): this is very full-feature and is the professional choice for cross-platform development. It supports Windows, macOS, Linux, iOS, Android, and can be built for WebAssembly. However, the license is expensive for small companies, and the free license (LGPL) is unclear and requires hosting a 750 MB source file for download for an indeterminate time to comply with the LGPL license. The macOS implementation is clunky and not very native. Also, new features seem to be restricted to Qt Quick, which uses a sort of JavaScript. However, Qt is historically a C++ library, and C++ has quite opposite design values than JavaScript. Finally, the library is quite large, and while shipping a Qt app is not difficult, the packaging process has a few gotchas on some platforms that are time-consuming to discover.
+* [Qt](https://www.qt.io/): this is very full-featured and is the professional choice for cross-platform development. It supports Windows, macOS, Linux, iOS, Android, and can be built for WebAssembly. At the time of initial development, the license was expensive for small companies, and the free license (LGPL) is unclear and requires hosting a 750 MB source file for download for an indeterminate time to comply with the LGPL license. (Some of this may no longer be the case.) The macOS implementation is clunky and not very native. Also, new features seem to be restricted to Qt Quick, which uses a sort of JavaScript. However, Qt is historically a C++ library, and C++ has quite opposite design values than JavaScript. Finally, the library is quite large, and while shipping a Qt app is not difficult, the packaging process has a few gotchas on some platforms that are time-consuming to discover.
 * [Flutter](https://flutter.dev/): developed by Google, supports all the major platforms. However, it requires programming in the Dart language.
 * [Gtk](https://www.gtk.org/): supports Linux, macOS, and Windows, and possibly WebAssembly. However, Windows and macOS are functional, but do not look or function at all native. Also, the library is written in C, which can be used by many programming languages, but this makes for a fairly low-level experience in languages like C++. GTK is functionally the "native" UI toolkit for Linux, so is a good choice for apps that are primarily targeted to Linux but which need to run on other platforms.
 * [wxWidgets](https://www.wxwidgets.org/): implemented for Windows, Linux, and macOS, plus others. Descended from MFC 1.0, so the interface is not very modern and very Microsoft-oriented. My experience was that the widgets were fairly inelegant visually, some features were spotty, and that MFC is not the best interface. (Hopefully it has improved since then, although Qt is mentioned as a platform solution over wxWidgets by a wide margin.)
