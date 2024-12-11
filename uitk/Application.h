@@ -32,9 +32,10 @@ namespace uitk {
 
 class Clipboard;
 class IconPainter;
-class OSMenubar;
 class OSApplication;
+class OSMenubar;
 class Shortcuts;
+class Sound;
 class Theme;
 class Window;
 
@@ -129,6 +130,11 @@ public:
     /// to produce the beep when a pressing a keyboard shortcut for a menu
     /// item, and we are not using native OS menus.)
     void beep();
+
+    /// Gets the application's sound interface.
+    /// This is relatively simple to meet the limited needs of most apps.
+    /// For more complete control, use a third-party library such as OpenAL.
+    Sound& sound() const;
 
     /// Prints the string to the debug output. Normally this is std::cout,
     /// but Win32 applications entering from WinMain() do not have std::cout

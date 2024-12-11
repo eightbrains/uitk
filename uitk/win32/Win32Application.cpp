@@ -23,6 +23,7 @@
 #include "Win32Application.h"
 
 #include "Win32Clipboard.h"
+#include "Win32Sound.h"
 #include "Win32Utils.h"
 #include "../Application.h"
 #include "../Window.h"
@@ -51,6 +52,7 @@ static OSApplication::SchedulingId gNextTimerId = OSApplication::kInvalidSchedul
 
 struct Win32Application::Impl {
     std::unique_ptr<Win32Clipboard> clipboard;
+    std::unique_ptr<Win32Sound> sound;
     std::unordered_map<HWND, Win32Window*> hwnd2window;
     bool needsToUnitializeCOM;
 
@@ -158,6 +160,7 @@ Win32Application::Win32Application()
     SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 
     mImpl->clipboard = std::make_unique<Win32Clipboard>();
+    mImpl->sound = std::make_unique<Win32Sound>();
 }
 
 Win32Application::~Win32Application()
@@ -285,6 +288,11 @@ std::vector<std::string> Win32Application::availableFontFamilies() const
 void Win32Application::beep()
 {
     MessageBeep(MB_OK);  // default beep
+}
+
+Sound& Win32Application::sound() const
+{
+    return *mImpl->sound;
 }
 
 void Win32Application::debugPrint(const std::string& s)

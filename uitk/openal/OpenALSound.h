@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2024 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -20,50 +20,31 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
+#include "../Sound.h"
 
-#define ND_NAMESPACE uitk
+#include <list>
 
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
+namespace uitk {
 
-#include "Application.h"
-#include "Button.h"
-#include "Checkbox.h"
-#include "Clipboard.h"
-#include "ColorEdit.h"
-#include "ComboBox.h"
-#include "Cursor.h"
-#include "Dialog.h"
-#include "Events.h"
-#include "FileDialog.h"
-#include "FontListComboBox.h"
-#include "Icon.h"
-#include "IconAndText.h"
-#include "ImageView.h"
-#include "Label.h"
-#include "Layout.h"
-#include "ListView.h"
-#include "NumberEdit.h"
-#include "Menu.h"
-#include "OSMenubar.h"
-#include "ProgressBar.h"
-#include "ScrollView.h"
-#include "SearchBar.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
-#include "Sound.h"
-#include "Splitter.h"
-#include "StackedWidget.h"
-#include "StringEdit.h"
-#include "UIContext.h"
-#include "Waiting.h"
-#include "Window.h"
+class OpenALSound : public Sound
+{
+public:
+    ~OpenALSound();
 
-#include "io/Directory.h"
-#include "io/File.h"
+    void play(int16_t *samples, uint32_t count, int rateHz, int nChannels,
+              Loop loop = Sound::Loop::kNo) override;
 
-#include <nativedraw.h>
+    void stop() override;
 
-#endif // UITK_H
+private:
+    void *mContext = nullptr;
+    std::list<uint32_t> mActiveSources;
+
+    void openSound();
+    void closeSound();
+    enum Purge { kCompleted = 0, kAll = 1 };
+    void purgeSources(Purge purge);
+};
+
+} // namespace uitk
+

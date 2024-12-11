@@ -606,8 +606,10 @@ Widget::EventResult Widget::mouse(const MouseEvent& e)
     auto *oldMouseoverWidget = (win ? win->mouseoverWidget() : nullptr);
 
     auto result = EventResult::kIgnored;
-    for (auto *child : mImpl->children) {
-        result = mouseChild(e, child, result);
+    // Drawing is done in order (first is bottom, last is top), so hit-testing must be
+    // done in reverse order.
+    for (auto childIt = mImpl->children.rbegin();  childIt != mImpl->children.rend();  ++childIt) {
+        result = mouseChild(e, *childIt, result);
         if (result == EventResult::kConsumed) {
             break;
         }

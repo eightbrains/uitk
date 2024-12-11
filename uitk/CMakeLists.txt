@@ -45,6 +45,7 @@ set(UITK_PUBLIC_HEADERS
                  ShortcutKey.h
                  Slider.h
                  SliderLogic.h
+                 Sound.h
                  Splitter.h
                  StackedWidget.h
                  StringEdit.h
@@ -144,6 +145,7 @@ if (APPLE)
                              macos/MacOSDialog.h
                              macos/MacOSMenu.h
                              macos/MacOSMenubar.h
+                             macos/MacOSSound.h
                              macos/MacOSWindow.h)
     list(APPEND UITK_SOURCES macos/MacOSAccessibility.mm
                              macos/MacOSApplication.mm
@@ -152,6 +154,7 @@ if (APPLE)
                              macos/MacOSDialog.mm
                              macos/MacOSMenu.mm
                              macos/MacOSMenubar.mm
+                             macos/MacOSSound.mm
                              macos/MacOSWindow.mm)
     find_library(CORE_GRAPHICS CoreGraphics)
     find_library(APPKIT AppKit)
@@ -163,6 +166,7 @@ elseif (WIN32)
                              win32/Win32Dialog.h
                              win32/Win32Menu.h
                              win32/Win32Menubar.h
+                             win32/Win32Sound.h
                              win32/Win32Utils.h
                              win32/Win32Window.h)
     list(APPEND UITK_SOURCES win32/Win32Application.cpp
@@ -171,28 +175,34 @@ elseif (WIN32)
                              win32/Win32Dialog.cpp
                              win32/Win32Menu.cpp
                              win32/Win32Menubar.cpp
+                             win32/Win32Sound.cpp
                              win32/Win32Utils.cpp
                              win32/Win32Window.cpp)
-    list(APPEND UITK_LIBS imm32 d3d11 d2d1 dwrite shcore comctl32 WindowsApp)
+    list(APPEND UITK_LIBS imm32 d3d11 d2d1 dwrite shcore comctl32 winmm WindowsApp)
 elseif (EMSCRIPTEN)
     list(APPEND UITK_HEADERS wasm/WASMApplication.h
                              wasm/WASMClipboard.h
                              wasm/WASMCursor.h
-                             wasm/WASMWindow.h)
+                             wasm/WASMSound.h
+                             wasm/WASMWindow.h
+                             openal/OpenALSound.h)
     list(APPEND UITK_SOURCES wasm/WASMApplication.cpp
                              wasm/WASMClipboard.cpp
                              wasm/WASMCursor.cpp
-                             wasm/WASMWindow.cpp)
+                             wasm/WASMWindow.cpp
+                             openal/OpenALSound.cpp)
     list(APPEND UITK_LIBS embind)
 elseif (UNIX)  # note that APPLE and EMSCRIPTEN are UNIX, so check them first
     list(APPEND UITK_HEADERS x11/X11Application.h
                              x11/X11Clipboard.h
                              x11/X11Cursor.h
-                             x11/X11Window.h)
+                             x11/X11Window.h
+                             openal/OpenALSound.h)
     list(APPEND UITK_SOURCES x11/X11Application.cpp
                              x11/X11Clipboard.cpp
                              x11/X11Cursor.cpp
-                             x11/X11Window.cpp)
+                             x11/X11Window.cpp
+                             openal/OpenALSound.cpp)
     find_package(X11)
     find_path(CAIRO_INCLUDE_DIRS
               NAMES cairo.h
@@ -260,7 +270,10 @@ elseif (UNIX)  # note that APPLE and EMSCRIPTEN are UNIX, so check them first
         message(FATAL_ERROR "Cannot find GIF library. (Install libgif7, libgif-dev on Ubuntu)")
     endif()
 
-    include_directories(${X11_INCLUDE_DIRS} ${CAIRO_INCLUDE_DIRS})
+    include_directories(${X11_INCLUDE_DIRS} ${CAIRO_INCLUDE_DIRS} ${OPENAL_INCLUDE_DIR})
+    # Do not link directly to OpenAL; we will dynamically open the library
+    # So that applications that do not require sound will not need to have
+    # OpenAL installed.
     list(APPEND UITK_LIBS ${CAIRO_LIBRARIES}
                           ${PANGO_LIBRARIES}
                           ${X11_Xcursor_LIB}
@@ -269,7 +282,8 @@ elseif (UNIX)  # note that APPLE and EMSCRIPTEN are UNIX, so check them first
                           ${X11_LIBRARIES}
                           ${JPEG_LIBRARIES}
                           ${PNG_LIBRARIES}
-                          ${GIF_LIBRARIES})
+                          ${GIF_LIBRARIES}
+                          -ldl)
 endif()
 
 add_library(uitk ${UITK_HEADERS} ${UITK_SOURCES})

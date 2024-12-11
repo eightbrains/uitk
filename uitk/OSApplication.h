@@ -32,6 +32,7 @@
 namespace uitk {
 
 class Clipboard;
+class Sound;
 class Window;
 
 class OSApplication
@@ -66,6 +67,7 @@ public:
     virtual bool platformHasMenubar() const = 0;
 
     virtual Clipboard& clipboard() const = 0;
+    virtual Sound& sound() const = 0;
 
     virtual Theme::Params themeParams() const = 0;
 };

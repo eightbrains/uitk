@@ -29,6 +29,7 @@
 
 namespace uitk {
 
+class Sound;
 class X11Window;
 
 class X11Application : public OSApplication
@@ -51,6 +52,7 @@ public:
     std::vector<std::string> availableFontFamilies() const override;
 
     void beep() override;
+    Sound& sound() const override;
     void debugPrint(const std::string& s) override;
 
     bool isOriginInUpperLeft() const override;
