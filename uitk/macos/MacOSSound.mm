@@ -26,7 +26,46 @@
 
 #import <AppKit/AppKit.h>
 
+#include <algorithm>
+
+@interface UITKSound : NSSound<NSSoundDelegate>
+{
+    uitk::MacOSSound* _owner;
+}
+
+- (id)initWithData:(NSData*)data owner:(uitk::MacOSSound*)owner;
+- (void)sound:(NSSound *)sound didFinishPlaying:(BOOL)flag;
+@end
+
+@implementation UITKSound
+- (id)initWithData:(NSData*)data owner:(uitk::MacOSSound*)owner;
+{
+    if (self = [super initWithData:data]) {
+        _owner = owner;
+        self.delegate = self;
+    }
+    return self;
+}
+
+- (void)sound:(NSSound *)sound didFinishPlaying:(BOOL)flag
+{
+    if (_owner) {  // flag is YES if finished by itself, NO if it was stopped with -stop
+        self.delegate = nullptr;
+        _owner->onSoundFinished((__bridge void *)sound);
+        _owner = nullptr;
+    }
+}
+@end
+
 namespace uitk {
+
+MacOSSound::~MacOSSound()
+{
+    for (auto *sound : mCurrentlyPlaying) {
+        ((__bridge NSSound*)sound).delegate = nil;
+        CFBridgingRelease(sound);
+    }
+}
 
 void MacOSSound::play(int16_t *samples, uint32_t count, int rateHz, int nChannels, Sound::Loop loop /* = kNo */)
 {
@@ -75,7 +114,11 @@ void MacOSSound::play(int16_t *samples, uint32_t count, int rateHz, int nChannel
     *(uint32_t*)wav = nSoundBytes;
 
     NSData *data = [NSData dataWithBytes:wavBytes length:nBytes];
-    NSSound *sound = [[NSSound alloc] initWithData:data];
+    NSSound *sound = [[UITKSound alloc] initWithData:data owner:this];
+    if (loop == Loop::kYes) {
+        sound.loops = YES;
+    }
+    mCurrentlyPlaying.push_back((void*)CFBridgingRetain(sound));
     [sound play];
 
     delete [] wavBytes;
@@ -83,6 +126,19 @@ void MacOSSound::play(int16_t *samples, uint32_t count, int rateHz, int nChannel
 
 void MacOSSound::stop()
 {
+    for (auto *snd : mCurrentlyPlaying) {
+        [(__bridge UITKSound*)snd stop];
+    }
+}
+
+void MacOSSound::onSoundFinished(void *snd)
+{
+    auto it = std::find(mCurrentlyPlaying.begin(), mCurrentlyPlaying.end(), snd);
+    if (it != mCurrentlyPlaying.end()) {
+        CFBridgingRelease(*it);
+        *it = nullptr;
+        mCurrentlyPlaying.erase(it);
+    }
 }
 
 } // namespace uitk

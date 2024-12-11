@@ -22,13 +22,22 @@
 
 #include "../Sound.h"
 
+#include <list>
+
 namespace uitk {
 
 class MacOSSound : public Sound
 {
 public:
+    ~MacOSSound();
+
     void play(int16_t *samples, uint32_t count, int rateHz, int nChannels, Sound::Loop loop = Sound::Loop::kNo) override;
     void stop() override;
+
+    void onSoundFinished(void *snd);
+
+private:
+    std::list<void*> mCurrentlyPlaying;
 };
 
 } // namespace uitk

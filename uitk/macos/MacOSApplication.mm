@@ -123,7 +123,7 @@ bool MacOSApplication::platformHasMenubar() const { return true; }
 
 Clipboard& MacOSApplication::clipboard() const { return *mImpl->clipboard; }
 
-OSSound& MacOSApplication::sound() const { return *mImpl->sound; }
+Sound& MacOSApplication::sound() const { return *mImpl->sound; }
 
 Theme::Params MacOSApplication::themeParams() const
 {

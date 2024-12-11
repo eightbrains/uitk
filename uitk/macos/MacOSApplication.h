@@ -59,7 +59,7 @@ public:
     bool platformHasMenubar() const override;
 
     Clipboard& clipboard() const override;
-    OSSound& sound() const override;
+    Sound& sound() const override;
 
     Theme::Params themeParams() const override;
 
