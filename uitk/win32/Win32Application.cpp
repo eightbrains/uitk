@@ -295,7 +295,7 @@ Sound& Win32Application::sound() const
     return *mImpl->sound;
 }
 
-void Win32Application::debugPrint(const std::string& s)
+void Win32Application::debugPrint(const std::string& s) const
 {
     DPrint() << s;  // includes \n
 }

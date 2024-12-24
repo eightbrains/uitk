@@ -330,7 +330,7 @@ Sound& X11Application::sound() const
     return *mImpl->sound;
 }
 
-void X11Application::debugPrint(const std::string& s)
+void X11Application::debugPrint(const std::string& s) const
 {
     std::cout << s << std::endl;
 }

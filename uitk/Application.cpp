@@ -235,7 +235,12 @@ Sound& Application::sound() const
     return mImpl->osApp->sound();
 }
 
-void Application::debugPrint(const std::string& s)
+void Application::printDocument(int nPages, std::function<void(const PrintContext&)> drawPageCallback) const
+{
+    mImpl->osApp->printDocument(nPages, drawPageCallback);
+}
+
+void Application::debugPrint(const std::string& s) const
 {
     mImpl->osApp->debugPrint(s);
 }

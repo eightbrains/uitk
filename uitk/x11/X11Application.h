@@ -53,7 +53,7 @@ public:
 
     void beep() override;
     Sound& sound() const override;
-    void debugPrint(const std::string& s) override;
+    void debugPrint(const std::string& s) const override;
 
     bool isOriginInUpperLeft() const override;
     bool isWindowBorderInsideWindowFrame() const override;

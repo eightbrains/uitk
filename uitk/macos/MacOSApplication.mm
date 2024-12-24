@@ -26,6 +26,7 @@
 #include "MacOSSound.h"
 
 #include "../Application.h"
+#include "../UIContext.h"
 #include "../Window.h"
 #include "../themes/EmpireTheme.h"
 
@@ -67,6 +68,89 @@
 }
 @end
 
+//-----------------------------------------------------------------------------
+@interface PrintingView : NSView
+{
+    int mNPages;
+    std::function<void(const uitk::PrintContext&)> mPageCallback;
+}
+- (id)initWithNPages:(int)nPages callback:(std::function<void(const uitk::PrintContext&)>)pageCallback;
+- (BOOL)knowsPageRange:(NSRangePointer)range;
+- (NSRect)rectForPage:(NSInteger)page;
+- (void)drawRect:(NSRect)dirtyRect;
+@end
+
+@implementation PrintingView
+- (id)initWithNPages:(int)nPages callback:(std::function<void(const uitk::PrintContext&)>)pageCallback
+{
+    if (self = [super init]) {
+        mNPages = nPages;
+        mPageCallback = pageCallback;
+    }
+    return self;
+}
+
+- (BOOL)knowsPageRange:(NSRangePointer)range
+{
+    range->location = 1;
+    range->length = mNPages;
+    return YES;
+}
+
+- (NSRect)rectForPage:(NSInteger)page
+{
+    if (page <= 2) {
+        NSSize size = NSPrintInfo.sharedPrintInfo.paperSize;
+        return NSMakeRect(0, (page - 1) * size.height, size.width, size.height);
+    } else {
+        return NSMakeRect(0, 0, 0, 0);
+    }
+}
+
+- (void)drawRect:(NSRect)dirtyRect
+{
+    using namespace uitk;
+
+    NSPrintInfo *printer = NSPrintInfo.sharedPrintInfo;
+    // Note: all CGFloat coorinates are in typographic points (units of 1/72 in.), so we can
+    //       pass them directly to PicaPt's constructor.
+    uitk::Size paperSize(PicaPt(printer.paperSize.width),
+                         PicaPt(printer.paperSize.height));
+    uitk::Rect imageableRect(PicaPt(printer.imageablePageBounds.origin.x),
+                             PicaPt(printer.imageablePageBounds.origin.y),
+                             PicaPt(printer.imageablePageBounds.size.width),
+                             PicaPt(printer.imageablePageBounds.size.height));
+    int page = int(std::floor((dirtyRect.origin.y - printer.paperSize.height) / printer.paperSize.height)) + 1;
+
+    float dpi = 600.0f;  // default; pretty much every modern printer does at least 600 dpi.
+    PMPrinter pmprinter;
+    OSStatus status = PMSessionGetCurrentPrinter((PMPrintSession)printer.PMPrintSession, &pmprinter);
+    if (status == noErr) {
+        PMResolution res;
+        PMPrintSession dbg = (PMPrintSession)printer.PMPrintSession;  // debugging; remove
+        status = PMPrinterGetOutputResolution(pmprinter,
+                                              (PMPrintSettings)printer.PMPrintSettings,
+                                              &res);
+        if (status == noErr) {
+            dpi = float(std::min(res.hRes, res.vRes));
+        }
+    }
+
+    CGContextTranslateCTM(NSGraphicsContext.currentContext.CGContext, 0.0f, dirtyRect.origin.y);
+    auto dc = DrawContext::fromCoreGraphics(NSGraphicsContext.currentContext.CGContext,
+                                            printer.paperSize.width, printer.paperSize.height,
+                                            72.0f, dpi);
+
+    PrintContext context = { *Application::instance().theme(),
+                             *dc,
+                             uitk::Rect(PicaPt::kZero, PicaPt::kZero, paperSize.width, paperSize.height),
+                             true,  // window is active (we are printing it)
+                             paperSize,
+                             imageableRect,
+                             page };
+    mPageCallback(context);
+}
+@end
 //-----------------------------------------------------------------------------
 namespace uitk {
 
@@ -252,7 +336,20 @@ void MacOSApplication::beep()
     NSBeep();
 }
 
-void MacOSApplication::debugPrint(const std::string& s)
+void MacOSApplication::printDocument(int nPages, std::function<void(const PrintContext&)> drawPageCallback) const
+{
+    PrintingView *view = [[PrintingView alloc] initWithNPages:nPages callback:drawPageCallback];
+    [view setFrame:NSMakeRect(0, 0, 612, 10000000)]; // the height must be greater than the number of pages
+    NSPrintInfo *printInfo = [[NSPrintInfo alloc] initWithDictionary:@{}];
+    NSPrintOperation *op = [NSPrintOperation
+                            printOperationWithView:view
+                            printInfo:printInfo];
+
+    [op setShowsPrintPanel:YES];
+    [op runOperation];
+}
+
+void MacOSApplication::debugPrint(const std::string& s) const
 {
     std::cout << s << std::endl;
 }

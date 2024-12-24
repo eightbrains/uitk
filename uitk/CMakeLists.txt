@@ -183,7 +183,6 @@ elseif (EMSCRIPTEN)
     list(APPEND UITK_HEADERS wasm/WASMApplication.h
                              wasm/WASMClipboard.h
                              wasm/WASMCursor.h
-                             wasm/WASMSound.h
                              wasm/WASMWindow.h
                              openal/OpenALSound.h)
     list(APPEND UITK_SOURCES wasm/WASMApplication.cpp

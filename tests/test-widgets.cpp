@@ -91,6 +91,7 @@ private:
 
 static const MenuId kMenuIdNew = 1;
 static const MenuId kMenuIdQuit = 2;
+static const MenuId kMenuIdPrint = 3;
 static const MenuId kMenuIdDisabled = 10;
 static const MenuId kMenuIdCheckable = 11;
 static const MenuId kMenuIdAddItem = 12;
@@ -146,6 +147,10 @@ public:
 
         setOnMenuActivated(kMenuIdNew, [](){ Document::createNewDocument(); });
         setOnMenuActivated(kMenuIdQuit, [](){ Application::instance().quit(); });
+        setOnMenuActivated(kMenuIdPrint, [this]() {
+            Application::instance().printDocument(2,  // two pages, in case any problems with second page
+                                                  [this](const PrintContext& c) { this->print(c); });
+        });
         setOnMenuActivated(kMenuIdDisabled,
                            [](){ Application::instance().quit(); /* shouldn't get here b/c disabled */ });
         setOnMenuActivated(kMenuIdCheckable,
@@ -178,6 +183,111 @@ public:
         addChild(root);
 
         show(true);
+    }
+
+    void print(const PrintContext& context) const
+    {
+        if (context.page > 2) {
+            return;
+        }
+
+        auto &dc = context.dc;
+        // Draw the unimageable margins with light grey, to see if the rect is really correct.
+        // If the grey is visible in the printout, then the imageableRect is not correct.
+        // This may be the OS's fault: macOS 10.14 uses the wrong imageable bounds for
+        // the Brother HL-L2370DW.
+        dc.setFillColor(Color(0.75f, 0.75f, 0.75f));
+        dc.drawRect(context.drawRect, kPaintFill);
+        dc.setFillColor(Color::kWhite);
+        dc.drawRect(context.imageableRect, kPaintFill);  // clearRect() may not work in the OS (e.g. macOS)
+        dc.setFillColor(Color::kBlack);
+
+        // Draw the page rect (shouldn't be visible printed, but will be in a PDF)
+        dc.setStrokeWidth(PicaPt(1));
+        dc.setStrokeDashes({ PicaPt(1), PicaPt(2), PicaPt(2), PicaPt(2) }, PicaPt::kZero);
+        // stroked rect will have the line at the outside on the right/bottom
+        auto half = PicaPt(0.5f);
+        dc.drawRect(context.drawRect.insetted(half, half), kPaintStroke);
+        dc.setStrokeDashes({}, PicaPt::kZero);
+
+        // Draw the imageable rect
+        dc.setStrokeDashes({ PicaPt(1), PicaPt(1) }, PicaPt::kZero);
+        dc.drawRect(context.imageableRect.insetted(half, half), kPaintStroke);
+        dc.setStrokeDashes({}, PicaPt::kZero);
+
+        // Draw ruler
+        auto drawRuler = [](DrawContext& dc, const Point& origin, const PicaPt& length) {
+            auto inch = PicaPt(72.0f);
+            Font rulerFont("Georgia", 0.125f * inch);
+            auto minorTickHeight = 0.0625f * inch;
+            auto majorTickHeight = 0.125f * inch;
+            int i = 0;
+            PicaPt x = origin.x, y = origin.y;
+            while (x <= origin.x + length) {
+                if (i % 2 == 0) {
+                    dc.drawLines({ Point(x, y), Point(x, y + majorTickHeight )});
+                    auto text = std::to_string(i / 2);
+                    auto width = dc.textMetrics(text.c_str(), rulerFont).width;
+                    if (i == 2) {
+                        text += " in.";
+                    }
+                    auto textX = x - 0.5f * width;
+                    if (i == 0) {
+                        textX = x;
+                    } else if (textX + width > origin.x + length) {
+                        textX = origin.x + length - width;
+                    }
+                    dc.drawText(text.c_str(), Point(textX, y + majorTickHeight + 0.125f), rulerFont, kPaintFill);
+                } else {
+                    dc.drawLines({ Point(x, y), Point(x, y + minorTickHeight )});
+                }
+                x += 0.5f * inch;
+                ++i;
+            }
+        };
+        drawRuler(dc, Point::kZero, context.drawRect.maxX());
+        drawRuler(dc, context.imageableRect.upperLeft(), context.imageableRect.width);
+
+        Font font("Georgia", PicaPt(12));
+        auto lineHeight = font.metrics(dc).lineHeight;
+        auto y = context.imageableRect.y + PicaPt(24);
+        dc.drawText(("Page " + std::to_string(context.page) + " (" + std::to_string(dc.dpi()) + " dpi)").c_str(),
+                    Rect(context.imageableRect.x, y, context.imageableRect.width, lineHeight),
+                    Alignment::kTop | Alignment::kVCenter, TextWrapping::kWrapNone, font, kPaintFill);
+
+        auto text = dc.createTextLayout("If ruler is slightly missized, check physical paper size.\nSome printers change the print size to keep the L/R margins equal.", Font("Georgia", PicaPt(8)), Color::kBlack, Size(context.imageableRect.width, PicaPt::kZero), Alignment::kTop | Alignment::kRight);
+        dc.drawText(*text, Point(context.imageableRect.x, y));
+
+        y += 2.0f * lineHeight;
+
+        dc.drawText("Fonts (may not space evenly due to font metrics)",
+                    Point(context.imageableRect.x, y), font, kPaintFill);
+        y += lineHeight;
+
+        auto y0 = y;
+        auto x = context.imageableRect.x;
+        auto allFonts = Application::instance().availableFontFamilies();
+        auto approxNRowsPerCol = (context.imageableRect.maxY() - y) / lineHeight;  // lineHeight so estimates high
+        auto approxNCols = std::ceil(allFonts.size() / approxNRowsPerCol);
+        auto colWidth = context.imageableRect.width / approxNCols;
+        dc.save();
+        dc.clipToRect(Rect(x, y, colWidth, context.imageableRect.maxY() - y));
+        for (auto &fname : allFonts) {
+            Font f(fname, PicaPt(10));
+            auto h = dc.fontMetrics(f).lineHeight;
+            if (y + h > context.imageableRect.maxY()) {
+                y = y0;
+                x += colWidth;
+                dc.restore();
+                dc.save();
+                dc.clipToRect(Rect(x, y, colWidth, context.imageableRect.maxY() - y));
+            }
+            dc.drawText(fname.c_str(),
+                        Rect(x, y, context.imageableRect.width, h),
+                        Alignment::kTop | Alignment::kVCenter, TextWrapping::kWrapNone, f, kPaintFill);
+            y += h;
+        }
+        dc.restore();
     }
 
 private:
@@ -231,7 +341,12 @@ int main(int argc, char *argv[])
 
     auto *fileMenu =
         app.menubar().newMenu("File")
-        ->addItem("New", kMenuIdNew, ShortcutKey(KeyModifier::kCtrl, Key::kN));
+            ->addItem("New", kMenuIdNew, ShortcutKey(KeyModifier::kCtrl, Key::kN))
+#ifndef __EMSCRIPTEN__
+            ->addSeparator()
+            ->addItem("Print...", kMenuIdPrint, ShortcutKey(KeyModifier::kCtrl, Key::kP))
+#endif // __EMSCRIPTEN
+        ;
 //            ->addSeparator()
 //            ->addItem("Quit", kMenuIdQuit, ShortcutKey(KeyModifier::kCtrl, Key::kQ));
     auto *editMenu =
