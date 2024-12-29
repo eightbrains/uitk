@@ -88,7 +88,7 @@ struct PrintContext : public UIContext
     /// margins the user specifies. But this can be used to warn if the
     /// margins may exceed the printable area.
     Rect imageableRect;
-    int page;
+    int pageIndex;  /// 0-based;  the page number is pageIndex + 1
 };
 
 }  // namespace uitk

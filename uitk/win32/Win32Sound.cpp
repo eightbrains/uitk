@@ -80,7 +80,7 @@ void Win32Sound::play(int16_t *samples, uint32_t count, int rateHz, int nChannel
     if (loop == Sound::Loop::kYes) {
         flags |= SND_LOOP;
     }
-    PlaySound(wavBytes, NULL, flags);
+    PlaySoundA(wavBytes, NULL, flags);
 
     delete [] wavBytes;
 }

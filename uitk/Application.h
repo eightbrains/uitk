@@ -34,7 +34,7 @@ class Clipboard;
 class IconPainter;
 class OSApplication;
 class OSMenubar;
-class PrintContext;
+struct PrintContext;
 class Shortcuts;
 class Sound;
 class Theme;

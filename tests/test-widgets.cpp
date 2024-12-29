@@ -187,19 +187,34 @@ public:
 
     void print(const PrintContext& context) const
     {
-        if (context.page > 2) {
+        if (context.pageIndex >= 2) {
             return;
         }
 
+        auto margins = PicaPt(0.5f * 72.0f); // 1/2 inch
+        auto r = Rect(PicaPt::kZero, PicaPt::kZero, context.paperSize.width, context.paperSize.height).insetted(margins, margins);
+
         auto &dc = context.dc;
+
+        // --- debugging ---
+        dc.drawText("UL", Point(PicaPt(-144.0f), PicaPt(-144.0f)),
+                    Font("Georgia", PicaPt(72.0f)), kPaintFill);
+        dc.drawText("LL", Point(PicaPt(-144.0f), PicaPt(32.0f)),
+            Font("Georgia", PicaPt(72.0f)), kPaintFill);
+        dc.drawText("UR", Point(PicaPt(0.0f), PicaPt(-144.0f)),
+            Font("Georgia", PicaPt(72.0f)), kPaintFill);
+        // ----
+
         // Draw the unimageable margins with light grey, to see if the rect is really correct.
         // If the grey is visible in the printout, then the imageableRect is not correct.
         // This may be the OS's fault: macOS 10.14 uses the wrong imageable bounds for
         // the Brother HL-L2370DW.
         dc.setFillColor(Color(0.75f, 0.75f, 0.75f));
         dc.drawRect(context.drawRect, kPaintFill);
+        dc.setFillColor(Color(0.9f, 0.9f, 0.9f));
+        dc.drawRect(context.imageableRect, kPaintFill);
         dc.setFillColor(Color::kWhite);
-        dc.drawRect(context.imageableRect, kPaintFill);  // clearRect() may not work in the OS (e.g. macOS)
+        dc.drawRect(r, kPaintFill);  // clearRect() may not work on p rint context in the OS (e.g. macOS)
         dc.setFillColor(Color::kBlack);
 
         // Draw the page rect (shouldn't be visible printed, but will be in a PDF)
@@ -216,11 +231,11 @@ public:
         dc.setStrokeDashes({}, PicaPt::kZero);
 
         // Draw ruler
-        auto drawRuler = [](DrawContext& dc, const Point& origin, const PicaPt& length) {
+        auto drawRuler = [](DrawContext& dc, const Point& origin, const PicaPt& length, const PicaPt& tickLength) {
             auto inch = PicaPt(72.0f);
             Font rulerFont("Georgia", 0.125f * inch);
-            auto minorTickHeight = 0.0625f * inch;
-            auto majorTickHeight = 0.125f * inch;
+            auto minorTickHeight = 0.5f * tickLength;
+            auto majorTickHeight = tickLength;
             int i = 0;
             PicaPt x = origin.x, y = origin.y;
             while (x <= origin.x + length) {
@@ -245,45 +260,55 @@ public:
                 ++i;
             }
         };
-        drawRuler(dc, Point::kZero, context.drawRect.maxX());
-        drawRuler(dc, context.imageableRect.upperLeft(), context.imageableRect.width);
+        drawRuler(dc, Point::kZero, context.drawRect.maxX(), PicaPt(0.125f * 72.0f));
+        drawRuler(dc, r.upperLeft(), r.width, PicaPt(0.0875f * 72.0f));
+        dc.drawLines({ Point(r.x, r.y), Point(r.maxX(), r.y) });
 
         Font font("Georgia", PicaPt(12));
         auto lineHeight = font.metrics(dc).lineHeight;
-        auto y = context.imageableRect.y + PicaPt(24);
-        dc.drawText(("Page " + std::to_string(context.page) + " (" + std::to_string(dc.dpi()) + " dpi)").c_str(),
-                    Rect(context.imageableRect.x, y, context.imageableRect.width, lineHeight),
+        auto y = r.y + PicaPt(24.0f);
+        dc.drawText(("Page " + std::to_string(context.pageIndex + 1) + " (" + std::to_string(dc.dpi()) + " dpi)").c_str(),
+                    Rect(r.x, y, r.width, lineHeight),
                     Alignment::kTop | Alignment::kVCenter, TextWrapping::kWrapNone, font, kPaintFill);
+        y += lineHeight;
 
-        auto text = dc.createTextLayout("If ruler is slightly missized, check physical paper size.\nSome printers change the print size to keep the L/R margins equal.", Font("Georgia", PicaPt(8)), Color::kBlack, Size(context.imageableRect.width, PicaPt::kZero), Alignment::kTop | Alignment::kRight);
-        dc.drawText(*text, Point(context.imageableRect.x, y));
+        std::stringstream s;
+        s << "Paper size (pts): " << context.paperSize.width.asFloat() << " x " << context.paperSize.height.asFloat()
+          << ";  imageableRect: (" << context.imageableRect.x.asFloat() << ", " << context.imageableRect.y.asFloat() << ") "
+          << context.imageableRect.width.asFloat() << " x " << context.imageableRect.height.asFloat();
+        auto text = dc.createTextLayout(s.str().c_str(), Font("Georgia", PicaPt(8)), Color::kBlack, Size(r.width, PicaPt::kZero), Alignment::kTop | Alignment::kLeft);
+        dc.drawText(*text, Point(r.x, y));
+        y += lineHeight;
+        y += lineHeight;  // extra line
 
-        y += 2.0f * lineHeight;
+        text = dc.createTextLayout("If ruler is slightly missized, check physical paper size.\nSome printers change the print size to keep the L/R margins equal.", Font("Georgia", PicaPt(8)), Color::kBlack, Size(r.width, PicaPt::kZero), Alignment::kTop | Alignment::kRight);
+        dc.drawText(*text, Point(r.x, r.y + PicaPt(24.0f)));
+
 
         dc.drawText("Fonts (may not space evenly due to font metrics)",
-                    Point(context.imageableRect.x, y), font, kPaintFill);
+                    Point(r.x, y), font, kPaintFill);
         y += lineHeight;
 
         auto y0 = y;
-        auto x = context.imageableRect.x;
+        auto x = r.x;
         auto allFonts = Application::instance().availableFontFamilies();
-        auto approxNRowsPerCol = (context.imageableRect.maxY() - y) / lineHeight;  // lineHeight so estimates high
+        auto approxNRowsPerCol = (r.maxY() - y) / lineHeight;  // lineHeight so estimates high
         auto approxNCols = std::ceil(allFonts.size() / approxNRowsPerCol);
-        auto colWidth = context.imageableRect.width / approxNCols;
+        auto colWidth = r.width / approxNCols;
         dc.save();
-        dc.clipToRect(Rect(x, y, colWidth, context.imageableRect.maxY() - y));
+        dc.clipToRect(Rect(x, y, colWidth, r.maxY() - y));
         for (auto &fname : allFonts) {
-            Font f(fname, PicaPt(10));
+            Font f(fname, PicaPt(9));
             auto h = dc.fontMetrics(f).lineHeight;
-            if (y + h > context.imageableRect.maxY()) {
+            if (y + h > r.maxY()) {
                 y = y0;
                 x += colWidth;
                 dc.restore();
                 dc.save();
-                dc.clipToRect(Rect(x, y, colWidth, context.imageableRect.maxY() - y));
+                dc.clipToRect(Rect(x, y, colWidth, r.maxY() - y));
             }
             dc.drawText(fname.c_str(),
-                        Rect(x, y, context.imageableRect.width, h),
+                        Rect(x, y, r.width, h),
                         Alignment::kTop | Alignment::kVCenter, TextWrapping::kWrapNone, f, kPaintFill);
             y += h;
         }

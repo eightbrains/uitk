@@ -74,7 +74,7 @@ public:
             samples[i] = int16_t(std::round(float(INT16_MAX) * v));
         }
 
-        Application::instance().sound().play(samples.data(), samples.size(), int(rate), 1);
+        Application::instance().sound().play(samples.data(), uint32_t(samples.size()), int(rate), 1);
     }
 
 private:
@@ -124,7 +124,7 @@ public:
             auto *key = childs[i];
             key->setBorderColor(Color::kBlack);
             key->setBorderWidth(PicaPt::fromStandardPixels(0.5f));
-            key->setFrame(Rect(i * whiteWidth, PicaPt::kZero, whiteWidth, r.height));
+            key->setFrame(Rect(float(i) * whiteWidth, PicaPt::kZero, whiteWidth, r.height));
         }
 
         childs[7]->setFrame(Rect(1.0f * whiteWidth - halfBlack, PicaPt::kZero, blackWidth, blackHeight));

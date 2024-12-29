@@ -32,7 +32,7 @@
 namespace uitk {
 
 class Clipboard;
-class PrintContext;
+struct PrintContext;
 class Sound;
 class Window;
 
