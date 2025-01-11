@@ -148,8 +148,10 @@ public:
         setOnMenuActivated(kMenuIdNew, [](){ Document::createNewDocument(); });
         setOnMenuActivated(kMenuIdQuit, [](){ Application::instance().quit(); });
         setOnMenuActivated(kMenuIdPrint, [this]() {
-            Application::instance().printDocument(2,  // two pages, in case any problems with second page
-                                                  [this](const PrintContext& c) { this->print(c); });
+            PrintSettings settings;
+            settings.calcPages = [](const PaperSize&, const LayoutContext&) { return 2; };  // two, in case any problems with second page
+            settings.drawPage = [this](const PrintContext& c) { this->print(c); };
+            Application::instance().printDocument(settings);
         });
         setOnMenuActivated(kMenuIdDisabled,
                            [](){ Application::instance().quit(); /* shouldn't get here b/c disabled */ });

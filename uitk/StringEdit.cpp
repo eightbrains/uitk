@@ -370,6 +370,13 @@ TextEditorLogic* StringEdit::asTextEditorLogic()
     return &mImpl->editor;
 }
 
+Widget* StringEdit::setEnabled(bool enabled)
+{
+    Super::setEnabled(enabled);
+    // Need to recreate the TextLayout, because it probably changed color.
+    mImpl->editor.setNeedsLayout();
+}
+
 AccessibilityInfo StringEdit::accessibilityInfo()
 {
     auto info = Super::accessibilityInfo();

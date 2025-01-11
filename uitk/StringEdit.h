@@ -66,6 +66,7 @@ public:
     CutPasteable* asCutPasteable() override;
     TextEditorLogic* asTextEditorLogic() override;
 
+    Widget* setEnabled(bool enabled) override;
     AccessibilityInfo accessibilityInfo() override;
     Size preferredSize(const LayoutContext& context) const override;
     void layout(const LayoutContext& context) override;

@@ -91,6 +91,8 @@ public:
     /// which is assumed to exist in the child hierarchy.
     void setAsDefaultButton(Button *button);
 
+    Size preferredSize(const LayoutContext& context) const;
+    void layout(const LayoutContext& context);
     EventResult key(const KeyEvent& e) override;
 
 private:

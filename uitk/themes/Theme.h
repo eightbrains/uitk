@@ -88,6 +88,7 @@ public:
         Color nonNativeMenubarBackgroundColor;
         Font labelFont;
         Font nonNativeMenubarFont;
+        PicaPt dialogMargins;  /// if 0, will be set to a reasonable default. Only used by the library for non-native dialogs (and Linux/WebAssembly), but is useful for app's dialogs.
 
         bool useClearTextButton = false;
         bool useClearTextButtonForSearch = false;

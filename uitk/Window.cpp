@@ -879,7 +879,8 @@ Widget* Window::addChild(Widget *child)
         return child;
     }
 
-    mImpl->rootWidget->addChild(child);
+    mImpl->rootWidget->addChild(child);  // should set needs layout
+    assert(mImpl->needsLayout);
     child->themeChanged(*mImpl->theme);
     setNeedsDraw();
     return child;
@@ -1444,6 +1445,7 @@ void Window::onLayout(const DrawContext& dc)
             }
         }
     }
+
     mImpl->rootWidget->layout(context);
     mImpl->needsLayout = false;
 

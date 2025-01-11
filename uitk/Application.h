@@ -34,7 +34,9 @@ class Clipboard;
 class IconPainter;
 class OSApplication;
 class OSMenubar;
+struct PaperSize;
 struct PrintContext;
+struct PrintSettings;
 class Shortcuts;
 class Sound;
 class Theme;
@@ -137,6 +139,9 @@ public:
     /// For more complete control, use a third-party library such as OpenAL.
     Sound& sound() const;
 
+    /// Returns the default paper size for the current locale.
+    const PaperSize& defaultPaperSize() const;
+
     /// Prints to the printer, first displaying the operating system dialog
     /// so the user can select the printer, number of pages, etc. Up to
     /// `nPages` will be printed (depending on selections by the user.)
@@ -144,7 +149,7 @@ public:
     /// number (zero-based) for each page to be printed.
     /// Note: the WebAssembly back-end is a no-op, because browser printing
     ///       is done with the DOM, which we do not use.
-    void printDocument(int nPages, std::function<void(const PrintContext&)> drawPageCallback) const;
+    void printDocument(const PrintSettings& settings) const;
     
     /// Prints the string to the debug output. Normally this is std::cout,
     /// but Win32 applications entering from WinMain() do not have std::cout

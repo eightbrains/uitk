@@ -105,6 +105,11 @@ Widget::~Widget()
     clearAllChildren();
 }
 
+std::string Widget::debugDescription()
+{
+    return debugDescription(Point::kZero, 0);
+}
+
 std::string Widget::debugDescription(const Point& offset /*= Point(PicaPt::kZero, PicaPt::kZero)*/,
                                      int indent /*= 0*/) const
 {
@@ -456,8 +461,8 @@ Widget::MouseState Widget::state() const { return mImpl->state; }
 void Widget::setState(MouseState state, bool fromExited /*= false*/)
 {
     if (!mImpl->enabled) {
-        // Need to specifically set in case setEnabled(false) calls setState() after
-        // setting mImpl->enabled = false.
+        // Need to specifically set in case setEnabled(false) calls setState()
+        // after setting mImpl->enabled = false.
         mImpl->state = MouseState::kDisabled;
         return;
     }
@@ -470,7 +475,7 @@ void Widget::setState(MouseState state, bool fromExited /*= false*/)
 
     if (oldState == MouseState::kNormal && state != MouseState::kNormal) {
         mouseEntered();
-    } else if (oldState != MouseState::kNormal && state == MouseState::kNormal && !fromExited) {
+    } else if ((oldState != MouseState::kNormal && oldState != MouseState::kDisabled) && state == MouseState::kNormal && !fromExited) {
         mouseExited();
     }
 
@@ -549,43 +554,58 @@ float Widget::fixedHeightEm() const
 
 Size Widget::preferredSize(const LayoutContext& context) const
 {
-    return Size(kDimGrow, kDimGrow);
+    bool isRealWidget = (typeid(*this) == typeid(Widget));  // typeid(this) is always Widget*
+    if (isRealWidget) {
+        // If this is an actual instance of Widget, make the preferred size
+        // the maximum widget size (layout will be all on top of each other).
+        // This behavior is useful so that putting a Layout in a widget works
+        // like you would expect. (If you want a widget that is just a container
+        // and does not size the children, create a derived class.)
+        if (mImpl->children.size() == 0) {
+            return Size(kDimGrow, kDimGrow);
+        } else {
+            Size size;
+            for (auto *child : mImpl->children) {
+                auto pref = child->preferredSize(context);
+                size.width = std::max(size.width, pref.width);
+                size.height = std::max(size.height, pref.height);
+            }
+            if (size.width <= PicaPt::kZero) {
+                size.width = kDimGrow;
+            }
+            if (size.height <= PicaPt::kZero) {
+                size.height = kDimGrow;
+            }
+            return size;
+        }
+    } else {  // this is a derived class of Widget
+        return Size(kDimGrow, kDimGrow);
+    }
 }
 
 void Widget::layout(const LayoutContext& context)
 {
     static bool showBaseWarning = true;
 
-    for (auto *child : mImpl->children) {
-        child->layout(context);
+    // If this is actually and instance of Widget, we need to size the children.
+    // If this is a derived class, then we are supering and should NOT size
+    // the children, because the derived class' layout() already did this.
+    // This behavior for a real Widget allows users to put a Layout in a widget
+    // and get the results that they expect. (If you want a widget that just
+    // acts as a container and someone else manages the frames of the children,
+    // then create a derived class.)
+    // (Note: when changing, test with print dialog on Linux, and the ListView
+    //        container widget)
+    bool isRealWidget = (typeid(*this) == typeid(Widget));  // typeid(this) is always Widget*
+    if (isRealWidget) {
+        for (auto *child : mImpl->children) {
+            child->setFrame(bounds());
+        }
     }
 
-    // It is tempting, especially for Qt users, to put a Layout in a widget,
-    // instead of inheriting from the desired Layout. A base Widget actually
-    // does no sizing, so putting children in a base Widget requires manually
-    // calling setFrame() on each child. This is not a good idea, so we warn
-    // and assert in development mode.
-    // Q: Is there a way to get a layout in a Widget to work?
-    // A: I could not think of one. We want base Widget to not size the objects
-    //    as that is the job of a layout, and if we resized for layouts but
-    //    not other things it would be inconsistent, and if we only resized
-    //    if the size is zero we would fail to resize when the widget is
-    //    resized (for instance, if the window is resized by the user), which
-    //    would introduce a subtle bug. So we keep the behavior and warn the
-    //    programmer.
-    // (Note that comparison using typeid() is fast, much more than dynamic_cast())
-    bool isRealWidget = (typeid(*this) == typeid(Widget));  // typeid(id) is always Widget*
-    if (isRealWidget && showBaseWarning) {
-        for (auto *child : mImpl->children) {
-            // Note: child->bounds().isEmpty() does not work, because if the size is, say, (0, 10),
-            //       that shows that it actually *was* sized, just not to anything visible, and thus
-            //       it is being manually laid out.
-            if (child->bounds().width == PicaPt::kZero && child->bounds().height == PicaPt::kZero) {
-                Application::instance().debugPrint("[uitk] Assert: children of a base-class Widget will always be sized to 0x0 and must be sized manually. You should inherit from Widget and override layout() or inherit from a Layout directly (instead of inheriting from Widget and then adding a Layout as a child).");
-                showBaseWarning = false;
-                assert(false);
-            }
-        }
+    // Always layout the children
+    for (auto *child : mImpl->children) {
+        child->layout(context);
     }
 }
 

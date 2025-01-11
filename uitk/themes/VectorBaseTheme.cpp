@@ -78,6 +78,10 @@ void VectorBaseTheme::setVectorParams(const Params &params)
 {
     mParams = params;
 
+    if (params.dialogMargins <= PicaPt::kZero) {
+        mParams.dialogMargins = 2.0f * params.labelFont.pointSize();
+    }
+
     auto copyStyles = [](const WidgetStyle src[], WidgetStyle dest[]) {
         dest[NORMAL] = src[NORMAL];
         dest[DISABLED] = src[DISABLED];

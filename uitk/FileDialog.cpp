@@ -433,10 +433,11 @@ FileDialog::FileDialog(Type type)
         addChild(mImpl->panel.filenameLabel);
         mImpl->panel.filename = new StringEdit();
         addChild(mImpl->panel.filename);
-        mImpl->panel.filename->setOnTextChanged([this](const std::string &){
+        mImpl->panel.filename->setOnTextChanged([this](const std::string &t){
             if (mImpl->panel.files->selectedIndex() >= 0) {
                 mImpl->panel.files->setSelectedIndex(-1);
             }
+            mImpl->panel.ok->setEnabled(mImpl->isValidExt(t));
         });
     }
     mImpl->panel.cancel = new Button("Cancel");
@@ -445,8 +446,8 @@ FileDialog::FileDialog(Type type)
     mImpl->panel.ok = new Button(type == kSave ? "Save" : "Open");
     mImpl->panel.ok->setEnabled(false);  // nothing selected at first, so ok is disabled
     mImpl->panel.ok->setOnClicked([this](Button*) {
-        auto selectedIdx = mImpl->panel.files->selectedIndex();
-        if (mImpl->model.entries[selectedIdx].isDir && !mImpl->canSelectDirectory) {
+        int selectedIdx = mImpl->panel.files->selectedIndex();
+        if (selectedIdx >= 0 && selectedIdx < int(mImpl->model.entries.size()) && mImpl->model.entries[selectedIdx].isDir && !mImpl->canSelectDirectory) {
             mImpl->goIntoSubdir(mImpl->model.entries[selectedIdx].name);
         } else {
             this->finish(1);

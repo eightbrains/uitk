@@ -30,6 +30,18 @@
 #include "../themes/EmpireTheme.h"
 #include "../private/PlatformUtils.h"
 
+// For print dialog
+#include "../Button.h"
+#include "../ComboBox.h"
+#include "../Dialog.h"
+#include "../FileDialog.h"
+#include "../Label.h"
+#include "../Layout.h"
+#include "../NumberEdit.h"
+#include "../Printing.h"
+#include "../StringEdit.h"
+#include "../UIContext.h"
+
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/Xresource.h>
@@ -208,6 +220,175 @@ private:
     int mLastClickY = 0;
 };
 
+class PrintDialog : public Dialog
+{
+    using Super = Dialog;
+public:
+    explicit PrintDialog(const PrintSettings& settings)
+    {
+        mKnownSizes = PaperSize::knownSizes(); // copies
+        auto paperSize = settings.paperSize;
+        if (paperSize.width < PicaPt(1.0f) || paperSize.height < PicaPt(1.0f)) {
+            paperSize = Application::instance().defaultPaperSize();
+        }
+
+        VLayout *layout = new VLayout();
+        GridLayout *grid = new GridLayout();
+        int row = 0;
+
+        HLayout *sizeLayout = new HLayout();
+        mPaperWidthEdit = new NumberEdit();
+        mPaperWidthEdit->setFixedWidthEm(4.0f);
+        mPaperHeightEdit = new NumberEdit();
+        mPaperHeightEdit->setFixedWidthEm(4.0f);
+
+        // What should the max be? Could be a long sheet of paper that is
+        // a poster or something, so just use a big number.
+        const double kMaxPaperSize = 1e6;
+
+        std::string units;
+        float widthInches = paperSize.width.asFloat() / 72.0f;
+        float heightInches = paperSize.height.asFloat() / 72.0f;
+        if ((std::floor(widthInches * 4.0f) == widthInches * 4.0f) && 
+            (std::floor(heightInches * 4.0f) == heightInches * 4.0f))
+        {
+            mPtsToUnits = 1.0f / 72.0f;
+            units = "in.";
+            mPaperWidthEdit->setLimits(0.0, kMaxPaperSize, 0.1);
+            mPaperHeightEdit->setLimits(0.0, kMaxPaperSize, 0.1);
+        } else {
+            mPtsToUnits = 25.4f / 72.0f;
+            units = "mm";
+            mPaperWidthEdit->setLimits(0.0, kMaxPaperSize, 1.0);
+            mPaperHeightEdit->setLimits(0.0, kMaxPaperSize, 1.0);
+        }
+
+        sizeLayout->setAlignment(Alignment::kRight);
+        sizeLayout->addChild(mPaperWidthEdit);
+        sizeLayout->addChild(new Label(units + " x "));
+        sizeLayout->addChild(mPaperHeightEdit);
+        sizeLayout->addChild(new Label(units));
+
+        mPaperSizes = new ComboBox();
+        for (size_t i = 0;  i < mKnownSizes.size();  ++i) {
+            mPaperSizes->addItem(mKnownSizes[i].name, i);
+        }
+        mPaperSizes->addItem("Custom", -1);
+        mPaperSizes->setOnSelectionChanged([this](ComboBox *) {
+            this->updateUI();
+        });
+
+        grid->addChild(new Label("Paper size"), row, 0);
+        grid->addChild(mPaperSizes, row, 1);
+        ++row;
+        grid->addChild(new Label(" "), row, 0);  // debugging
+        grid->addChild(sizeLayout, row, 1);
+        ++row;
+
+        mOrientations = new ComboBox();
+        mOrientations->addItem("Portrait", int(PaperOrientation::kPortrait));
+        mOrientations->addItem("Landscape", int(PaperOrientation::kLandscape));
+
+        grid->addChild(new Label("Paper orientation"), row, 0);
+        grid->addChild(mOrientations, row, 1);
+        ++row;
+
+        mFilename = new StringEdit();
+        mFilename->setOnTextChanged([this](const std::string&) { this->updateUI(); });
+
+        auto *fileDlgButton = new Button("...");
+        fileDlgButton->setOnClicked([this](Button*) {
+            FileDialog *fd = new FileDialog(FileDialog::Type::kSave);
+            fd->addAllowedType("pdf", "PDF");
+            fd->addAllowedType("", "All files");
+            fd->showModal(nullptr, [this, fd](Dialog::Result result, int i) {
+                if (result == Dialog::Result::kFinished) {
+                    this->mFilename->setText(fd->selectedPath());
+                    this->updateUI();
+                }
+                delete fd;
+            });
+        });
+        
+        grid->addChild(new Label(" "), row, 0);  // blank line
+        ++row;
+        grid->addChild(new Label("Filename"), row, 0);
+        grid->addChild(new HLayout({ mFilename, fileDlgButton }), row, 1);
+        ++row;
+
+        mOkButton = new Button("Ok");
+        auto *cancelButton = new Button("Cancel");
+        mOkButton->setOnClicked([this](Button *b) { this->finish(1); });
+        cancelButton->setOnClicked([this](Button *b) { this->cancel(); });
+        auto *buttonRow = new HLayout();
+        buttonRow->addStretch();
+        buttonRow->addChild(mOkButton);
+        buttonRow->addChild(cancelButton);
+
+        layout->setMargins(Application::instance().theme()->params().dialogMargins);
+        layout->addChild(grid);
+        layout->addSpacingEm(1.0f);
+        layout->addStretch();  // so buttons do not expand
+        layout->addChild(buttonRow);
+
+        addChild(layout);
+        setTitle("Print to PDF");
+
+        updateUI();
+    }
+
+    PaperSize paperSize() const
+    {
+        auto idx = mPaperSizes->selectedIndex();
+        if (idx >= 0) {
+            return mKnownSizes[idx];
+        } else {
+            return PaperSize(PicaPt(mPaperWidthEdit->doubleValue() / mPtsToUnits),
+                             PicaPt(mPaperHeightEdit->doubleValue() / mPtsToUnits),
+                             "Custom");
+        }
+    }
+
+    PaperOrientation orientation() const {
+        return (PaperOrientation)mOrientations->selectedValue();
+    }
+
+    std::string filename() const { return mFilename->text(); }
+    int startPage() const { return 1; }
+    int endPage() const { return 1000000000; }
+
+    Size preferredSize(const LayoutContext& context) const override
+    {
+        auto em = context.theme.params().labelFont.pointSize();
+        return Size(35.0f * em, 20.0f * em);
+    }
+
+protected:
+    void updateUI()
+    {
+        auto sizeIdx = mPaperSizes->selectedValue();
+        mPaperWidthEdit->setEnabled(sizeIdx < 0);
+        mPaperHeightEdit->setEnabled(sizeIdx < 0);
+        if (sizeIdx >= 0) {
+            auto &paperSize = mKnownSizes[sizeIdx];
+            mPaperWidthEdit->setValue(paperSize.width.asFloat() * mPtsToUnits);
+            mPaperHeightEdit->setValue(paperSize.height.asFloat() * mPtsToUnits);
+        }
+
+        mOkButton->setEnabled(!mFilename->text().empty());
+    }
+
+private:
+    float mPtsToUnits;
+    std::vector<PaperSize> mKnownSizes;
+    ComboBox *mPaperSizes;
+    ComboBox *mOrientations;
+    NumberEdit *mPaperWidthEdit;
+    NumberEdit *mPaperHeightEdit;
+    StringEdit *mFilename;
+    Button *mOkButton;
+};
+
 //-----------------------------------------------------------------------------
 struct X11Application::Impl
 {
@@ -333,6 +514,59 @@ Sound& X11Application::sound() const
 void X11Application::debugPrint(const std::string& s) const
 {
     std::cout << s << std::endl;
+}
+
+void X11Application::printDocument(const PrintSettings& settings) const
+{
+    assert(settings.calcPages);
+    assert(settings.drawPage);
+
+    auto *win = Application::instance().activeWindow();  // nullptr is okay
+
+    auto *dlg = new PrintDialog(settings);
+    dlg->showModal(win, [dlg, settings/*copy, orig is on stack*/](Dialog::Result r, int i) {
+        if (r == Dialog::Result::kFinished) {
+            auto theme = Application::instance().theme();
+            auto paperSize = dlg->paperSize();  // copies
+            if (dlg->orientation() == PaperOrientation::kLandscape) {
+                std::swap(paperSize.width, paperSize.height);
+            }
+            int width = std::ceil(paperSize.width.asFloat());
+            int height = std::ceil(paperSize.height.asFloat());
+            int nPages = 0;
+            {
+            auto layoutDC = DrawContext::createCairoPDF(nullptr, width, height, 72.0f);
+            LayoutContext layoutContext = { *theme, *layoutDC };
+            nPages = settings.calcPages(paperSize, layoutContext);
+            }  // releases layoutDC
+
+            auto dc = DrawContext::createCairoPDF(dlg->filename().c_str(), width, height, 72.0f);
+            Rect pageRect(PicaPt::kZero, PicaPt::kZero, paperSize.width, paperSize.height);
+            PrintContext context {
+                *theme,
+                *dc,
+                pageRect,
+                true,  // window is active
+                Size(paperSize.width, paperSize.height),
+                pageRect,  // we do not know the imageable bounds
+                0
+            };
+
+            int startPageIdx = dlg->startPage() - 1;
+            int endPageIdx = std::min(dlg->endPage() - 1, nPages - 1);
+            dc->beginDraw();
+            for (int i = startPageIdx;  i <= endPageIdx;  ++i) {
+                if (i > 0) {
+                    dc->addPage();
+                }
+                context.pageIndex = i;
+                settings.drawPage(context);
+            }
+            dc->endDraw();
+        }
+
+        delete dlg;
+    });
 }
 
 bool X11Application::isOriginInUpperLeft() const { return true; }

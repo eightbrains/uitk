@@ -36,6 +36,7 @@ set(UITK_PUBLIC_HEADERS
                  OSMenubar.h
                  OSWindow.h
                  PopupWindow.h
+                 Printing.h
                  ProgressBar.h
                  Screen.h
                  ScrollBar.h
@@ -94,6 +95,7 @@ set(UITK_SOURCES Accessibility.cpp
                  NumericModel.cpp
                  OSMenubar.cpp
                  PopupWindow.cpp
+                 Printing.cpp
                  ProgressBar.cpp
                  Screen.cpp
                  ScrollBar.cpp

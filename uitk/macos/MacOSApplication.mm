@@ -336,7 +336,7 @@ void MacOSApplication::beep()
     NSBeep();
 }
 
-void MacOSApplication::printDocument(int nPages, std::function<void(const PrintContext&)> drawPageCallback) const
+void MacOSApplication::printDocument(const PrintSettings& settings) const
 {
     PrintingView *view = [[PrintingView alloc] initWithNPages:nPages callback:drawPageCallback];
     [view setFrame:NSMakeRect(0, 0, 612, 10000000)]; // the height must be greater than the number of pages

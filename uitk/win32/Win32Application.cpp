@@ -298,7 +298,7 @@ Sound& Win32Application::sound() const
     return *mImpl->sound;
 }
 
-void Win32Application::printDocument(int nPages, std::function<void(const PrintContext&)> drawPageCallback) const
+void Win32Application::printDocument(const PrintSettings& settings) const
 {
     const float kPointsPerInch = 72.0f;
 

@@ -48,6 +48,7 @@
 #include "NumberEdit.h"
 #include "Menu.h"
 #include "OSMenubar.h"
+#include "Printing.h"
 #include "ProgressBar.h"
 #include "ScrollView.h"
 #include "SearchBar.h"

@@ -32,7 +32,7 @@
 namespace uitk {
 
 class Clipboard;
-struct PrintContext;
+struct PrintSettings;
 class Sound;
 class Window;
 
@@ -60,7 +60,7 @@ public:
     virtual void beep() = 0;
     virtual void debugPrint(const std::string& s) const = 0;
 
-    virtual void printDocument(int nPages, std::function<void(const PrintContext&)> drawPageCallback) const = 0;
+    virtual void printDocument(const PrintSettings& settings) const = 0;
 
     virtual bool isOriginInUpperLeft() const = 0;
     virtual bool isWindowBorderInsideWindowFrame() const = 0;
