@@ -75,4 +75,10 @@ std::vector<PaperSize> PaperSize::knownSizes()
     };
 }
 
+PrintSettings::PrintSettings()
+    : paperSize(PaperSize::kDefault)
+    , orientation(PaperOrientation::kPortrait)
+{
+}
+
 } // namespace uitk

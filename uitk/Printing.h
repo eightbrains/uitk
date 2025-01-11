@@ -87,7 +87,7 @@ struct PrintSettings
     /// from the print dialog. Default is PaperSize::kDefault.
     PaperSize paperSize;
 
-    /// Default is Orientation::kPortrait.
+    /// Default is PaperOrientation::kPortrait.
     PaperOrientation orientation;
 
     /// Called after the print dialog completes, must return the number of
@@ -96,6 +96,8 @@ struct PrintSettings
 
     /// Called to draw each page.
     std::function<void(const PrintContext&)> drawPage;
+
+    PrintSettings();
 };
 
 } // namespace uitk

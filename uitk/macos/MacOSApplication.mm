@@ -26,6 +26,7 @@
 #include "MacOSSound.h"
 
 #include "../Application.h"
+#include "../Printing.h"
 #include "../UIContext.h"
 #include "../Window.h"
 #include "../themes/EmpireTheme.h"
@@ -71,27 +72,36 @@
 //-----------------------------------------------------------------------------
 @interface PrintingView : NSView
 {
+    uitk::PrintSettings mSettings;
     int mNPages;
-    std::function<void(const uitk::PrintContext&)> mPageCallback;
 }
-- (id)initWithNPages:(int)nPages callback:(std::function<void(const uitk::PrintContext&)>)pageCallback;
+- (id)initWithSettings:(const uitk::PrintSettings&)settings;
 - (BOOL)knowsPageRange:(NSRangePointer)range;
 - (NSRect)rectForPage:(NSInteger)page;
 - (void)drawRect:(NSRect)dirtyRect;
 @end
 
 @implementation PrintingView
-- (id)initWithNPages:(int)nPages callback:(std::function<void(const uitk::PrintContext&)>)pageCallback
+- (id)initWithSettings:(const uitk::PrintSettings&)settings;
 {
     if (self = [super init]) {
-        mNPages = nPages;
-        mPageCallback = pageCallback;
+        mSettings = settings;  // copies
+        mNPages = -1;
     }
     return self;
 }
 
 - (BOOL)knowsPageRange:(NSRangePointer)range
 {
+    using namespace uitk;
+
+    NSSize size = NSPrintInfo.sharedPrintInfo.paperSize;
+    PaperSize paperSize(PicaPt(size.width), PicaPt(size.height),
+                        NSPrintInfo.sharedPrintInfo.paperName.capitalizedString.UTF8String);
+    auto dc = DrawContext::createCoreGraphicsBitmap(BitmapType::kBitmapGreyscale, size.width, size.height, 72.0f);
+    mNPages = mSettings.calcPages(paperSize,
+                                  LayoutContext{ *uitk::Application::instance().theme(), *dc });
+
     range->location = 1;
     range->length = mNPages;
     return YES;
@@ -99,7 +109,7 @@
 
 - (NSRect)rectForPage:(NSInteger)page
 {
-    if (page <= 2) {
+    if (page <= mNPages) {
         NSSize size = NSPrintInfo.sharedPrintInfo.paperSize;
         return NSMakeRect(0, (page - 1) * size.height, size.width, size.height);
     } else {
@@ -148,7 +158,7 @@
                              paperSize,
                              imageableRect,
                              page };
-    mPageCallback(context);
+    mSettings.drawPage(context);
 }
 @end
 //-----------------------------------------------------------------------------
@@ -338,9 +348,16 @@ void MacOSApplication::beep()
 
 void MacOSApplication::printDocument(const PrintSettings& settings) const
 {
-    PrintingView *view = [[PrintingView alloc] initWithNPages:nPages callback:drawPageCallback];
-    [view setFrame:NSMakeRect(0, 0, 612, 10000000)]; // the height must be greater than the number of pages
+    PrintingView *view = [[PrintingView alloc] initWithSettings:settings];
+    [view setFrame:NSMakeRect(0, 0, 612, 100000000)]; // the height must be greater than the number of pages
     NSPrintInfo *printInfo = [[NSPrintInfo alloc] initWithDictionary:@{}];
+    printInfo.orientation = (settings.orientation == PaperOrientation::kPortrait
+                             ? NSPaperOrientationPortrait
+                             : NSPaperOrientationLandscape);
+    if (settings.paperSize.width > PicaPt::kZero && settings.paperSize.height > PicaPt::kZero) {
+        printInfo.paperSize = NSMakeSize(settings.paperSize.width.asFloat(),
+                                         settings.paperSize.height.asFloat());
+    }
     NSPrintOperation *op = [NSPrintOperation
                             printOperationWithView:view
                             printInfo:printInfo];
