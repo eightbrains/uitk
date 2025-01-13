@@ -217,6 +217,10 @@ void VectorBaseTheme::setVectorParams(const Params &params)
     }
     mCheckboxOnStyles[INACTIVE_WIN] = mCheckboxStyles[INACTIVE_WIN];
 
+    // Radio buttons
+    copyStyles(mCheckboxStyles, mRadioButtonStyles);
+    copyStyles(mCheckboxOnStyles, mRadioButtonOnStyles);
+
     // SegmentedControl (background)
     copyStyles(mButtonStyles, mSegmentedControlStyles);  // only NORMAL, DISABLED matter
 
@@ -888,6 +892,27 @@ void VectorBaseTheme::drawCheckbox(UIContext& ui, const Rect& frame,
     if (isOn) {
         auto margin = ui.dc.ceilToNearestPixel(0.175f * frame.width);
         drawCheckmark(ui, frame.insetted(margin, margin), *bs);
+    }
+}
+
+void VectorBaseTheme::drawRadioBox(UIContext& ui, const Rect& frame,
+                                   const WidgetStyle& style, WidgetState state,
+                                   bool isOn) const
+{
+    WidgetStyle bs;
+    if (isOn) {
+        bs = mRadioButtonOnStyles[paramsIndex(ui, state)];
+    } else {
+        bs = mRadioButtonStyles[paramsIndex(ui, state)];
+    }
+    bs.borderRadius = 0.5f * frame.height;
+
+    drawFrame(ui, frame, bs.merge(style));
+
+    if (isOn) {
+        auto radius = 0.1666f * frame.height;
+        ui.dc.setFillColor(bs.fgColor);
+        ui.dc.drawEllipse(Rect(frame.midX() - radius, frame.midY() - radius, 2.0f * radius, 2.0f * radius), kPaintFill);
     }
 }
 

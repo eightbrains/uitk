@@ -83,6 +83,9 @@ public:
     void drawCheckbox(UIContext& ui, const Rect& frame,
                       const WidgetStyle& style, WidgetState state,
                       bool isOn) const override;
+    void drawRadioBox(UIContext& ui, const Rect& frame,
+                      const WidgetStyle& style, WidgetState state,
+                      bool isOn) const override;
     void drawSegmentedControl(UIContext& ui, const Rect& frame, SegmentDrawStyle drawStyle,
                               const WidgetStyle& style, WidgetState state) const override;
     void drawSegment(UIContext& ui, const Rect& frame, SegmentDrawStyle drawStyle,
@@ -157,6 +160,8 @@ protected:
     WidgetStyle mButtonDefaultDialogStyles[6];
     WidgetStyle mCheckboxStyles[6];
     WidgetStyle mCheckboxOnStyles[6];
+    WidgetStyle mRadioButtonStyles[6];
+    WidgetStyle mRadioButtonOnStyles[6];
     WidgetStyle mSegmentedControlStyles[6];  // style for the background
     WidgetStyle mSegmentStyles[6];  // style for individual segment (button-style)
     WidgetStyle mSegmentOffStyles[6];  // style for individual segment (off)

@@ -20,51 +20,30 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#ifndef UITK_H
-#define UITK_H
+#ifndef UITK_RADIOBUTTON_H
+#define UITK_RADIOBUTTON_H
 
-#define ND_NAMESPACE uitk
-
-// NOTE: this is for external use only, do NOT include this within the UITK
-//       library.
-
-#include "Application.h"
-#include "Button.h"
 #include "Checkbox.h"
-#include "Clipboard.h"
-#include "ColorEdit.h"
-#include "ComboBox.h"
-#include "Cursor.h"
-#include "Dialog.h"
-#include "Events.h"
-#include "FileDialog.h"
-#include "FontListComboBox.h"
-#include "Icon.h"
-#include "IconAndText.h"
-#include "ImageView.h"
-#include "Label.h"
-#include "Layout.h"
-#include "ListView.h"
-#include "NumberEdit.h"
-#include "Menu.h"
-#include "OSMenubar.h"
-#include "ProgressBar.h"
-#include "RadioButton.h"
-#include "ScrollView.h"
-#include "SearchBar.h"
-#include "SegmentedControl.h"
-#include "Slider.h"
-#include "Sound.h"
-#include "Splitter.h"
-#include "StackedWidget.h"
-#include "StringEdit.h"
-#include "UIContext.h"
-#include "Waiting.h"
-#include "Window.h"
 
-#include "io/Directory.h"
-#include "io/File.h"
+namespace uitk {
 
-#include <nativedraw.h>
+/// Implements a radio button. Note that it does NOT implement exclusivity for
+/// multiple radio buttons, so that will need to be done manually via
+/// the callback to setOnClicked().
+class RadioButton : public Checkbox {
+    using Super = Checkbox;
+public:
+    explicit RadioButton(const std::string& text);
+    ~RadioButton();
 
-#endif // UITK_H
+    AccessibilityInfo accessibilityInfo() override;
+
+    Widget::EventResult mouse(const MouseEvent &e) override;
+    Widget::EventResult key(const KeyEvent& e) override;
+
+    void draw(UIContext& context) override;
+};
+
+}  // namespace uitk
+#endif // UITK_RADIOBUTTON_H
+
