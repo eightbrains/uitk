@@ -42,9 +42,9 @@ UITK uses a limited MVC approach. The `Widget` class joins the model and control
   - Displays text in all languages, but right-to-left may not work properly
   - Supports VoiceOver on macOS
 - Basic sound playing (use OpenAL or similar if need something more thorough)
+- Printing (Linux prints to PDF, and WebAssembly has no printing facility)
 
 ### Not yet implemented
-- Printing
 - Gesture support
 - Multi-monitor may have bugs, probably mostly in moving between monitors
 - Drag-n-drop
@@ -62,7 +62,7 @@ UITK uses a limited MVC approach. The `Widget` class joins the model and control
 - Video playback (not sure how support on Linux [especially] and WebAssembly would work)
 - OpenGL/Vulkan backend
 - OpenGL/Vulkan widget
-- VoiceOver equivalent in Windows (the frameworks supports it, but crashes in kernel32.dll with no information, and I really hate spending time on Windows; if someone opens an issue with information on how to resolve the crash I will implement the rest).
+- VoiceOver equivalent in Windows (the library supports it, but crashes in kernel32.dll with no information, and I really hate spending time on Windows; if someone opens an issue with information on how to resolve the crash I will implement the rest).
 
 ### Why a new toolkit?
 I am not aware of a toolkit that covers all of the following:
