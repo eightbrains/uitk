@@ -1191,7 +1191,7 @@ WASMApplication::WASMApplication()
         std::cerr << "[error] first canvas element in document is not a valid object!" << std::endl;
     }
     mImpl->screen = std::make_unique<WASMScreen>(canvases[0]);
-    mImpl->sound = std::make_unique<WASMSound>();
+    mImpl->sound = std::make_unique<OpenALSound>();
 }
 
 WASMApplication::~WASMApplication()
@@ -1286,7 +1286,15 @@ Sound& WASMApplication::sound() const
     return *mImpl->sound;
 }
 
-void WASMApplication::debugPrint(const std::string& s)
+void WASMApplication::printDocument(int nPages, std::function<void(const PrintContext&)> drawPageCallback) const
+{
+    // Printing on WebAsembly is troublesome, since the browser's print
+    // system uses the DOM and we cannot call draw functions on it directly.
+    // TODO: we could try creating a page-sized canvas and print that?
+    debugPrint("[uitk] WASMApplication::printDocument() is not implemented on WebAssembly");
+}
+
+void WASMApplication::debugPrint(const std::string& s) const
 {
     std::cout << s << std::endl;
 }

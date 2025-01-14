@@ -209,7 +209,16 @@ public:
     virtual Size preferredSize(const LayoutContext& context) const;
 
     /// Lays out children according to the frame. Not intended to be called
-    /// directly.
+    /// directly. If this is overridden, call the super-class layout().
+    /// When Widget::layout() is called as a super call, it will only layout
+    /// the children; it will not alter their frames. However, if this object
+    /// is actually a base Widget object (not a derived instance), then layout()
+    /// will set the frame of each child to bounds(). (This allows putting a
+    /// Layout as a child of a Widget to work like you would expect, although in
+    /// most cases is it most direct to use a Layout directly. In the rare
+    /// case that you want a Widget that is just a container, and the children's
+    /// bounds are managed elsewhere, such as ListView does, then create a
+    /// derived class and instantiate that.
     virtual void layout(const LayoutContext& context);
 
     enum class EventResult { kIgnored, kConsumed };
@@ -224,9 +233,9 @@ public:
 
     virtual void text(const TextEvent& e);
 
-    /// Called when the theme changes. Generally there is no need to override this,
-    /// but if anything like text, text font, or text color is cached, it should
-    /// be cleared here (as well as anywhere else relevant).
+    /// Called when the theme changes. Generally there is no need to override
+    /// this, but if anything like text, text font, or text color is cached, it
+    /// should be cleared here (as well as anywhere else relevant).
     virtual void themeChanged(const Theme& theme);
 
     /// Draws the widget. Classes inheriting from Widget must draw the frame
@@ -236,6 +245,7 @@ public:
     /// track, but does not want the track to be the full frame.)
     virtual void draw(UIContext& context);
 
+    std::string debugDescription(); // for use in the debugger
     std::string debugDescription(const Point& offset = Point(PicaPt::kZero, PicaPt::kZero),
                                  int indent = 0) const;
 
@@ -243,16 +253,17 @@ public:
     enum MouseState { kNormal = 0, kDisabled, kMouseOver, kMouseDown };
     MouseState state() const;
     /// Merges MouseState with any other state that the widget may have (notably,
-    /// selection) to produce the state the widget should use to draw. If setThemeState()
-    /// has been called, that state will be used.
+    /// selection) to produce the state the widget should use to draw.
+    /// If setThemeState() has been called, that state will be used.
     virtual Theme::WidgetState themeState() const;
     Theme::WidgetStyle& style(Theme::WidgetState state);
 
     /// Forces a widget state for drawing. This can be useful when using a widget
-    /// as a child to reuse drawing, instead of reusing functionality. For example,
-    /// Button uses Label to draw, but the label should take the button's theme state.
-    /// Contrast with NumericEdit, which uses IncDecWidget as a child, but in that case
-    /// the child keeps its own drawing state because it functions as widget.
+    /// as a child to reuse drawing, instead of reusing functionality.
+    /// For example, Button uses Label to draw, but the label should take the
+    /// button's theme state. Contrast with NumericEdit, which uses IncDecWidget
+    /// as a child, but in that case the child keeps its own drawing state
+    /// because it functions as widget.
     void setThemeState(Theme::WidgetState state);
 
     /// Sets theme state back to unset, to undo a call to setThemeState().
@@ -271,12 +282,12 @@ protected:
     /// and pass to Widget::setTooltip().
     virtual void onTooltip() const;
 
-    /// Since the window does not know about visibility changes, if our widget changes
-    /// visibility, we need to ensure that ourself or a child widget does not have
-    /// key focus if we became invisible and/or disabled. This is called by setVisible()
-    /// and setEnabled(), so you would only need to call it in the case you are
-    /// something like StackedWidget, where switching panels could make an ancestor
-    /// of a focused widget invisible.
+    /// Since the window does not know about visibility changes, if our widget
+    /// changes visibility, we need to ensure that ourself or a child widget
+    /// does not have key focus if we became invisible and/or disabled. This is
+    /// called by setVisible() and setEnabled(), so you would only need to call
+    /// it in the case you are something like StackedWidget, where switching
+    /// panels could make an ancestor of a focused widget invisible.
     void updateKeyFocusOnVisibilityOrEnabledChange();
 
     void setWindow(Window* window);  // for Window

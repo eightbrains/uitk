@@ -36,6 +36,7 @@ set(UITK_PUBLIC_HEADERS
                  OSMenubar.h
                  OSWindow.h
                  PopupWindow.h
+                 Printing.h
                  ProgressBar.h
                  RadioButton.h
                  Screen.h
@@ -95,6 +96,7 @@ set(UITK_SOURCES Accessibility.cpp
                  NumericModel.cpp
                  OSMenubar.cpp
                  PopupWindow.cpp
+                 Printing.cpp
                  ProgressBar.cpp
                  RadioButton.cpp
                  Screen.cpp
@@ -180,12 +182,11 @@ elseif (WIN32)
                              win32/Win32Sound.cpp
                              win32/Win32Utils.cpp
                              win32/Win32Window.cpp)
-    list(APPEND UITK_LIBS imm32 d3d11 d2d1 dwrite shcore comctl32 winmm WindowsApp)
+    list(APPEND UITK_LIBS imm32 d3d11 d2d1 dwrite shcore comctl32 winmm prntvpt WindowsApp)
 elseif (EMSCRIPTEN)
     list(APPEND UITK_HEADERS wasm/WASMApplication.h
                              wasm/WASMClipboard.h
                              wasm/WASMCursor.h
-                             wasm/WASMSound.h
                              wasm/WASMWindow.h
                              openal/OpenALSound.h)
     list(APPEND UITK_SOURCES wasm/WASMApplication.cpp
@@ -299,6 +300,13 @@ if (APPLE)
     # We have to enable ARC automatically. All ObjC objects are internal, so
     # callers do not need to have ARC enabled, hence PRIVATE is sufficient.
     target_compile_options(uitk PRIVATE "-fobjc-arc")
+elseif (WIN32)
+    target_compile_definitions(uitk PRIVATE _UNICODE=1 UNICODE=1)  # Required for print ticket API to work correctly
+    # remove_defintions() does not seem to actually work, at least for the _MBCS defintion.
+    # So we will end up with _UNICODE and _MBCS defined, which is wrong.
+    # Fortunately, it seems the windows.h macros check for _UNICODE first,
+    # but probably this will bite us sometime :(
+    remove_definitions(-D_MBCS)
 endif()
 
 # set_target_properties(uitk PROPERTIES PUBLIC_HEADER "${UITK_PUBLIC_HEADERS}")

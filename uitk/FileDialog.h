@@ -32,18 +32,19 @@ class FileDialog : public Dialog
     using Super = Dialog;
 public:
     enum Type { kOpen, kSave };
-    FileDialog(Type type);
+    explicit FileDialog(Type type);
     virtual ~FileDialog();
 
     /// This returns the path the user selected, or "" if the dialog was
-    /// canceled. This should be called after the dialog has finished, for example,
-    /// in the onDone callback to showModal().
+    /// canceled. This should be called after the dialog has finished,
+    /// for example, in the onDone callback to showModal().
     std::string selectedPath() const;
 
     /// Returns the paths the user selected, or an empty vectory if the dialog
     /// was canceled. There will only be multiple paths if this is a kOpen dialog
-    /// and setCanSelectMultipleFiles(true) was called. This should be called after
-    /// the dialog has finished, for example, in the onDone callback to showModal().
+    /// and setCanSelectMultipleFiles(true) was called. This should be called
+    /// after the dialog has finished, for example, in the onDone callback to
+    /// showModal().
     std::vector<std::string> selectedPaths() const;
 
     const std::string& directory() const;
@@ -51,16 +52,17 @@ public:
 
     void clearAllowedTypes();
 
-    /// Adds an allowed type. Use extension "" to allow all types.
+    /// Adds an allowed type. The extension does NOT include the "."
+    /// (e.g. "png", NOT ".png"). Use extension "" to allow all types.
     void addAllowedType(const std::string& extension, const std::string& description);
-    /// Adds multiple allowed types with one description (e.g. "Images"). This should
-    /// only be used for kOpen dialogs.
+    /// Adds multiple allowed types with one description (e.g. "Images").
+    /// This should only be used for kOpen dialogs.
     void addAllowedType(const std::vector<std::string>& extensions, const std::string& description);
 
     bool canSelectDirectory() const;
-    /// Allows selecting a directory. This does not work with native Win32 dialogs,
-    /// as the feature was not implemented in Win32, so the non-native dialog will
-    /// be used on Win32 if this is true.
+    /// Allows selecting a directory. This does not work with native Win32
+    /// dialogs, as the feature was not implemented in Win32, so the non-native
+    /// dialog will be used on Win32 if this is true.
     void setCanSelectDirectory(bool can);
 
     /// Returns true if user can select multiple files. Default is false.

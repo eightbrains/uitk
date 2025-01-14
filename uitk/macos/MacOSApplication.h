@@ -49,7 +49,9 @@ public:
     std::vector<std::string> availableFontFamilies() const override;
 
     void beep() override;
-    void debugPrint(const std::string& s) override;
+    void debugPrint(const std::string& s) const override;
+
+    void printDocument(const PrintSettings& settings) const override;
 
     bool isOriginInUpperLeft() const override;
     bool isWindowBorderInsideWindowFrame() const override;

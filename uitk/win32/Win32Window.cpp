@@ -178,7 +178,7 @@ struct Win32Window::Impl {
             HIMC imeContext = ImmGetContext(this->hwnd);
             auto nBytes = ImmGetCompositionStringW(imeContext, gcsType, nullptr, 0);
             if (nBytes >= 0) {
-                char* compositionUTF16 = new char[nBytes + 2];  // +2 because u0000 is 2 bytes
+                char* compositionUTF16 = new char[nBytes + (LONG)2];  // +2 because u0000 is 2 bytes
                 if (ImmGetCompositionStringW(imeContext, gcsType, compositionUTF16, nBytes) >= 0) {
                     compositionUTF16[nBytes] = 0;
                     compositionUTF16[nBytes + 1] = 0;

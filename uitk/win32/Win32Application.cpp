@@ -26,6 +26,8 @@
 #include "Win32Sound.h"
 #include "Win32Utils.h"
 #include "../Application.h"
+#include "../Printing.h"
+#include "../UIContext.h"
 #include "../Window.h"
 #include "../themes/EmpireTheme.h"
 
@@ -33,10 +35,12 @@
 #include <list>
 #include <mutex>
 #include <set>
+#include <sstream>
 #include <unordered_map>
 
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include <windows.h>  // cannot use WIN32_LEAN_AND_MEAN because it excludes some printing functions
+#include <commdlg.h>
+#include <prntvpt.h>  // from PT* functions (printing)
 #include <psapi.h>  // for GetProcessImageFileName()
 #include <shellscalingapi.h>  // for SetProcessDpiAwareness()
 #include <wrl.h>
@@ -295,7 +299,252 @@ Sound& Win32Application::sound() const
     return *mImpl->sound;
 }
 
-void Win32Application::debugPrint(const std::string& s)
+void Win32Application::printDocument(const PrintSettings& settings) const
+{
+    const float kPointsPerInch = 72.0f;
+
+    auto* w = Application::instance().activeWindow();
+    HWND hwnd = NULL;
+    if (w) {
+        hwnd = (HWND)w->nativeHandle();
+    }
+
+    PRINTDLGW printInfo;
+    ZeroMemory(&printInfo, sizeof(printInfo));
+    printInfo.lStructSize = sizeof(printInfo);
+    printInfo.hwndOwner = NULL;  // we get PDERR_INITFAILURE if we use hwnd
+    printInfo.hDC = NULL;
+    printInfo.Flags = PD_USEDEVMODECOPIESANDCOLLATE | PD_NOCURRENTPAGE | PD_NOSELECTION | PD_HIDEPRINTTOFILE | PD_RETURNDC;
+    printInfo.nCopies = 1;
+    printInfo.nFromPage = 0xffff;
+    printInfo.nToPage = 0xffff;
+    printInfo.nMinPage = 1;
+    printInfo.nMaxPage = 0xffff;
+    printInfo.hDevMode = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, sizeof(DEVMODEW));
+    {
+        DEVMODEW* devmode = (DEVMODEW*)GlobalLock(printInfo.hDevMode);
+        devmode->dmSize = sizeof(DEVMODEW);
+        devmode->dmFields = DM_ORIENTATION;
+        devmode->dmOrientation = (settings.orientation == PaperOrientation::kPortrait
+                                        ? DMORIENT_PORTRAIT : DMORIENT_LANDSCAPE);
+        // It *seems* like Windows will detect what paper it is if you only specify the size,
+        // but in case it does not work for all drivers, try to identify it first.
+        if (settings.paperSize.width > PicaPt::kZero && settings.paperSize.height > PicaPt::kZero) {
+            bool isKnownSize = false;
+            for (auto &sz : PaperSize::knownSizes()) {
+                if (std::abs((sz.width - settings.paperSize.width).asFloat()) <= 1e-4f &&
+                    std::abs((sz.height - settings.paperSize.height).asFloat()) <= 1e-4f)
+                {
+                    isKnownSize = true;
+                    devmode->dmFields |= DM_PAPERSIZE;
+                    if (sz == PaperSize::kUSLetter) {
+                        devmode->dmPaperSize = DMPAPER_LETTER;
+                    } else if (sz == PaperSize::kUSLegal) {
+                        devmode->dmPaperSize = DMPAPER_LEGAL;
+                    } else if (sz == PaperSize::kUSLedger) {
+                        devmode->dmPaperSize = DMPAPER_LEDGER;
+                    // Windows does not have DMPAPER_A0 and DMPAPER_A1
+                    } else if (sz == PaperSize::kA2) {
+                        devmode->dmPaperSize = DMPAPER_A2;
+                    } else if (sz == PaperSize::kA3) {
+                        devmode->dmPaperSize = DMPAPER_A3;
+                    } else if (sz == PaperSize::kA4) {
+                        devmode->dmPaperSize = DMPAPER_A4;
+                    } else if (sz == PaperSize::kA5) {
+                        devmode->dmPaperSize = DMPAPER_A5;
+                    } else if (sz == PaperSize::kA6) {
+                        devmode->dmPaperSize = DMPAPER_A6;
+                    // Windows does not DMPAPER_A7 and DMPAPER_B0 through DMPAPER_B3
+                    } else if (sz == PaperSize::kB4) {
+                        devmode->dmPaperSize = DMPAPER_B4;
+                    } else if (sz == PaperSize::kB5) {
+                        devmode->dmPaperSize = DMPAPER_B5;
+                    // Windows does not DMPAPER_B6 and DMPAPER_B7
+                    } else {
+                        isKnownSize = false;
+                        devmode->dmFields &= ~DM_PAPERSIZE;
+                    }
+
+                    if (isKnownSize) {
+                        break;
+                    }
+                }
+
+            }
+            if (!isKnownSize) {  // Windows may coerce a custom size to a known paper size, but try anyway
+                devmode->dmFields |= DM_PAPERWIDTH | DM_PAPERLENGTH;
+                devmode->dmPaperWidth = settings.paperSize.width.asFloat() * 254.0f / 72.0f;  // 1/10 of mm
+                devmode->dmPaperLength = settings.paperSize.height.asFloat() * 254.0f / 72.0f;
+            }
+        }
+        GlobalUnlock(devmode);
+    }
+
+    HPTPROVIDER provider = nullptr;  // init these here, in case something fails
+    LPSTREAM ptStream = nullptr;
+    DEVNAMES *devnames = nullptr;
+    DEVMODE *devmode = nullptr;
+
+    if (PrintDlgW(&printInfo) == TRUE) {
+        // The device caps provides good information, but hDevMode provides virtually nothing
+        auto logx = float(GetDeviceCaps(printInfo.hDC, LOGPIXELSX));
+        auto logy = float(GetDeviceCaps(printInfo.hDC, LOGPIXELSY));
+        auto pageWidthInch = float(GetDeviceCaps(printInfo.hDC, PHYSICALWIDTH)) / logx;
+        auto pageHeightInch = float(GetDeviceCaps(printInfo.hDC, PHYSICALHEIGHT)) / logy;
+        auto imageableXInch = float(GetDeviceCaps(printInfo.hDC, PHYSICALOFFSETX)) / logx;
+        auto imageableYInch = float(GetDeviceCaps(printInfo.hDC, PHYSICALOFFSETY)) / logy;
+        auto imageableWidthInch = float(GetDeviceCaps(printInfo.hDC, HORZRES)) / logx;
+        auto imageableHeightInch = float(GetDeviceCaps(printInfo.hDC, VERTRES)) / logy;
+        auto dpi = min(logx, logy);
+
+        float rotationDeg = 0.0f;
+        auto translation = Point::kZero;
+
+        // The "Microsoft Print to PDF" built-in printer seems to require scaling,
+        // but there does not seem to be a way to detect this. Compared with a real
+        // printer, GetDeviceCaps() and the DEVMODE structures give the same results.
+        // The Direct2D initial transform and the GetWorldTransform(printInfo.hDC)
+        // both have scaling of 1.0. So, since real printers cannot usually print
+        // to the absolute edge of the paper, assume that any that can are printing
+        // to a PDF. (This is probably wrong, but I cannot find a better way to do it.)
+        bool isMSPrintToPDF = (imageableWidthInch >= pageWidthInch && imageableHeightInch >= pageHeightInch);
+
+        XFORM transform;
+        GetWorldTransform(printInfo.hDC, &transform);
+
+        devmode = (DEVMODE*)GlobalLock(printInfo.hDevMode);
+        if (!devmode) { goto err; }
+        devnames = (DEVNAMES*)GlobalLock(printInfo.hDevNames);
+        if (!devnames) { goto err; }
+
+        // Handle landscape: my test printer prints blank pages in landscape, despite
+        // everything being correct as far as I can tell. So change the devmode to be
+        // back to portrait, and then rotate/translate so the drawing code acts like
+        // it is printing landscape. However, this does not work for the Microsoft
+        // Print to PDF driver.
+        if (!isMSPrintToPDF && (devmode->dmDisplayFlags & DM_ORIENTATION) && devmode->dmOrientation != DMORIENT_PORTRAIT) {
+            if (pageWidthInch < pageHeightInch) {
+                std::swap(pageWidthInch, pageHeightInch);
+                std::swap(imageableXInch, imageableYInch);
+            }
+            if (imageableWidthInch < imageableHeightInch) { // in case HORZRES/VERTRES act differently
+                std::swap(imageableWidthInch, imageableHeightInch);
+            }
+
+            // Force portrait orientation
+            devmode->dmOrientation = DMORIENT_PORTRAIT;
+            if ((devmode->dmDisplayFlags & DM_PAPERWIDTH) && (devmode->dmDisplayFlags & DM_PAPERLENGTH) &&
+                devmode->dmPaperWidth > devmode->dmPaperLength)
+            {
+                std::swap(devmode->dmPaperWidth, devmode->dmPaperLength);
+            }
+            rotationDeg = -90.0f;
+            translation = Point(PicaPt::kZero, -PicaPt::fromPixels(pageHeightInch * dpi, dpi));
+        }
+
+        auto hr = CreateStreamOnHGlobal(nullptr, TRUE, &ptStream);
+        if (hr != S_OK) { goto err; }
+        auto* deviceName = (PCWSTR)devnames + devnames->wDeviceOffset;
+        hr = PTOpenProvider(deviceName, 1, &provider);
+        if (hr != S_OK) { goto err; }
+        hr = PTConvertDevModeToPrintTicket(provider, devmode->dmSize + devmode->dmDriverExtra,
+                                           devmode, kPTJobScope, ptStream);
+        if (hr != S_OK) { goto err; }
+
+        {
+            int nPages = 0;
+            {
+            auto dc = DrawContext::createDirect2DBitmap(kBitmapGreyscale, int(std::ceil(pageWidthInch * 72.0f)),
+                                                        int(std::ceil(pageHeightInch * 72.0f)), 72.0f);
+            LayoutContext context = { *Application::instance().theme(), *dc };
+            PaperSize paperSize(PicaPt(pageHeightInch * 72.0f), PicaPt(pageHeightInch * 72.0f), "");
+            nPages = settings.calcPages(paperSize, context);
+            }
+
+            auto jobName = Application::instance().applicationName();
+            auto dc = DrawContext::createPrinterContext(deviceName,
+                                                        jobName.c_str(),
+                                                        nullptr, // output to printer
+                                                        ptStream,
+                                                        int(std::ceil(pageWidthInch * dpi)),
+                                                        int(std::ceil(pageHeightInch * dpi)),
+                                                        dpi);
+            PrintContext context = { *Application::instance().theme(),
+                                     *dc,
+                                     Rect(PicaPt::kZero, PicaPt::kZero, PicaPt(pageWidthInch * kPointsPerInch), PicaPt(pageHeightInch * kPointsPerInch)),
+                                     true,  // window is active (in case that matters)
+            };
+            context.paperSize = Size(PicaPt(pageWidthInch * kPointsPerInch),
+                                     PicaPt(pageHeightInch * kPointsPerInch));
+            context.imageableRect = Rect(PicaPt(imageableXInch * kPointsPerInch),
+                                         PicaPt(imageableYInch * kPointsPerInch),
+                                         PicaPt(imageableWidthInch * kPointsPerInch),
+                                         PicaPt(imageableHeightInch * kPointsPerInch));
+            if (isMSPrintToPDF) {
+                dc->scale(dpi / 96.0f, dpi / 96.0f);
+            }
+            dc->rotate(rotationDeg);
+            dc->translate(translation.x, translation.y);
+
+            int startPageIdx = 0;
+            int endPageIdx = nPages - 1;
+            if (printInfo.Flags & PD_PAGENUMS) {
+                startPageIdx = printInfo.nFromPage - 1;
+                endPageIdx = printInfo.nToPage - 1;
+            } 
+            for (int p = startPageIdx;  p <= endPageIdx;  ++p) {
+                context.pageIndex = p;
+                settings.drawPage(context);
+                dc->addPage();
+            }
+
+            dc.reset();
+        }
+
+    err:
+        if (provider) {
+            PTCloseProvider(provider);
+        }
+        if (ptStream) {
+            ptStream->Release();
+        }
+        if (devmode) {
+            GlobalUnlock(printInfo.hDevMode);
+        }
+        if (devnames) {
+            GlobalUnlock(printInfo.hDevNames);
+        }
+        if (printInfo.hDevMode != NULL) {
+            GlobalFree(printInfo.hDevMode);
+        }
+        if (printInfo.hDevNames != NULL) {
+            GlobalFree(printInfo.hDevNames);
+        }
+        DeleteDC(printInfo.hDC);
+    } else {
+        auto err = CommDlgExtendedError();
+        if (err > 0) {  // err == 0 means dialog was cancelled
+            std::string msg;
+            switch (err) {
+                case PDERR_NODEVICES:
+                    msg = "No printer drivers were found";
+                    break;
+                case PDERR_NODEFAULTPRN:
+                    msg = "There is no default printer";
+                    break;
+                default: {
+                    std::stringstream s;
+                    s << "Internal error: err " << std::hex << err;
+                    msg = s.str();
+                    break;
+                }
+            }
+            MessageBoxA(hwnd, msg.c_str(), "Print error", MB_OK);
+        }
+    }
+}
+
+void Win32Application::debugPrint(const std::string& s) const
 {
     DPrint() << s;  // includes \n
 }

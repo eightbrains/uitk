@@ -96,12 +96,16 @@ TextEditorLogic::Index TextEditorLogic::lineBelow(Index i) const
 
 void TextEditorLogic::handleMouseEntered(Window *w)
 {
-    w->pushCursor(Cursor::iBeam());
+    if (w) {
+        w->pushCursor(Cursor::iBeam());
+    }
 }
 
 void TextEditorLogic::handleMouseExited(Window *w)
 {
-    w->popCursor();
+    if (w) {
+        w->popCursor();
+    }
 }
 
 bool TextEditorLogic::handleMouseEvent(const MouseEvent& e, bool isInFrame)

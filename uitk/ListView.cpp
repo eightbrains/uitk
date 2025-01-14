@@ -90,9 +90,12 @@ PicaPt layoutItems(const uitk::LayoutContext& context, LayoutMode mode,
 } // namespace
 
 //-----------------------------------------------------------------------------
+// Define a container class so Widget does not layout the children
+class ListViewContainer : public Widget {};
+
 struct ListView::Impl
 {
-    Widget *content = nullptr;  // super owns this
+    ListViewContainer *content = nullptr;  // super owns this
     Size contentPadding = Size(kUnsetPadding, kUnsetPadding);
     SelectionMode selectionMode = SelectionMode::kSingleItem;
     bool keyNavigationWraps = false;
@@ -140,7 +143,7 @@ struct ListView::Impl
 ListView::ListView()
     : mImpl(new Impl())
 {
-    mImpl->content = new Widget();
+    mImpl->content = new ListViewContainer();
     addChild(mImpl->content);
 }
 

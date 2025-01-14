@@ -79,5 +79,17 @@ struct UIContext
     bool isWindowActive;
 };
 
+struct PrintContext : public UIContext
+{
+    Size paperSize;
+    /// The imageableRect is advisory; the OS has been known to provide an
+    /// incorrect value. Generally applications will print using the
+    /// UIContext.drawRect, which is the full page, and use whatever
+    /// margins the user specifies. But this can be used to warn if the
+    /// margins may exceed the printable area.
+    Rect imageableRect;
+    int pageIndex;  /// 0-based;  the page number is pageIndex + 1
+};
+
 }  // namespace uitk
 #endif // UITK_UICONTEXT_H

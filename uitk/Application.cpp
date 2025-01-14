@@ -24,6 +24,7 @@
 
 #include "MenubarUITK.h"
 #include "OSApplication.h"
+#include "Printing.h"
 #include "ShortcutKey.h"
 #include "Sound.h"
 #include "Window.h"
@@ -49,9 +50,12 @@
 #include <unistd.h>
 #endif
 
+#include <stdlib.h>
+
 #include <assert.h>
 #include <algorithm>
 #include <chrono>
+#include <locale>
 
 namespace uitk {
 
@@ -235,7 +239,63 @@ Sound& Application::sound() const
     return mImpl->osApp->sound();
 }
 
-void Application::debugPrint(const std::string& s)
+const PaperSize& Application::defaultPaperSize() const
+{
+    std::string lc_paper;
+    auto *e = getenv("LC_PAPER");  // (this is a GNU extension)
+    if (e) {
+        lc_paper = std::string(e);
+    } else {
+        try {
+            lc_paper = std::locale("").name();
+        } catch (...) {
+            // Bad locale name (which differs by platform)
+            //debugPrint("[uitk] Invalid user locale set");
+            e = getenv("LC_ALL");
+            if (!e) {
+                e = getenv("LANG");
+            }
+            if (e) {
+                lc_paper = std::string(e);
+            } else {
+                lc_paper = "C";
+            }
+        }
+    }
+
+    for (auto &c : lc_paper) {
+        c = std::tolower(c);
+    }
+
+    if (lc_paper == "C") {
+        return PaperSize::kUSLetter;
+    } else if (lc_paper == "en" || lc_paper == "sp") {
+        return PaperSize::kUSLetter;
+    } else if (lc_paper.size() >=5 && lc_paper[2] == '_') {
+        auto country = lc_paper.substr(3, 2);
+        // The US, Canada (ca), Mexico (mx), Philippines (ph), Chile (cl),
+        // Venezuela (ve), Costa Rica (cr), and Colombia (co) use US Letter
+        // in practice, although some officially use A4.
+        // (Note: "cr" does not conflict with Croatian, which is "hr")
+        if (country == "us" || country == "ca" || country == "mx" ||
+            country == "ph" || country == "cl" || country == "ve" ||
+            country == "cr" || country == "co")
+        {
+            return PaperSize::kUSLetter;
+        } else {
+            return PaperSize::kA4;
+        }
+    } else {
+        return PaperSize::kA4;
+    }
+}
+
+void Application::printDocument(const PrintSettings& settings) const
+{
+    mImpl->osApp->printDocument(settings);
+}
+
+void Application::debugPrint(const std::string& s) const
 {
     mImpl->osApp->debugPrint(s);
 }

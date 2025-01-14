@@ -91,6 +91,7 @@ private:
 
 static const MenuId kMenuIdNew = 1;
 static const MenuId kMenuIdQuit = 2;
+static const MenuId kMenuIdPrint = 3;
 static const MenuId kMenuIdDisabled = 10;
 static const MenuId kMenuIdCheckable = 11;
 static const MenuId kMenuIdAddItem = 12;
@@ -146,6 +147,12 @@ public:
 
         setOnMenuActivated(kMenuIdNew, [](){ Document::createNewDocument(); });
         setOnMenuActivated(kMenuIdQuit, [](){ Application::instance().quit(); });
+        setOnMenuActivated(kMenuIdPrint, [this]() {
+            PrintSettings settings;
+            settings.calcPages = [](const PaperSize&, const LayoutContext&) { return 2; };  // two, in case any problems with second page
+            settings.drawPage = [this](const PrintContext& c) { this->print(c); };
+            Application::instance().printDocument(settings);
+        });
         setOnMenuActivated(kMenuIdDisabled,
                            [](){ Application::instance().quit(); /* shouldn't get here b/c disabled */ });
         setOnMenuActivated(kMenuIdCheckable,
@@ -178,6 +185,136 @@ public:
         addChild(root);
 
         show(true);
+    }
+
+    void print(const PrintContext& context) const
+    {
+        if (context.pageIndex >= 2) {
+            return;
+        }
+
+        auto margins = PicaPt(0.5f * 72.0f); // 1/2 inch
+        auto r = Rect(PicaPt::kZero, PicaPt::kZero, context.paperSize.width, context.paperSize.height).insetted(margins, margins);
+
+        auto &dc = context.dc;
+
+        // --- debugging ---
+        dc.drawText("UL", Point(PicaPt(-144.0f), PicaPt(-144.0f)),
+                    Font("Georgia", PicaPt(72.0f)), kPaintFill);
+        dc.drawText("LL", Point(PicaPt(-144.0f), PicaPt(32.0f)),
+            Font("Georgia", PicaPt(72.0f)), kPaintFill);
+        dc.drawText("UR", Point(PicaPt(0.0f), PicaPt(-144.0f)),
+            Font("Georgia", PicaPt(72.0f)), kPaintFill);
+        // ----
+
+        // Draw the unimageable margins with light grey, to see if the rect is really correct.
+        // If the grey is visible in the printout, then the imageableRect is not correct.
+        // This may be the OS's fault: macOS 10.14 uses the wrong imageable bounds for
+        // the Brother HL-L2370DW.
+        dc.setFillColor(Color(0.75f, 0.75f, 0.75f));
+        dc.drawRect(context.drawRect, kPaintFill);
+        dc.setFillColor(Color(0.9f, 0.9f, 0.9f));
+        dc.drawRect(context.imageableRect, kPaintFill);
+        dc.setFillColor(Color::kWhite);
+        dc.drawRect(r, kPaintFill);  // clearRect() may not work on p rint context in the OS (e.g. macOS)
+        dc.setFillColor(Color::kBlack);
+
+        // Draw the page rect (shouldn't be visible printed, but will be in a PDF)
+        dc.setStrokeWidth(PicaPt(1));
+        dc.setStrokeDashes({ PicaPt(1), PicaPt(2), PicaPt(2), PicaPt(2) }, PicaPt::kZero);
+        // stroked rect will have the line at the outside on the right/bottom
+        auto half = PicaPt(0.5f);
+        dc.drawRect(context.drawRect.insetted(half, half), kPaintStroke);
+        dc.setStrokeDashes({}, PicaPt::kZero);
+
+        // Draw the imageable rect
+        dc.setStrokeDashes({ PicaPt(1), PicaPt(1) }, PicaPt::kZero);
+        dc.drawRect(context.imageableRect.insetted(half, half), kPaintStroke);
+        dc.setStrokeDashes({}, PicaPt::kZero);
+
+        // Draw ruler
+        auto drawRuler = [](DrawContext& dc, const Point& origin, const PicaPt& length, const PicaPt& tickLength) {
+            auto inch = PicaPt(72.0f);
+            Font rulerFont("Georgia", 0.125f * inch);
+            auto minorTickHeight = 0.5f * tickLength;
+            auto majorTickHeight = tickLength;
+            int i = 0;
+            PicaPt x = origin.x, y = origin.y;
+            while (x <= origin.x + length) {
+                if (i % 2 == 0) {
+                    dc.drawLines({ Point(x, y), Point(x, y + majorTickHeight )});
+                    auto text = std::to_string(i / 2);
+                    auto width = dc.textMetrics(text.c_str(), rulerFont).width;
+                    if (i == 2) {
+                        text += " in.";
+                    }
+                    auto textX = x - 0.5f * width;
+                    if (i == 0) {
+                        textX = x;
+                    } else if (textX + width > origin.x + length) {
+                        textX = origin.x + length - width;
+                    }
+                    dc.drawText(text.c_str(), Point(textX, y + majorTickHeight + 0.125f), rulerFont, kPaintFill);
+                } else {
+                    dc.drawLines({ Point(x, y), Point(x, y + minorTickHeight )});
+                }
+                x += 0.5f * inch;
+                ++i;
+            }
+        };
+        drawRuler(dc, Point::kZero, context.drawRect.maxX(), PicaPt(0.125f * 72.0f));
+        drawRuler(dc, r.upperLeft(), r.width, PicaPt(0.0875f * 72.0f));
+        dc.drawLines({ Point(r.x, r.y), Point(r.maxX(), r.y) });
+
+        Font font("Georgia", PicaPt(12));
+        auto lineHeight = font.metrics(dc).lineHeight;
+        auto y = r.y + PicaPt(24.0f);
+        dc.drawText(("Page " + std::to_string(context.pageIndex + 1) + " (" + std::to_string(dc.dpi()) + " dpi)").c_str(),
+                    Rect(r.x, y, r.width, lineHeight),
+                    Alignment::kTop | Alignment::kVCenter, TextWrapping::kWrapNone, font, kPaintFill);
+        y += lineHeight;
+
+        std::stringstream s;
+        s << "Paper size (pts): " << context.paperSize.width.asFloat() << " x " << context.paperSize.height.asFloat()
+          << ";  imageableRect: (" << context.imageableRect.x.asFloat() << ", " << context.imageableRect.y.asFloat() << ") "
+          << context.imageableRect.width.asFloat() << " x " << context.imageableRect.height.asFloat();
+        auto text = dc.createTextLayout(s.str().c_str(), Font("Georgia", PicaPt(8)), Color::kBlack, Size(r.width, PicaPt::kZero), Alignment::kTop | Alignment::kLeft);
+        dc.drawText(*text, Point(r.x, y));
+        y += lineHeight;
+        y += lineHeight;  // extra line
+
+        text = dc.createTextLayout("If ruler is slightly missized, check physical paper size.\nSome printers change the print size to keep the L/R margins equal.", Font("Georgia", PicaPt(8)), Color::kBlack, Size(r.width, PicaPt::kZero), Alignment::kTop | Alignment::kRight);
+        dc.drawText(*text, Point(r.x, r.y + PicaPt(24.0f)));
+
+
+        dc.drawText("Fonts (may not space evenly due to font metrics)",
+                    Point(r.x, y), font, kPaintFill);
+        y += lineHeight;
+
+        auto y0 = y;
+        auto x = r.x;
+        auto allFonts = Application::instance().availableFontFamilies();
+        auto approxNRowsPerCol = (r.maxY() - y) / lineHeight;  // lineHeight so estimates high
+        auto approxNCols = std::ceil(allFonts.size() / approxNRowsPerCol);
+        auto colWidth = r.width / approxNCols;
+        dc.save();
+        dc.clipToRect(Rect(x, y, colWidth, r.maxY() - y));
+        for (auto &fname : allFonts) {
+            Font f(fname, PicaPt(9));
+            auto h = dc.fontMetrics(f).lineHeight;
+            if (y + h > r.maxY()) {
+                y = y0;
+                x += colWidth;
+                dc.restore();
+                dc.save();
+                dc.clipToRect(Rect(x, y, colWidth, r.maxY() - y));
+            }
+            dc.drawText(fname.c_str(),
+                        Rect(x, y, r.width, h),
+                        Alignment::kTop | Alignment::kVCenter, TextWrapping::kWrapNone, f, kPaintFill);
+            y += h;
+        }
+        dc.restore();
     }
 
 private:
@@ -231,7 +368,12 @@ int main(int argc, char *argv[])
 
     auto *fileMenu =
         app.menubar().newMenu("File")
-        ->addItem("New", kMenuIdNew, ShortcutKey(KeyModifier::kCtrl, Key::kN));
+            ->addItem("New", kMenuIdNew, ShortcutKey(KeyModifier::kCtrl, Key::kN))
+#ifndef __EMSCRIPTEN__
+            ->addSeparator()
+            ->addItem("Print...", kMenuIdPrint, ShortcutKey(KeyModifier::kCtrl, Key::kP))
+#endif // __EMSCRIPTEN
+        ;
 //            ->addSeparator()
 //            ->addItem("Quit", kMenuIdQuit, ShortcutKey(KeyModifier::kCtrl, Key::kQ));
     auto *editMenu =

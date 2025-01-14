@@ -90,7 +90,7 @@ public:
     Size preferredSize(const LayoutContext& context) const override
     {
         auto em = context.theme.params().labelFont.pointSize();
-        const auto margin = 2.0f * em;
+        const auto margin = context.theme.params().dialogMargins;
 
         // Text is most readable between 60 and 80 characters,
         // which is roughly 40 - 45 ems.
@@ -127,7 +127,7 @@ public:
     void layout(const LayoutContext& context) override
     {
         auto em = context.theme.params().labelFont.pointSize();
-        const auto margin = 2.0f * em;
+        const auto margin = context.theme.params().dialogMargins;
         auto w = bounds().width - 2.0f * margin;
 
         if (!mMessage->text().empty()) {
@@ -299,6 +299,42 @@ void Dialog::cancel()
             mImpl->onDone(Result::kCancelled, 0);
         });
     }
+}
+
+Size Dialog::preferredSize(const LayoutContext& context) const
+{
+    // If we only have one child, it must be a layout (what use is a dialog
+    // with only one widget?), in which case
+    auto &childs = children();
+    if (childs.size() == 1) {
+        Size size;
+        for (auto *child : childs) {
+            auto pref = child->preferredSize(context);
+            size.width = std::max(size.width, pref.width);
+            size.height = std::max(size.height, pref.height);
+        }
+        if (size.width <= PicaPt::kZero) {
+            size.width = kDimGrow;
+        }
+        if (size.height <= PicaPt::kZero) {
+            size.height = kDimGrow;
+        }
+        return size;
+    } else {
+        return Super::preferredSize(context);
+    }
+}
+
+void Dialog::layout(const LayoutContext& context)
+{
+    // If we only have one child, it must be a layout (what use is a dialog
+    // with only one widget?), in which case
+    auto &childs = children();
+    if (childs.size() == 1) {
+        childs[0]->setFrame(bounds());
+    }
+
+    Super::layout(context);
 }
 
 Widget::EventResult Dialog::key(const KeyEvent& e)
