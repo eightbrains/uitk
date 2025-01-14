@@ -304,6 +304,9 @@ public:
     virtual void drawCheckbox(UIContext& ui, const Rect& frame,
                               const WidgetStyle& style, WidgetState state,
                               bool isOn) const = 0;
+    virtual void drawRadioBox(UIContext& ui, const Rect& frame,
+                              const WidgetStyle& style, WidgetState state,
+                              bool isOn) const = 0;
     enum class SegmentDrawStyle
     {
         kNormal, kNoDecoration

@@ -139,6 +139,11 @@ public:
                       const WidgetStyle& style, WidgetState state,
                       bool isOn) const override
         { mTheme->drawCheckbox(ui, frame, style, state, isOn); }
+    void drawRadioBox(UIContext& ui, const Rect& frame,
+                      const WidgetStyle& style, WidgetState state,
+                      bool isOn) const override
+        { mTheme->drawRadioBox(ui, frame, style, state, isOn); }
+
     void drawSegmentedControl(UIContext& ui, const Rect& frame, SegmentDrawStyle drawStyle,
                               const WidgetStyle& style, WidgetState state) const override
         { mTheme->drawSegmentedControl(ui, frame, drawStyle, style, state); }

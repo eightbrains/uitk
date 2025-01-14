@@ -247,6 +247,13 @@ public:
 
         mCheckbox = new Checkbox("Checkbox");
         addChild(mCheckbox);
+
+        mRadio1 = new RadioButton("Radio 1");
+        addChild(mRadio1);
+        mRadio2 = new RadioButton("Radio 2");
+        addChild(mRadio2);
+        mRadio1->setOnClicked([this](Button*) { mRadio2->setOn(false); });
+        mRadio2->setOnClicked([this](Button*) { mRadio1->setOn(false); });
     }
 
     Size preferredSize(const LayoutContext& context) const override
@@ -293,6 +300,12 @@ public:
         pref = mCheckbox->preferredSize(context);
         mCheckbox->setFrame(Rect(x, y, pref.width, pref.height));
 
+        pref = mRadio1->preferredSize(context);
+        mRadio1->setFrame(Rect(mUndecorated1->frame().midX(), y, pref.width, pref.height));
+        pref = mRadio2->preferredSize(context);
+        y += context.dc.roundToNearestPixel(std::max(mCheckbox->frame().height, mRadio1->frame().height));
+        mRadio2->setFrame(Rect(mUndecorated1->frame().midX(), y, pref.width, pref.height));
+
         Super::layout(context);
     }
 
@@ -308,6 +321,8 @@ private:
     Button *mUndecorated1;
     Button *mUndecorated2;
     Checkbox *mCheckbox;
+    RadioButton *mRadio1;
+    RadioButton *mRadio2;
     Label *mLabel;
 };
 

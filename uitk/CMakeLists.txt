@@ -38,6 +38,7 @@ set(UITK_PUBLIC_HEADERS
                  PopupWindow.h
                  Printing.h
                  ProgressBar.h
+                 RadioButton.h
                  Screen.h
                  ScrollBar.h
                  ScrollView.h
@@ -97,6 +98,7 @@ set(UITK_SOURCES Accessibility.cpp
                  PopupWindow.cpp
                  Printing.cpp
                  ProgressBar.cpp
+                 RadioButton.cpp
                  Screen.cpp
                  ScrollBar.cpp
                  ScrollView.cpp
