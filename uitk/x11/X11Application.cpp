@@ -31,6 +31,7 @@
 #include "../private/PlatformUtils.h"
 
 // For print dialog
+#include "../io/File.h"
 #include "../Button.h"
 #include "../ComboBox.h"
 #include "../Dialog.h"
@@ -39,6 +40,7 @@
 #include "../Layout.h"
 #include "../NumberEdit.h"
 #include "../Printing.h"
+#include "../RadioButton.h"
 #include "../StringEdit.h"
 #include "../UIContext.h"
 
@@ -254,8 +256,8 @@ public:
         {
             mPtsToUnits = 1.0f / 72.0f;
             units = "in.";
-            mPaperWidthEdit->setLimits(0.0, kMaxPaperSize, 0.1);
-            mPaperHeightEdit->setLimits(0.0, kMaxPaperSize, 0.1);
+            mPaperWidthEdit->setLimits(0.0, kMaxPaperSize, 0.01);  // 2 digits, for 0.25
+            mPaperHeightEdit->setLimits(0.0, kMaxPaperSize, 0.01);
         } else {
             mPtsToUnits = 25.4f / 72.0f;
             units = "mm";
@@ -269,25 +271,38 @@ public:
         sizeLayout->addChild(mPaperHeightEdit);
         sizeLayout->addChild(new Label(units));
 
+        const int kCustomPaperValue = -1;
+        int paperSelectionValue = kCustomPaperValue;
         mPaperSizes = new ComboBox();
         for (size_t i = 0;  i < mKnownSizes.size();  ++i) {
             mPaperSizes->addItem(mKnownSizes[i].name, i);
+            if (std::abs(mKnownSizes[i].width.asFloat() - paperSize.width.asFloat()) < 1e-4f &&
+                std::abs(mKnownSizes[i].height.asFloat() - paperSize.height.asFloat()) < 1e-4f)
+            {
+                paperSelectionValue = i;
+            }
         }
-        mPaperSizes->addItem("Custom", -1);
+        mPaperSizes->addItem("Custom", kCustomPaperValue);
+        mPaperSizes->setSelectedValue(paperSelectionValue);
         mPaperSizes->setOnSelectionChanged([this](ComboBox *) {
             this->updateUI();
         });
 
+        if (paperSelectionValue == kCustomPaperValue) {
+            mPaperWidthEdit->setValue(paperSize.width.asFloat() * mPtsToUnits);
+            mPaperHeightEdit->setValue(paperSize.height.asFloat() * mPtsToUnits);
+        }
+
         grid->addChild(new Label("Paper size"), row, 0);
         grid->addChild(mPaperSizes, row, 1);
         ++row;
-        grid->addChild(new Label(" "), row, 0);  // debugging
         grid->addChild(sizeLayout, row, 1);
         ++row;
 
         mOrientations = new ComboBox();
         mOrientations->addItem("Portrait", int(PaperOrientation::kPortrait));
         mOrientations->addItem("Landscape", int(PaperOrientation::kLandscape));
+        mOrientations->setSelectedValue(int(settings.orientation));
 
         grid->addChild(new Label("Paper orientation"), row, 0);
         grid->addChild(mOrientations, row, 1);
@@ -310,6 +325,35 @@ public:
             });
         });
         
+        mAllPages = new RadioButton("All pages");
+        mRangePages = new RadioButton("Range");
+        mAllPages->setOn(true);
+        mAllPages->setOnClicked([this](Button *) {
+            mRangePages->setOn(false);
+            updateUI();
+        });
+        mRangePages->setOnClicked([this](Button *) {
+            mAllPages->setOn(false);
+            updateUI();
+        });
+        mStartPage = new StringEdit();
+        mStartPage->setAlignment(Alignment::kRight);
+        mStartPage->setFixedWidthEm(4);
+        mStartPage->setOnValueChanged([this](StringEdit*) { updateUI(); });
+        mEndPage = new StringEdit();  // StringEdit, so can be empty, not 1e9
+        mEndPage->setAlignment(Alignment::kRight);
+        mEndPage->setFixedWidthEm(4);
+        mEndPage->setOnValueChanged([this](StringEdit*) { updateUI(); });
+
+        grid->addChild(new Label(" "), row, 0);  // blank line
+        ++row;
+        grid->addChild(mAllPages, row, 0);
+        ++row;
+        grid->addChild(mRangePages, row, 0);
+        grid->addChild((new HLayout({ mStartPage, new Label("to"), mEndPage }))->setAlignment(Alignment::kLeft),
+                       row, 1);
+        ++row;
+
         grid->addChild(new Label(" "), row, 0);  // blank line
         ++row;
         grid->addChild(new Label("Filename"), row, 0);
@@ -339,7 +383,7 @@ public:
 
     PaperSize paperSize() const
     {
-        auto idx = mPaperSizes->selectedIndex();
+        auto idx = mPaperSizes->selectedValue();
         if (idx >= 0) {
             return mKnownSizes[idx];
         } else {
@@ -354,13 +398,31 @@ public:
     }
 
     std::string filename() const { return mFilename->text(); }
-    int startPage() const { return 1; }
-    int endPage() const { return 1000000000; }
+
+    int startPage() const
+    {
+        if (mAllPages->isOn()) {
+            return 1;
+        } else {
+            int start = std::max(1, std::atoi(mStartPage->text().c_str()));
+            return start;
+        }
+    }
+
+    int endPage() const
+    {
+        if (mAllPages->isOn()) {
+            return kMaxPage;
+        } else {
+            int end = std::max(1, std::atoi(mEndPage->text().c_str()));
+            return end;
+        }
+    }
 
     Size preferredSize(const LayoutContext& context) const override
     {
         auto em = context.theme.params().labelFont.pointSize();
-        return Size(35.0f * em, 20.0f * em);
+        return Size(35.0f * em, 23.0f * em);
     }
 
 protected:
@@ -375,16 +437,40 @@ protected:
             mPaperHeightEdit->setValue(paperSize.height.asFloat() * mPtsToUnits);
         }
 
-        mOkButton->setEnabled(!mFilename->text().empty());
+        int start = 1;
+        int end = kMaxPage;
+        if (!mStartPage->text().empty()) {
+            start = std::atoi(mStartPage->text().c_str());
+            start = std::max(1, start);  // an error in atoi gives 0, which will
+                                         // be conveniently maxned to 1
+            mStartPage->setText(std::to_string(start));
+        }
+        if (!mEndPage->text().empty()) {
+            end = std::atoi(mEndPage->text().c_str());
+            end = std::max(start, end);
+            mEndPage->setText(std::to_string(end));
+        }
+        mStartPage->setEnabled(mRangePages->isOn());
+        mEndPage->setEnabled(mRangePages->isOn());
+
+        bool rangeOk = (mAllPages->isOn() || (!mStartPage->text().empty() && !mEndPage->text().empty() && end >= start));
+        bool isOk = (!mFilename->text().empty() && rangeOk);
+        mOkButton->setEnabled(isOk);
     }
 
 private:
+    static constexpr int kMaxPage = 1000000000;
+
     float mPtsToUnits;
     std::vector<PaperSize> mKnownSizes;
     ComboBox *mPaperSizes;
     ComboBox *mOrientations;
     NumberEdit *mPaperWidthEdit;
     NumberEdit *mPaperHeightEdit;
+    RadioButton *mAllPages;
+    RadioButton *mRangePages;
+    StringEdit *mStartPage;
+    StringEdit *mEndPage;
     StringEdit *mFilename;
     Button *mOkButton;
 };
@@ -552,17 +638,27 @@ void X11Application::printDocument(const PrintSettings& settings) const
                 0
             };
 
+            int pagesFinished = 0;
             int startPageIdx = dlg->startPage() - 1;
             int endPageIdx = std::min(dlg->endPage() - 1, nPages - 1);
             dc->beginDraw();
             for (int i = startPageIdx;  i <= endPageIdx;  ++i) {
-                if (i > 0) {
+                if (pagesFinished > 0) {   // i might always be > 0!
                     dc->addPage();
                 }
                 context.pageIndex = i;
                 settings.drawPage(context);
+                ++pagesFinished;
             }
             dc->endDraw();
+            dc.reset();  // force destruction, so file should be written
+            
+            // Note: if the file already exists, but we could not write to it,
+            // we will not notify the user. However, to do that we would need
+            // for nativedraw to return native errors.
+            if (!File(dlg->filename()).exists()) {
+                Dialog::showAlert(nullptr, "Print Error", "Could not print to file '" + dlg->filename() + "'", "Check that the path is writable and that the disk has enough space.");
+            }
         }
 
         delete dlg;
