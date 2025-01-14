@@ -76,6 +76,11 @@ struct PaperSize
     PaperSize(const PicaPt& w, const PicaPt& h, const std::string& n)
         : width(w), height(h), name(n)
     {}
+
+    bool operator==(const PaperSize& rhs) const
+        { return this->width == rhs.width && this->height == rhs.height; }
+    bool operator!=(const PaperSize& rhs) const
+        { return this->width != rhs.width || this->height != rhs.height; }
 };
 
 #undef INCH
@@ -84,7 +89,9 @@ struct PaperSize
 struct PrintSettings
 {
     /// Set if document size is known, otherwise the size will be taken
-    /// from the print dialog. Default is PaperSize::kDefault.
+    /// from the print dialog. Default is PaperSize::kDefault. This is
+    /// a request: the operating system (or the user) may override the
+    /// paper size with a standard size, if a custom size is used.
     PaperSize paperSize;
 
     /// Default is PaperOrientation::kPortrait.

@@ -26,6 +26,7 @@
 #include "Win32Sound.h"
 #include "Win32Utils.h"
 #include "../Application.h"
+#include "../Printing.h"
 #include "../UIContext.h"
 #include "../Window.h"
 #include "../themes/EmpireTheme.h"
@@ -318,7 +319,71 @@ void Win32Application::printDocument(const PrintSettings& settings) const
     printInfo.nFromPage = 0xffff;
     printInfo.nToPage = 0xffff;
     printInfo.nMinPage = 1;
-    printInfo.nMaxPage = nPages;
+    printInfo.nMaxPage = 0xffff;
+    printInfo.hDevMode = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, sizeof(DEVMODEW));
+    {
+        DEVMODEW* devmode = (DEVMODEW*)GlobalLock(printInfo.hDevMode);
+        devmode->dmSize = sizeof(DEVMODEW);
+        devmode->dmFields = DM_ORIENTATION;
+        devmode->dmOrientation = (settings.orientation == PaperOrientation::kPortrait
+                                        ? DMORIENT_PORTRAIT : DMORIENT_LANDSCAPE);
+        // It *seems* like Windows will detect what paper it is if you only specify the size,
+        // but in case it does not work for all drivers, try to identify it first.
+        if (settings.paperSize.width > PicaPt::kZero && settings.paperSize.height > PicaPt::kZero) {
+            bool isKnownSize = false;
+            for (auto &sz : PaperSize::knownSizes()) {
+                if (std::abs((sz.width - settings.paperSize.width).asFloat()) <= 1e-4f &&
+                    std::abs((sz.height - settings.paperSize.height).asFloat()) <= 1e-4f)
+                {
+                    isKnownSize = true;
+                    devmode->dmFields |= DM_PAPERSIZE;
+                    if (sz == PaperSize::kUSLetter) {
+                        devmode->dmPaperSize = DMPAPER_LETTER;
+                    } else if (sz == PaperSize::kUSLegal) {
+                        devmode->dmPaperSize = DMPAPER_LEGAL;
+                    } else if (sz == PaperSize::kUSLedger) {
+                        devmode->dmPaperSize = DMPAPER_LEDGER;
+                    // Windows does not have DMPAPER_A0 and DMPAPER_A1
+                    } else if (sz == PaperSize::kA2) {
+                        devmode->dmPaperSize = DMPAPER_A2;
+                    } else if (sz == PaperSize::kA3) {
+                        devmode->dmPaperSize = DMPAPER_A3;
+                    } else if (sz == PaperSize::kA4) {
+                        devmode->dmPaperSize = DMPAPER_A4;
+                    } else if (sz == PaperSize::kA5) {
+                        devmode->dmPaperSize = DMPAPER_A5;
+                    } else if (sz == PaperSize::kA6) {
+                        devmode->dmPaperSize = DMPAPER_A6;
+                    // Windows does not DMPAPER_A7 and DMPAPER_B0 through DMPAPER_B3
+                    } else if (sz == PaperSize::kB4) {
+                        devmode->dmPaperSize = DMPAPER_B4;
+                    } else if (sz == PaperSize::kB5) {
+                        devmode->dmPaperSize = DMPAPER_B5;
+                    // Windows does not DMPAPER_B6 and DMPAPER_B7
+                    } else {
+                        isKnownSize = false;
+                        devmode->dmFields &= ~DM_PAPERSIZE;
+                    }
+
+                    if (isKnownSize) {
+                        break;
+                    }
+                }
+
+            }
+            if (!isKnownSize) {  // Windows may coerce a custom size to a known paper size, but try anyway
+                devmode->dmFields |= DM_PAPERWIDTH | DM_PAPERLENGTH;
+                devmode->dmPaperWidth = settings.paperSize.width.asFloat() * 254.0f / 72.0f;  // 1/10 of mm
+                devmode->dmPaperLength = settings.paperSize.height.asFloat() * 254.0f / 72.0f;
+            }
+        }
+        GlobalUnlock(devmode);
+    }
+
+    HPTPROVIDER provider = nullptr;  // init these here, in case something fails
+    LPSTREAM ptStream = nullptr;
+    DEVNAMES *devnames = nullptr;
+    DEVMODE *devmode = nullptr;
 
     if (PrintDlgW(&printInfo) == TRUE) {
         // The device caps provides good information, but hDevMode provides virtually nothing
@@ -347,9 +412,9 @@ void Win32Application::printDocument(const PrintSettings& settings) const
         XFORM transform;
         GetWorldTransform(printInfo.hDC, &transform);
 
-        DEVMODE* devmode = (DEVMODE*)GlobalLock(printInfo.hDevMode);
+        devmode = (DEVMODE*)GlobalLock(printInfo.hDevMode);
         if (!devmode) { goto err; }
-        DEVNAMES* devnames = (DEVNAMES*)GlobalLock(printInfo.hDevNames);
+        devnames = (DEVNAMES*)GlobalLock(printInfo.hDevNames);
         if (!devnames) { goto err; }
 
         // Handle landscape: my test printer prints blank pages in landscape, despite
@@ -377,9 +442,6 @@ void Win32Application::printDocument(const PrintSettings& settings) const
             translation = Point(PicaPt::kZero, -PicaPt::fromPixels(pageHeightInch * dpi, dpi));
         }
 
-        HPTPROVIDER provider = nullptr;
-        LPSTREAM ptStream = nullptr;
-
         auto hr = CreateStreamOnHGlobal(nullptr, TRUE, &ptStream);
         if (hr != S_OK) { goto err; }
         auto* deviceName = (PCWSTR)devnames + devnames->wDeviceOffset;
@@ -390,6 +452,15 @@ void Win32Application::printDocument(const PrintSettings& settings) const
         if (hr != S_OK) { goto err; }
 
         {
+            int nPages = 0;
+            {
+            auto dc = DrawContext::createDirect2DBitmap(kBitmapGreyscale, int(std::ceil(pageWidthInch * 72.0f)),
+                                                        int(std::ceil(pageHeightInch * 72.0f)), 72.0f);
+            LayoutContext context = { *Application::instance().theme(), *dc };
+            PaperSize paperSize(PicaPt(pageHeightInch * 72.0f), PicaPt(pageHeightInch * 72.0f), "");
+            nPages = settings.calcPages(paperSize, context);
+            }
+
             auto jobName = Application::instance().applicationName();
             auto dc = DrawContext::createPrinterContext(deviceName,
                                                         jobName.c_str(),
@@ -423,7 +494,7 @@ void Win32Application::printDocument(const PrintSettings& settings) const
             } 
             for (int p = startPageIdx;  p <= endPageIdx;  ++p) {
                 context.pageIndex = p;
-                drawPageCallback(context);
+                settings.drawPage(context);
                 dc->addPage();
             }
 
