@@ -332,8 +332,9 @@ void Widget::removeAllChildren()
 
 void Widget::clearAllChildren()
 {
+    auto children = mImpl->children;  // copy: removeAllChildren() will clear mImpl->children;
     removeAllChildren();
-    for (auto *child : mImpl->children) {
+    for (auto *child : children) {
         delete child;
     }
     mImpl->children.clear();
