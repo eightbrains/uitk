@@ -246,7 +246,21 @@ const PaperSize& Application::defaultPaperSize() const
     if (e) {
         lc_paper = std::string(e);
     } else {
-        lc_paper = std::locale("").name();
+        try {
+            lc_paper = std::locale("").name();
+        } catch (...) {
+            // Bad locale name (which differs by platform)
+            //debugPrint("[uitk] Invalid user locale set");
+            e = getenv("LC_ALL");
+            if (!e) {
+                e = getenv("LANG");
+            }
+            if (e) {
+                lc_paper = std::string(e);
+            } else {
+                lc_paper = "C";
+            }
+        }
     }
 
     for (auto &c : lc_paper) {
