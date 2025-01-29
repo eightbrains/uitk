@@ -89,7 +89,7 @@ struct Widget::Impl {
     }
 };
 
-const PicaPt Widget::kDimGrow = PicaPt::fromPixels(32000.0f, 72.0f);
+const PicaPt Widget::kDimGrow = PicaPt::fromPixels(8000000.0f /* approx max int-float */, 72.0f);
 
 Widget::Widget()
     : mImpl(new Impl())
