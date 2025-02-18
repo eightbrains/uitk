@@ -95,9 +95,10 @@
 {
     using namespace uitk;
 
-    NSSize size = NSPrintInfo.sharedPrintInfo.paperSize;
+    NSPrintInfo *printInfo = NSPrintOperation.currentOperation.printInfo;
+    NSSize size = printInfo.paperSize;
     PaperSize paperSize(PicaPt(size.width), PicaPt(size.height),
-                        NSPrintInfo.sharedPrintInfo.paperName.capitalizedString.UTF8String);
+                        printInfo.paperName.capitalizedString.UTF8String);
     auto dc = DrawContext::createCoreGraphicsBitmap(BitmapType::kBitmapGreyscale, size.width, size.height, 72.0f);
     mNPages = mSettings.calcPages(paperSize,
                                   LayoutContext{ *uitk::Application::instance().theme(), *dc });
@@ -110,7 +111,7 @@
 - (NSRect)rectForPage:(NSInteger)page
 {
     if (page <= mNPages) {
-        NSSize size = NSPrintInfo.sharedPrintInfo.paperSize;
+        NSSize size = NSPrintOperation.currentOperation.printInfo.paperSize;
         return NSMakeRect(0, (page - 1) * size.height, size.width, size.height);
     } else {
         return NSMakeRect(0, 0, 0, 0);
@@ -121,7 +122,7 @@
 {
     using namespace uitk;
 
-    NSPrintInfo *printer = NSPrintInfo.sharedPrintInfo;
+    NSPrintInfo *printer = NSPrintOperation.currentOperation.printInfo;
     // Note: all CGFloat coorinates are in typographic points (units of 1/72 in.), so we can
     //       pass them directly to PicaPt's constructor.
     uitk::Size paperSize(PicaPt(printer.paperSize.width),
@@ -130,6 +131,14 @@
                              PicaPt(printer.imageablePageBounds.origin.y),
                              PicaPt(printer.imageablePageBounds.size.width),
                              PicaPt(printer.imageablePageBounds.size.height));
+    if (printer.orientation == NSPaperOrientationLandscape) {
+        paperSize.width = std::max(paperSize.width, paperSize.height);
+        paperSize.height = std::min(paperSize.width, paperSize.height);
+        if (printer.imageablePageBounds.size.width < printer.imageablePageBounds.size.height) {
+            imageableRect = uitk::Rect(imageableRect.y, imageableRect.x,
+                                       imageableRect.height, imageableRect.width);
+        }
+    }
     int page = int(std::floor((dirtyRect.origin.y - printer.paperSize.height) / printer.paperSize.height)) + 1;
 
     float dpi = 600.0f;  // default; pretty much every modern printer does at least 600 dpi.
@@ -349,7 +358,7 @@ void MacOSApplication::beep()
 void MacOSApplication::printDocument(const PrintSettings& settings) const
 {
     PrintingView *view = [[PrintingView alloc] initWithSettings:settings];
-    [view setFrame:NSMakeRect(0, 0, 612, 100000000)]; // the height must be greater than the number of pages
+    [view setFrame:NSMakeRect(0, 0, 612, 1000000000)]; // the height must be greater than the number of pages
     NSPrintInfo *printInfo = [[NSPrintInfo alloc] initWithDictionary:@{}];
     printInfo.orientation = (settings.orientation == PaperOrientation::kPortrait
                              ? NSPaperOrientationPortrait
@@ -357,6 +366,11 @@ void MacOSApplication::printDocument(const PrintSettings& settings) const
     if (settings.paperSize.width > PicaPt::kZero && settings.paperSize.height > PicaPt::kZero) {
         printInfo.paperSize = NSMakeSize(settings.paperSize.width.asFloat(),
                                          settings.paperSize.height.asFloat());
+        bool isPortraitSize = (printInfo.paperSize.width <= printInfo.paperSize.height);
+        bool isLandscapeSize = (printInfo.paperSize.width >= printInfo.paperSize.height);
+        if ((settings.orientation == PaperOrientation::kPortrait && !isPortraitSize) ||
+            (settings.orientation == PaperOrientation::kLandscape && !isLandscapeSize)) {
+        }
     }
     NSPrintOperation *op = [NSPrintOperation
                             printOperationWithView:view
