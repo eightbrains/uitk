@@ -138,7 +138,7 @@ public:
     Size preferredSize(const LayoutContext& context) const override
     {
         auto em = context.theme.params().labelFont.metrics(context.dc).lineHeight;
-        return Size(20.0f * em, 11.0f * em);
+        return Size(30.0f * em, 11.0f * em);
     }
 
     void layout(const LayoutContext& context) override

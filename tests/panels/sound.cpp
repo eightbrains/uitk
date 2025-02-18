@@ -55,7 +55,7 @@ public:
     void play() const
     {
         const float twoPi = 2.0f * 3.141592f;
-        float rate = 44000.0f;
+        float rate = 44100.0f;
         float lengthSec = 1.0f;
         float masterVolume = 0.5f;
         std::vector<float> volumes = { 1.0f, 0.5f, 0.25f, 0.125f, 0.0625f, 0.03125f };
@@ -64,11 +64,10 @@ public:
         std::vector<int16_t> samples((int)std::round(rate * lengthSec));
         for (size_t i = 0;  i < samples.size();  ++i) {
             const float sec = float(i) / rate;
-            //float decay = (lengthSec - sec) / lengthSec;
             float decay = std::exp(-7.0f * sec / lengthSec);
             float v = 0.0f;
-            for (size_t i = 0;  i < volumes.size();  ++i) {
-                v += volumes[i] * decay * std::sin(float(i) * mFreqHz * twoPi * sec);
+            for (auto vol : volumes) {
+                v += vol * decay * std::sin(mFreqHz * twoPi * sec);
             }
             v *= masterVolume;
             samples[i] = int16_t(std::round(float(INT16_MAX) * v));
