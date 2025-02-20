@@ -409,7 +409,7 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
                          uitk::PicaPt::fromPixels(self.frame.size.height - pt.y, dpi));
     me.keymods = toKeymods(e.modifierFlags);
     me.button.button = toUITKMouseButton(e.buttonNumber);
-    me.button.nClicks = e.clickCount;
+    me.button.nClicks = int(e.clickCount);
 
     [self doOnMouse:me];
 }
@@ -590,7 +590,7 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
         auto utf8 = self.textEditor->textWithConversion();
         auto toUtf16 = uitk::utf16IndicesForUTF8Indices(utf8.c_str());
         int start8 = self.textEditor->imeConversion().start;
-        int end8 = start8 + self.textEditor->imeConversion().text.length();
+        int end8 = start8 + int(self.textEditor->imeConversion().text.length());
         return NSMakeRange(toUtf16[start8], toUtf16[end8] - toUtf16[start8]);
     } else {
         return NSMakeRange(NSNotFound, 0);
@@ -663,8 +663,8 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
         } else if (replacementRange.length > 0) {
             // TODO: is the replacement range in the marked text or the committed text?
             // TODO: when does this happen? Doesn't seem to happen with Chinese, maybe Japanese?
-            self.textEditor->deleteText(replacementRange.location,
-                                        replacementRange.location + replacementRange.length);
+            self.textEditor->deleteText(int(replacementRange.location),
+                                        int(replacementRange.location + replacementRange.length));
         }
         std::string utf8;
         if ([string isKindOfClass:[NSAttributedString class]]) {
@@ -708,7 +708,7 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     if (self.textEditor) {
         auto &glyphs = self.textEditor->layout()->glyphs();
         const uitk::TextLayout::Glyph *g;
-        int idx = range.location;
+        int idx = int(range.location);
         if (idx < glyphs.size()) {
             g = &glyphs[idx];
         } else {

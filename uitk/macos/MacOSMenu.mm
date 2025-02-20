@@ -238,7 +238,7 @@ void MacOSMenu::clear()
 
 int MacOSMenu::size() const
 {
-    return mImpl->menu.numberOfItems;
+    return int(mImpl->menu.numberOfItems);
 }
 
 void MacOSMenu::addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut)
@@ -248,7 +248,7 @@ void MacOSMenu::addItem(const std::string& text, MenuId id, const ShortcutKey& s
 
 void MacOSMenu::addMenu(const std::string& text, Menu *menu)
 {
-    insertMenu(mImpl->menu.itemArray.count, text, menu);
+    insertMenu(int(mImpl->menu.itemArray.count), text, menu);
 }
 
 void MacOSMenu::addSeparator()

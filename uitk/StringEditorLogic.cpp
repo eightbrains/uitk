@@ -182,7 +182,7 @@ TextEditorLogic::Index StringEditorLogic::startOfLine(Index i) const
         glyphIdx = long(glyphs.size());  // will always be decremented before using, so size() is okay
     }
     while (i > 0 && mImpl->stringUTF8[i - 1] != '\n' && (glyphs[glyphIdx - 1].frame.x - x) < epsilon) {
-        i = glyphs[--glyphIdx].index;
+        i = int(glyphs[--glyphIdx].index);
         x = glyphs[glyphIdx].frame.x;
     }
     return i;
@@ -202,7 +202,7 @@ TextEditorLogic::Index StringEditorLogic::endOfLine(Index i) const
     auto x = glyphs[glyphIdx].frame.x;
     while (i < end && mImpl->stringUTF8[i] != '\n' && (glyphs[glyphIdx].frame.x - x) > -epsilon) {
         x = glyphs[glyphIdx].frame.x;
-        i = glyphs[glyphIdx++].indexOfNext;
+        i = int(glyphs[glyphIdx++].indexOfNext);
     }
     return i;
 }

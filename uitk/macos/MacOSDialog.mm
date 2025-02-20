@@ -119,7 +119,7 @@ void MacOSDialog::showAlert(Window *w,
                 break;
             default:
                 assert(returnCode > NSAlertThirdButtonReturn);
-                onDone(Dialog::Result::kFinished, 2 + returnCode - NSAlertThirdButtonReturn);
+                onDone(Dialog::Result::kFinished, 2 + int(returnCode - NSAlertThirdButtonReturn));
                 break;
         }
     };

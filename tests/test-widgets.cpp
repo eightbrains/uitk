@@ -281,11 +281,43 @@ public:
         auto text = dc.createTextLayout(s.str().c_str(), Font("Georgia", PicaPt(8)), Color::kBlack, Size(r.width, PicaPt::kZero), Alignment::kTop | Alignment::kLeft);
         dc.drawText(*text, Point(r.x, y));
         y += lineHeight;
-        y += lineHeight;  // extra line
 
         text = dc.createTextLayout("If ruler is slightly missized, check physical paper size.\nSome printers change the print size to keep the L/R margins equal.", Font("Georgia", PicaPt(8)), Color::kBlack, Size(r.width, PicaPt::kZero), Alignment::kTop | Alignment::kRight);
         dc.drawText(*text, Point(r.x, r.y + PicaPt(24.0f)));
 
+        auto styledFont = font.fontWithPointSize(PicaPt(9.0f));
+        Text styled("Egypt Egypt Egypt Egypt C6H12O6 r2 = x2 + y2 single double dotted wavy under6 under7 under8 under9 under12 under16", styledFont, Color::kBlack);
+        styled.setBold(6, 5);
+        styled.setItalic(12, 5);
+        styled.setBold(18, 5);
+        styled.setItalic(18, 5);
+        styled.setSubscript(25, 1);
+        styled.setSubscript(27, 2);
+        styled.setSubscript(30, 1);
+        styled.setItalic(32, 1);
+        styled.setSuperscript(33, 1);
+        styled.setItalic(37, 1);
+        styled.setSuperscript(38, 1);
+        styled.setItalic(42, 1);
+        styled.setSuperscript(43, 1);
+        styled.setUnderlineStyle(kUnderlineSingle, 45, 6);
+        styled.setUnderlineStyle(kUnderlineDouble, 52, 6);
+        styled.setUnderlineStyle(kUnderlineDotted, 59, 6);
+        styled.setUnderlineStyle(kUnderlineDotted, 66, 4);
+        styled.setFont(styledFont.setPointSize(PicaPt(6.0f)), 71, 6);
+        styled.setUnderlineStyle(kUnderlineSingle, 71, 6);
+        styled.setFont(styledFont.setPointSize(PicaPt(7.0f)), 78, 6);
+        styled.setUnderlineStyle(kUnderlineSingle, 78, 6);
+        styled.setFont(styledFont.setPointSize(PicaPt(8.0f)), 85, 6);
+        styled.setUnderlineStyle(kUnderlineSingle, 85, 6);
+        styled.setUnderlineStyle(kUnderlineSingle, 92, 6);  // same font; 9pt
+        styled.setFont(styledFont.setPointSize(PicaPt(12.0f)), 99, 7);
+        styled.setUnderlineStyle(kUnderlineSingle, 99, 7);
+        styled.setFont(styledFont.setPointSize(PicaPt(16.0f)), 107, 7);
+        styled.setUnderlineStyle(kUnderlineSingle, 107, 7);
+        dc.drawText(*dc.createTextLayout(styled, styledFont, Color::kBlack), Point(r.x, y));
+        y += lineHeight;
+        y += lineHeight;  // extra line
 
         dc.drawText("Fonts (may not space evenly due to font metrics)",
                     Point(r.x, y), font, kPaintFill);
