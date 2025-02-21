@@ -1286,7 +1286,7 @@ Sound& WASMApplication::sound() const
     return *mImpl->sound;
 }
 
-void WASMApplication::printDocument(int nPages, std::function<void(const PrintContext&)> drawPageCallback) const
+void WASMApplication::printDocument(const PrintSettings& settings) const
 {
     // Printing on WebAsembly is troublesome, since the browser's print
     // system uses the DOM and we cannot call draw functions on it directly.

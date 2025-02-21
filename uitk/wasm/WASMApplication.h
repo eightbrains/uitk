@@ -57,7 +57,7 @@ public:
     void beep() override;
     Sound& sound() const override;
 
-    void printDocument(int nPages, std::function<void(const PrintContext&)> drawPageCallback) const override;
+    void printDocument(const PrintSettings& settings) const override;
 
     void debugPrint(const std::string& s) const override;
 
