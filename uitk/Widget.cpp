@@ -636,9 +636,17 @@ Widget::EventResult Widget::mouse(const MouseEvent& e)
         }
     }
 
+    // Note that oldMouseoverWidget might be DELETED, if this was an action.
+    // (For instance, a directory list when .. was clicked and it cleared out the listbox;
+    // the old ".." label is now deleted.) Presumably moves will not produce actions.
+    // (We could also check that `result == EventResult::kIgnored`, but then if someone
+    // was confused and thought they needed to consume a move [or, more likely, a drag],
+    // then this would fail.)
     if (win && oldMouseoverWidget) {
+        bool isMove = (e.type == MouseEvent::Type::kMove || e.type == MouseEvent::Type::kDrag ||
+                       e.type == MouseEvent::Type::kScroll);
         auto *mw = win->mouseoverWidget();
-        if (oldMouseoverWidget != mw && oldMouseoverWidget->state() != MouseState::kNormal) {
+        if (isMove && oldMouseoverWidget != mw && oldMouseoverWidget->state() != MouseState::kNormal) {
             auto calcParents = [](Widget *w) -> std::list<Widget*> {
                 std::list<Widget*> parents; // list, because will always insert
                 auto *p = w;
