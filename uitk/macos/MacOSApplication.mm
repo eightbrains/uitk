@@ -279,6 +279,10 @@ Theme::Params MacOSApplication::themeParams() const
     // uses a different setting in Settings >> Display >> Resolution.
     float uiDPI;
     DrawContext::getScreenDPI(nullptr, &uiDPI, nullptr, nullptr);
+    // Handle projectors; see MacOSWindow.mm: createContext().
+    if (uiDPI < 72.0f) {
+        uiDPI = 90.0f;
+    }
     NSFont *nsfont = [NSTextField labelWithString:@"Ag"].font;
     params.labelFont = Font(nsfont.familyName.UTF8String,
                             PicaPt::fromPixels(nsfont.pointSize, uiDPI));

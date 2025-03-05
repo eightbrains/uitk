@@ -132,7 +132,6 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
 @property uitk::IWindowCallbacks *callbacks;  // ObjC does not accept reference
 @property bool inEvent;
 @property float dpi;
-@property float hiresDPI;
 @property uitk::TextEditorLogic* textEditor;
 @property uitk::Rect textEditorFrame;
 @property bool needsAccessibilityUpdate;
@@ -178,10 +177,19 @@ uitk::MouseButton toUITKMouseButton(NSInteger buttonNumber)
     // some screens--likely to be used by developers--will (correctly) display
     // using a scaled length and not the actual physical length specified. This
     // may surprise developers, but will match user expectations.
-    float uiDPI, hiDPI;
+    float uiDPI;  // the actual drawing resolution
+    float hiDPI;  // the effective resolution (resolution after scaling)
     uitk::DrawContext::getScreenDPI((__bridge void*)screen, &uiDPI, nullptr, &hiDPI);
     self.dpi = uiDPI;
-    self.hiresDPI = hiDPI;
+    // Handle projectors, which may report a very low resolution.
+    // According to https://www.rtings.com/monitor/tests/inputs/resolution-size
+    // some cheap monitors have PPI of about 82, so assume that anything less
+    // than 72 dpi is a projector, and fake a standard monitor. This makes things
+    // look about the correct size.
+    // Note: changes must also be made in MacOSApplication::themeParams()
+    if (self.dpi < 72.0f) {
+        self.dpi = 90.0f;
+    }
 }
 
 - (void)addDeferredCall:(std::function<void()>)f
