@@ -34,6 +34,7 @@ struct IconAndText::Impl
 {
     Label *label = nullptr;  // reference (Super owns it as child)
     Icon *icon = nullptr;  // reference (Super owns it as child)
+    bool iconIsFullFrame = false;
 };
 
 IconAndText::IconAndText()
@@ -59,6 +60,14 @@ Label* IconAndText::label() const
 Icon* IconAndText::icon() const
 {
     return mImpl->icon;
+}
+
+bool IconAndText::iconIsFullFrame() const { return mImpl->iconIsFullFrame; }
+
+IconAndText* IconAndText::setIconIsFullFrame(bool isFull)
+{
+    mImpl->iconIsFullFrame = isFull;
+    return this;
 }
 
 void IconAndText::setForegroundColorNoRedraw(const Color& c)
@@ -108,7 +117,11 @@ void IconAndText::layout(const LayoutContext& context)
         mImpl->label->setFrame(bounds());
     } else if (!hasText && hasIcon) {
         mImpl->icon->setVisible(true);
-        mImpl->icon->setFrame(context.theme.calcStandardIconRect(context.dc, bounds(), font));
+        if (mImpl->iconIsFullFrame) {
+            mImpl->icon->setFrame(bounds());
+        } else {
+            mImpl->icon->setFrame(context.theme.calcStandardIconRect(context.dc, bounds(), font));
+        }
         mImpl->label->setVisible(false);
         mImpl->label->setFrame(Rect::kZero);
     } else {  // uncommon case

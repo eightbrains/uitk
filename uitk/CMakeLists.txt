@@ -10,6 +10,7 @@ set(UITK_PUBLIC_HEADERS
                  ColorEdit.h
                  ComboBox.h
                  Cursor.h
+                 CustomButton.h
                  CutPasteable.h
                  Dialog.h
                  Events.h
@@ -78,6 +79,7 @@ set(UITK_SOURCES Accessibility.cpp
                  ColorEdit.cpp
                  ComboBox.cpp
                  Cursor.cpp
+                 CustomButton.cpp
                  Dialog.cpp
                  FileDialog.cpp
                  FontListComboBox.cpp

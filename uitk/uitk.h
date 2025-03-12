@@ -35,6 +35,7 @@
 #include "ColorEdit.h"
 #include "ComboBox.h"
 #include "Cursor.h"
+#include "CustomButton.h"
 #include "Dialog.h"
 #include "Events.h"
 #include "FileDialog.h"

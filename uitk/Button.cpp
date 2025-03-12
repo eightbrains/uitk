@@ -31,6 +31,8 @@
 
 namespace uitk {
 
+static const Color kDefaultColor(0, 0, 0, 0);
+
 struct Button::Impl {
     IconAndText *cell = nullptr;  // we do not own this
     DrawStyle drawStyle = DrawStyle::kNormal;
@@ -245,6 +247,11 @@ Widget::EventResult Button::key(const KeyEvent& e)
 
 void Button::draw(UIContext& context)
 {
+    draw(context, kDefaultColor);
+}
+
+void Button::draw(UIContext& context, const Color& fg)
+{
     auto themeState = this->themeState();
     Theme::ButtonDrawStyle bdStyle;
     switch (mImpl->drawStyle) {
@@ -263,8 +270,18 @@ void Button::draw(UIContext& context)
     }
     context.theme.drawButton(context, bounds(), bdStyle, style(themeState), themeState, isOn());
     mImpl->cell->setThemeState(themeState);
-    auto ws = context.theme.buttonTextStyle(context, themeState, bdStyle, mImpl->isOn);
-    mImpl->cell->setForegroundColorNoRedraw(ws.fgColor);
+    // Q: if we handle the drawing for CustomButton here, why not include it's features
+    //    in Button?
+    // A: By far the common case is that we want a standard system button, which is what
+    //    this class is for. Also, there's the problem of whether icons resize with size.
+    //    This way an icon-only Button is always displayed at the correct size (even if the
+    //    button is not).
+    if (fg.red() == 0.0f && fg.green() == 0.0f && fg.blue() == 0.0f && fg.alpha() == 0.0f) {
+        auto ws = context.theme.buttonTextStyle(context, themeState, bdStyle, mImpl->isOn);
+        mImpl->cell->setForegroundColorNoRedraw(ws.fgColor);
+    } else {
+        mImpl->cell->setForegroundColorNoRedraw(fg);
+    }
 
     Super::draw(context);
 }

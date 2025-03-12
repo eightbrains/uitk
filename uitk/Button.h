@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 - 2022 Eight Brains Studios, LLC
+// Copyright 2021 - 2024 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -33,6 +33,10 @@ class Icon;
 class Label;
 class IconAndText;
 
+/// This class is a standard system button. Its height should always be the
+/// preferred height, otherwise it will look incorrect. Please use
+/// `CustomButton` if you need to customize the button's foreground color(s)
+/// and/or you want an icon-only button to scale the icon with size.
 class Button : public Widget {
     using Super = Widget;
 public:
@@ -89,6 +93,8 @@ public:
 protected:
     IconAndText* cell() const;
 
+    void draw(UIContext& context, const Color& fg);
+
 private:
     struct Impl;
     std::unique_ptr<Impl> mImpl;
@@ -96,4 +102,3 @@ private:
 
 }  // namespace uitk
 #endif // UITK_BUTTON_H
-

@@ -49,8 +49,14 @@ public:
     // A: because C++ makes us play @#$! compiler with . and ->, and
     //    everywhere else we return a pointer, so nobody is going to
     //    remember to put a . instead of a -> here.
-    Label* label() const;  // pointer always exists
-    Icon* icon() const;  // pointer always exists
+    Label* label() const;  /// pointer always exists
+    Icon* icon() const;  /// pointer always exists
+
+    bool iconIsFullFrame() const;
+    /// If true, the icon is sized to bounds() if the cell is icon-only.
+    /// If false, the icon is sized to the theme icon size.
+    /// Default is false.
+    IconAndText* setIconIsFullFrame(bool isFull);
 
     // ---- CellWidget ----
     /// Sets the color, but does not request a redraw. This is useful when
