@@ -131,6 +131,9 @@ public:
     Point convertToLocalFromWindow(const Point& windowPt) const;
     Point convertToWindowFromLocal(const Point& localPt) const;
 
+    virtual Point convertToLocalFromParent(const Point& parentPt) const;
+    virtual Point convertToParentFromLocal(const Point& localPt) const;
+
     bool focused() const;
     void resignKeyFocus() const;
 

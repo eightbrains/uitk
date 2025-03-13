@@ -375,7 +375,7 @@ Point Widget::convertToLocalFromWindow(const Point& windowPt) const
     }
     const Widget *w = this;
     while (w->mImpl->parent) {
-        localPt -= w->frame().upperLeft();
+        localPt = w->convertToLocalFromParent(localPt);
         w = w->mImpl->parent;
     }
     return localPt;
@@ -389,10 +389,20 @@ Point Widget::convertToWindowFromLocal(const Point& localPt) const
     }
     const Widget *w = this;
     while (w && w->mImpl->parent) {
-        windowPt += w->frame().upperLeft();
+        windowPt = w->convertToLocalFromParent(windowPt);
         w = w->mImpl->parent;
     }
     return windowPt;
+}
+
+Point Widget::convertToLocalFromParent(const Point& parentPt) const
+{
+    return parentPt - frame().upperLeft();
+}
+
+Point Widget::convertToParentFromLocal(const Point& localPt) const
+{
+    return localPt + frame().upperLeft();
 }
 
 void Widget::setNeedsDraw()

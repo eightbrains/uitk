@@ -226,6 +226,16 @@ Point ScrollView::scrollPosition() const
     return Point(-b.x, -b.y);
 }
 
+Point ScrollView::convertToLocalFromParent(const Point& parentPt) const
+{
+    return parentPt - bounds().upperLeft() - frame().upperLeft();
+}
+
+Point ScrollView::convertToParentFromLocal(const Point& localPt) const
+{
+    return localPt + bounds().upperLeft() + frame().upperLeft();
+}
+
 AccessibilityInfo ScrollView::accessibilityInfo()
 {
     auto info = Super::accessibilityInfo();

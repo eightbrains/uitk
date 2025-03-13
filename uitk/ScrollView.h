@@ -56,6 +56,9 @@ public:
     /// same coordinate system that scrollTo() uses.
     Point scrollPosition() const;
 
+    Point convertToLocalFromParent(const Point& parentPt) const override;
+    Point convertToParentFromLocal(const Point& localPt) const override;
+
     AccessibilityInfo accessibilityInfo() override;
 
     Size preferredSize(const LayoutContext& context) const override;
