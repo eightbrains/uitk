@@ -389,7 +389,7 @@ Point Widget::convertToWindowFromLocal(const Point& localPt) const
     }
     const Widget *w = this;
     while (w && w->mImpl->parent) {
-        windowPt = w->convertToLocalFromParent(windowPt);
+        windowPt = w->convertToParentFromLocal(windowPt);
         w = w->mImpl->parent;
     }
     return windowPt;
