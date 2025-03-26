@@ -29,7 +29,7 @@
 
 // ------------------- dynamically load OpenAL on Linux -----------------------
 // Will also be true for non-Apple unixen: FreeBSD, etc.
-#if (defined(__unix__) || defined(unix)) && !defined(__APPLE__)
+#if (defined(__unix__) || defined(unix)) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
 #define IsLinux 1
 #include <dlfcn.h>
 
