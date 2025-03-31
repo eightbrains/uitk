@@ -466,9 +466,6 @@ public:
 
     void addWindow(WASMWindow *w)
     {
-        if (!mWindows.empty()) {
-        }
-
         auto insertAt = mWindows.rbegin();
         if (!mWindows.empty()) {
             if (!(w->flags() & Window::Flags::kDialog)) {
@@ -945,7 +942,21 @@ private:
     static int OnJSResize(int eventType, const EmscriptenUiEvent *e, void *userData)
     {
         if (eventType == EMSCRIPTEN_EVENT_RESIZE) {
-            ((WASMScreen*)userData)->refreshDC();
+            auto *screen = (WASMScreen*)userData;
+            auto oldRect = screen->mScreen.desktopFrame;
+            screen->refreshDC();
+            auto pixelScale = screen->mDC->dpi() / kCSSDPI;
+            auto newRect = screen->mScreen.desktopFrame;
+            for (auto &wi : screen->mWindows) {
+                if (wi.frame.x * pixelScale == oldRect.x &&
+                    wi.frame.y * pixelScale == oldRect.y &&
+                    wi.frame.width * pixelScale == oldRect.width &&
+                    wi.frame.height * pixelScale == oldRect.height &&
+                    wi.window /* should be always non-null */)
+                {
+                    wi.window->setOSFrame(newRect.x, newRect.y, newRect.width, newRect.height);
+                }
+            }
         }
         return 1;  // true: consumed event
     }
