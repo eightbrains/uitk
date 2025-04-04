@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 - 2022 Eight Brains Studios, LLC
+// Copyright 2021 - 2025 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -46,12 +46,16 @@ PicaPt calcMinOffsetY(const Rect& frame, const Rect& bounds)
     return -std::max(PicaPt::kZero, bounds.height - frame.height);
 }
 
+class ScrollViewContent : public Widget {};  // so Widget does not automatically layout contents
+
 }  // namespace
 
 struct ScrollView::Impl
 {
     Rect bounds;
     Rect contentRect;
+
+    ScrollViewContent *content;  // this is a child; base class owns
     ScrollBar *horizScroll;  // this is a child; base class owns
     ScrollBar *vertScroll;  // this is a child; base class owns
     bool usesHorizScrollbar = false;
@@ -120,6 +124,7 @@ struct ScrollView::Impl
 ScrollView::ScrollView()
     : mImpl(new Impl)
 {
+    mImpl->content = new ScrollViewContent();
     mImpl->horizScroll = new ScrollBar(Dir::kHoriz);
     mImpl->horizScroll->setVisible(false);
     mImpl->horizScroll->setOnValueChanged([this](SliderLogic *scroll) {
@@ -130,6 +135,7 @@ ScrollView::ScrollView()
     mImpl->vertScroll->setOnValueChanged([this](SliderLogic *scroll) {
         setContentOffset(Point(bounds().x, PicaPt::fromPixels(float(-scroll->doubleValue()), kScrollbarDPI)));
     });
+    Super::addChild(mImpl->content);
     Super::addChild(mImpl->horizScroll);
     Super::addChild(mImpl->vertScroll);
 }
@@ -140,6 +146,10 @@ ScrollView::~ScrollView()
     // may attempt to use the window, which might be going away.)
     mImpl->cancelHideTimer();
 }
+
+Widget* ScrollView::content() const { return mImpl->content; }
+
+Rect ScrollView::contentRect() const { return mImpl->contentRect; }
 
 ScrollView* ScrollView::setFrame(const Rect& frame)
 {
@@ -157,6 +167,7 @@ const Rect& ScrollView::bounds() const
 ScrollView* ScrollView::setBounds(const Rect& bounds)
 {
     mImpl->bounds = bounds;
+    mImpl->content->setFrame(bounds);
 
     auto &f = frame();
     if (bounds.width > f.width) {
@@ -226,15 +237,7 @@ Point ScrollView::scrollPosition() const
     return Point(-b.x, -b.y);
 }
 
-Point ScrollView::convertToLocalFromParent(const Point& parentPt) const
-{
-    return parentPt - bounds().upperLeft() - frame().upperLeft();
-}
-
-Point ScrollView::convertToParentFromLocal(const Point& localPt) const
-{
-    return localPt + bounds().upperLeft() + frame().upperLeft();
-}
+bool ScrollView::isMouseInScrollbar() const { return mImpl->mouseIsInScrollbar; }
 
 AccessibilityInfo ScrollView::accessibilityInfo()
 {
@@ -270,25 +273,15 @@ Widget::EventResult ScrollView::mouse(const MouseEvent& e)
 {
     auto result = EventResult::kIgnored;
 
-    // Mouse the scrollbars (see comment in draw() for why)
+    // Super-mouse: this will handle the scrollbars and the content (including prioritizing
+    // scrolling in children).
     bool inScrollbar = ((mImpl->vertScroll->visible() && mImpl->vertScroll->frame().contains(e.pos)) ||
                         (mImpl->horizScroll->visible() && mImpl->horizScroll->frame().contains(e.pos)));
     mImpl->mouseIsInScrollbar = inScrollbar;
-    result = mouseChild(e, mImpl->vertScroll, result);
-    result = mouseChild(e, mImpl->horizScroll, result);
-    if (result == EventResult::kConsumed && inScrollbar) {
-        result = Widget::EventResult::kConsumed;
-        mImpl->lastShowScrollActionTime = Application::instance().microTime();
-    }
-
-    // Now mouse the scrollable children
-    if (result != EventResult::kConsumed) {
-        auto mouseE = e;
-        mouseE.pos -= mImpl->bounds.upperLeft();
-        for (auto *child : children()) {
-            if (child != mImpl->horizScroll && child != mImpl->vertScroll) {
-                result = mouseChild(mouseE, child, result);
-            }
+    result = Super::mouse(e);
+    if (result == EventResult::kConsumed) {
+        if (result == EventResult::kConsumed && inScrollbar) {
+            mImpl->lastShowScrollActionTime = Application::instance().microTime();
         }
     }
 
@@ -329,6 +322,12 @@ Widget::EventResult ScrollView::mouse(const MouseEvent& e)
     return result;
 }
 
+void ScrollView::mouseExited()
+{
+    mImpl->mouseIsInScrollbar = false;
+    Super::mouseExited();
+}
+
 void ScrollView::draw(UIContext& context)
 {
     if (mImpl->drawsFrame == Tristate::kUndefined) {
@@ -338,48 +337,25 @@ void ScrollView::draw(UIContext& context)
             mImpl->drawsFrame = Tristate::kFalse;
         }
     }
+    Rect frameRect(PicaPt::kZero, PicaPt::kZero, frame().width, frame().height);
     if (mImpl->drawsFrame == Tristate::kTrue) {
-        Rect frameRect(PicaPt::kZero, PicaPt::kZero, frame().width, frame().height);
         context.theme.drawScrollView(context, frameRect, style(themeState()), themeState());
     }
 
-    context.dc.save();
-    context.theme.clipScrollView(context, mImpl->contentRect, style(themeState()), themeState(),
-                                 mImpl->drawsFrame == Tristate::kTrue);
-
-    // It would be nicer to be able to Super::draw() here (and have the scrollbars on top),
-    // but that would require that we have a content widget that everything is added to.
-    // Since we want scrollview->addChild() to do what you'd expect (add to the scrollable
-    // part), and we cannot make addChild() virtual (because you cannot call virtual functions
-    // in the constructor, but the constructor is the place where you want to create and
-    // add your children), we need to draw them ourselves.
-
-    // Draw the children of the (non-existent) content widget.
-    // Note that we do not want to draw all children that are not visible, but unfortunately,
-    // it might be grandchildren that are not visible (if, say, we own a big widget that
-    // owns all the items in a list). We just need to provide a UIContext with the correct
-    // drawRect and drawChild() will take care of not drawing the widgets in the tree that
-    // do not intersect with the drawRect.
-
-    // Align the bounds with pixel boundaries so icons work well. We cannot do this
-    // in setContentOffset() because we do not have the draw context.
-    mImpl->bounds.x = context.dc.roundToNearestPixel(mImpl->bounds.x);
-    mImpl->bounds.y = context.dc.roundToNearestPixel(mImpl->bounds.y);
-    context.dc.translate(mImpl->bounds.x, mImpl->bounds.y);
-    Rect drawRect = context.drawRect.translated(-mImpl->bounds.x, -mImpl->bounds.y);
-    UIContext scrollContext = { context.theme, context.dc, drawRect, context.isWindowActive };
-    for (auto *child : children()) {
-        if (child == mImpl->horizScroll || child == mImpl->vertScroll) {
-            continue;
-        }
-        drawChild(scrollContext, child);
+    auto origBounds = mImpl->content->frame();
+    auto newBounds = origBounds;
+    newBounds.x = context.dc.roundToNearestPixel(newBounds.x);
+    newBounds.y = context.dc.roundToNearestPixel(newBounds.y);
+    if (origBounds.x != newBounds.x || origBounds.y != newBounds.y) {
+        mImpl->content->setFrame(newBounds);
     }
-    context.dc.translate(-mImpl->bounds.x, -mImpl->bounds.y);
-    context.dc.restore();
 
-    // Draw the scrollbars last so they are on top.
-    drawChild(context, mImpl->horizScroll);
-    drawChild(context, mImpl->vertScroll);
+    context.dc.save();
+    context.theme.clipScrollView(context, frameRect, style(themeState()), themeState(),
+                                 mImpl->drawsFrame == Tristate::kTrue);
+    UIContext scrollContext = { context.theme, context.dc, mImpl->contentRect, context.isWindowActive };
+    Super::draw(scrollContext);
+    context.dc.restore();
 }
 
 }  // namespace uitk

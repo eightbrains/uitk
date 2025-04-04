@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 - 2022 Eight Brains Studios, LLC
+// Copyright 2021 - 2025 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -105,6 +105,8 @@ public:
     /// Adds widget as a child. The order that widgets are added is the order
     /// that they will be drawn. Takes ownership of the pointer. Returns a
     /// pointer to `this`.
+    // Design note: this cannot be virtual so that it can be used in
+    // constructors.
     Widget* addChild(Widget *w);
 
     /// Removes the widget and returns ownership to the caller.
@@ -131,8 +133,8 @@ public:
     Point convertToLocalFromWindow(const Point& windowPt) const;
     Point convertToWindowFromLocal(const Point& localPt) const;
 
-    virtual Point convertToLocalFromParent(const Point& parentPt) const;
-    virtual Point convertToParentFromLocal(const Point& localPt) const;
+    Point convertToLocalFromParent(const Point& parentPt) const;
+    Point convertToParentFromLocal(const Point& localPt) const;
 
     bool focused() const;
     void resignKeyFocus() const;

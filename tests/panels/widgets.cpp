@@ -791,8 +791,8 @@ public:
             int n = std::atoi(mIncLabel->text().c_str());
             mIncLabel->setText(std::to_string(n + 1));
         });
-        mScroll->addChild(mIncButton);
-        mScroll->addChild(mIncLabel);
+        mScroll->content()->addChild(mIncButton);
+        mScroll->content()->addChild(mIncLabel);
 
         mSliderLabel = new Label("33");
         mSlider = new Slider();
@@ -800,13 +800,13 @@ public:
         mSlider->setOnValueChanged([this](SliderLogic *s) {
             mSliderLabel->setText(std::to_string(s->intValue()));
         });
-        mScroll->addChild(mSlider);
-        mScroll->addChild(mSliderLabel);
+        mScroll->content()->addChild(mSlider);
+        mScroll->content()->addChild(mSliderLabel);
 
         mButton2 = new Button("Magic");
         mButton2->setTooltip("Toggles the magic!");
         mButton2->setToggleable(true);
-        mScroll->addChild(mButton2);
+        mScroll->content()->addChild(mButton2);
     }
 
     Size preferredSize(const LayoutContext& context) const override

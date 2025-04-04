@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// Copyright 2021 Eight Brains Studios, LLC
+// Copyright 2021 - 2025 Eight Brains Studios, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to
@@ -90,12 +90,9 @@ PicaPt layoutItems(const uitk::LayoutContext& context, LayoutMode mode,
 } // namespace
 
 //-----------------------------------------------------------------------------
-// Define a container class so Widget does not layout the children
-class ListViewContainer : public Widget {};
-
 struct ListView::Impl
 {
-    ListViewContainer *content = nullptr;  // super owns this
+    Widget *content = nullptr;  // super owns this
     Size contentPadding = Size(kUnsetPadding, kUnsetPadding);
     SelectionMode selectionMode = SelectionMode::kSingleItem;
     bool keyNavigationWraps = false;
@@ -143,8 +140,7 @@ struct ListView::Impl
 ListView::ListView()
     : mImpl(new Impl())
 {
-    mImpl->content = new ListViewContainer();
-    addChild(mImpl->content);
+    mImpl->content = content();
 }
 
 ListView::~ListView()
@@ -411,59 +407,61 @@ Widget::EventResult ListView::mouse(const MouseEvent& e)
         return EventResult::kConsumed;
     }
 
-    if (e.type == MouseEvent::Type::kButtonUp && e.button.button == MouseButton::kLeft) {
-        int idx = calcRowIndex(e.pos);
-        bool isEnabled = (mImpl->content && size_t(idx) < mImpl->content->children().size() &&
-                          mImpl->content->children()[idx]->enabled());
-        if (idx >= 0 && isEnabled) {
-            bool selectionChanged = false;
-            if (mImpl->selectionMode == SelectionMode::kSingleItem) {
-                setSelectedIndex(idx);
-                selectionChanged = true;
-            } else if (mImpl->selectionMode == SelectionMode::kMultipleItems) {
-                if (e.keymods == 0) {
+    if (!isMouseInScrollbar()) {
+        if (e.type == MouseEvent::Type::kButtonUp && e.button.button == MouseButton::kLeft) {
+            int idx = calcRowIndex(e.pos);
+            bool isEnabled = (mImpl->content && size_t(idx) < mImpl->content->children().size() &&
+                              mImpl->content->children()[idx]->enabled());
+            if (idx >= 0 && isEnabled) {
+                bool selectionChanged = false;
+                if (mImpl->selectionMode == SelectionMode::kSingleItem) {
                     setSelectedIndex(idx);
                     selectionChanged = true;
-                } else if (e.keymods == KeyModifier::kCtrl) {
-                    auto it = mImpl->selectedIndices.find(idx);
-                    if (it != mImpl->selectedIndices.end()) {
-                        mImpl->selectedIndices.erase(it);
-                    } else {
-                        mImpl->selectedIndices.insert(idx);
+                } else if (mImpl->selectionMode == SelectionMode::kMultipleItems) {
+                    if (e.keymods == 0) {
+                        setSelectedIndex(idx);
+                        selectionChanged = true;
+                    } else if (e.keymods == KeyModifier::kCtrl) {
+                        auto it = mImpl->selectedIndices.find(idx);
+                        if (it != mImpl->selectedIndices.end()) {
+                            mImpl->selectedIndices.erase(it);
+                        } else {
+                            mImpl->selectedIndices.insert(idx);
+                        }
+                        setSelectedIndices(mImpl->selectedIndices);
+                        selectionChanged = true;
+                    } else if (e.keymods == KeyModifier::kShift) {
+                        int startIdx = std::min(idx, mImpl->lastClickedRow);
+                        int endIdx = std::max(idx, mImpl->lastClickedRow);
+                        for (int i = startIdx;  i <= endIdx;  ++i) {
+                            mImpl->selectedIndices.insert(i);
+                        }
+                        setSelectedIndices(mImpl->selectedIndices);
+                        selectionChanged = true;
                     }
-                    setSelectedIndices(mImpl->selectedIndices);
-                    selectionChanged = true;
-                } else if (e.keymods == KeyModifier::kShift) {
-                    int startIdx = std::min(idx, mImpl->lastClickedRow);
-                    int endIdx = std::max(idx, mImpl->lastClickedRow);
-                    for (int i = startIdx;  i <= endIdx;  ++i) {
-                        mImpl->selectedIndices.insert(i);
-                    }
-                    setSelectedIndices(mImpl->selectedIndices);
-                    selectionChanged = true;
+                }
+                mImpl->lastClickedRow = idx;
+                if (selectionChanged && mImpl->onChanged) {
+                    mImpl->onChanged(this);
                 }
             }
-            mImpl->lastClickedRow = idx;
-            if (selectionChanged && mImpl->onChanged) {
-                mImpl->onChanged(this);
+            // Normally clicking does not give focus, but we want key navigation
+            // to work. But we do not want the visible focus ring, on the click
+            // (this is macOS behavior).
+            if (auto win = window()) {
+                win->setFocusWidget(this, Window::ShowFocusRing::kNo);
             }
+        } else if (e.type == MouseEvent::Type::kButtonDown && e.button.button == MouseButton::kLeft && e.button.nClicks == 2) {
+            // If we are double-clicking, we are on the same item (if the mouse
+            // had moved, it would not be double-click). So we do not want to
+            // redo the selection, just call the double-click handler (if any)
+            int idx = calcRowIndex(e.pos);
+            if (idx >= 0 && mImpl->onDblClicked) {
+                mImpl->onDblClicked(this, idx);
+            }
+        } else if (e.type == MouseEvent::Type::kMove || e.type == MouseEvent::Type::kDrag) {
+            mImpl->setMouseOverIndex(calcRowIndex(e.pos));
         }
-        // Normally clicking does not give focus, but we want key navigation
-        // to work. But we do not want the visible focus ring, on the click
-        // (this is macOS behavior).
-        if (auto win = window()) {
-            win->setFocusWidget(this, Window::ShowFocusRing::kNo);
-        }
-    } else if (e.type == MouseEvent::Type::kButtonDown && e.button.button == MouseButton::kLeft && e.button.nClicks == 2) {
-        // If we are double-clicking, we are on the same item (if the mouse
-        // had moved, it would not be double-click). So we do not want to
-        // redo the selection, just call the double-click handler (if any)
-        int idx = calcRowIndex(e.pos);
-        if (idx >= 0 && mImpl->onDblClicked) {
-            mImpl->onDblClicked(this, idx);
-        }
-    } else if (e.type == MouseEvent::Type::kMove || e.type == MouseEvent::Type::kDrag) {
-        mImpl->setMouseOverIndex(calcRowIndex(e.pos));
     }
 
     auto retval = Super::mouse(e);
