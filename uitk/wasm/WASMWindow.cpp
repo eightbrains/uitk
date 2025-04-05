@@ -160,8 +160,8 @@ void WASMWindow::toggleMaximize()
 
 void WASMWindow::close()
 {
-    if (mImpl->flags == Window::Flags::kNormal) {
-        std::cerr << "[error] Cannot close normal window on this platform" << std::endl;
+    if (mImpl->flags == Window::Flags::kNormal && getWASMApplication().nOpenNormalWindows() == 1) {
+        std::cerr << "[uitk] Cannot close last normal window on this platform" << std::endl;
     } else {
         if (onWindowShouldClose()) {
             onWindowWillClose();

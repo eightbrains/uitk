@@ -51,6 +51,7 @@ public:
     void cancelScheduled(SchedulingId id) override;
 
     std::string applicationName() const override;
+    std::string appDataPath() const override;
     std::string tempDir() const override;
     std::vector<std::string> availableFontFamilies() const override;
 
@@ -76,6 +77,7 @@ public:
     // This is roughly equivalent to the OS API
     void registerWindow(WASMWindow *w);
     void unregisterWindow(WASMWindow *w);
+    int nOpenNormalWindows() const;
     void setWindowFrame(WASMWindow *w, const Rect& frame);
     void showWindow(WASMWindow *w, bool show);
     void raiseWindow(const WASMWindow *w);

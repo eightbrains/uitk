@@ -464,6 +464,17 @@ public:
 
     const Point& currentMouseLocation() const { return mCurrentMousePos; }
 
+    int nOpenNormalWindows() const
+    {
+        int n = 0;
+        for (auto &w : mWindows) {
+            if (w.isVisible && w.window && w.window->flags() == Window::Flags::kNormal) {
+                ++n;
+            }
+        }
+        return n;
+    }
+
     void addWindow(WASMWindow *w)
     {
         auto insertAt = mWindows.rbegin();
@@ -1372,6 +1383,11 @@ void WASMApplication::unregisterWindow(WASMWindow *w)
 {
     mImpl->screen->removeWindow(w);
     mImpl->postedLater.removeForWindow(w);
+}
+
+int WASMApplication::nOpenNormalWindows() const
+{
+    return mImpl->screen->nOpenNormalWindows();
 }
 
 void WASMApplication::setWindowFrame(WASMWindow *w, const Rect& frame)
