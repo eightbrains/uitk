@@ -511,9 +511,10 @@ public:
 
         auto it = findWindow(w);
         if (it != mWindows.end()) {
+            bool windowTakesFocus = !(w->flags() & Window::Flags::kPopup);
             bool wasVisible = it->isVisible;
             it->isVisible = show;
-            if (wasVisible != show) {
+            if (wasVisible != show && windowTakesFocus) {
                 if (show) {
                     auto *currentActiveInfo = activeWindowInfo();
                     if (currentActiveInfo && currentActiveInfo->window == w) {
