@@ -54,6 +54,7 @@ public:
     virtual void cancelScheduled(SchedulingId id) = 0;
 
     virtual std::string applicationName() const = 0;
+    virtual std::string appDataPath() const = 0;
     virtual std::string tempDir() const = 0;
     virtual std::vector<std::string> availableFontFamilies() const = 0;
 

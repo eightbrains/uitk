@@ -29,6 +29,7 @@
 #include "../Printing.h"
 #include "../UIContext.h"
 #include "../Window.h"
+#include "../io/File.h"
 #include "../themes/EmpireTheme.h"
 
 #import <Cocoa/Cocoa.h>
@@ -342,6 +343,16 @@ void MacOSApplication::onWindowWillClose(void* nswindow)
 std::string MacOSApplication::applicationName() const
 {
     return std::string(NSRunningApplication.currentApplication.localizedName.UTF8String);
+}
+
+std::string MacOSApplication::appDataPath() const
+{
+    auto path = std::string(NSBundle.mainBundle.bundlePath.UTF8String);
+    auto contentsPath = path + "/Contents";
+    if (File(contentsPath).exists()) {  // usually a bundle, but could be a commandline binary
+        return contentsPath;
+    }
+    return path;
 }
 
 std::string MacOSApplication::tempDir() const
