@@ -106,9 +106,14 @@ public:
     std::string applicationName() const;
 
     /// Returns the path for app internal data files.
-    /// In WebAssembly this is always "/", and you should include the data
-    /// directory in the executable bundle with `--preload-file datadir`,
-    /// which will be available in /datadir.
+    /// macOS: this is <AppBundle>/Contents
+    /// Win32: this is the directory containing the .exe
+    /// Linux: if the binary is <path>/bin/appname, it is <path>/share/appname,
+    ///        assuming it exists. Otherwise it is the directory containing the
+    ///        binary.
+    /// WASM:  this is always "/", and you should include the data
+    ///        directory in the executable bundle with
+    ///        `--preload-file datadir`, which will be available in /datadir.
     std::string appDataPath() const;
 
     /// Returns the current working directory of the process.
