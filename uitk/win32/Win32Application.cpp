@@ -273,6 +273,25 @@ std::string Win32Application::applicationName() const
     return utf8FromWin32Unicode(path);
 }
 
+std::string Win32Application::appDataPath() const
+{
+    WCHAR exePath[MAX_PATH];
+    GetModuleFileNameW(NULL, exePath, MAX_PATH);
+    auto path = utf8FromWin32Unicode(exePath);
+    for (auto& c : path) {  // sadly, this is more straightforward than replace()
+        if (c == '\\') {
+            c = '/';
+        }
+    }
+    auto lastSlash = path.rfind('/');
+    auto firstSlash = path.find('/');
+    path = path.substr(0, lastSlash);
+    if (lastSlash == firstSlash) {
+        path += '/';
+    }
+    return path;
+}
+
 std::string Win32Application::tempDir() const
 {
     wchar_t path[MAX_PATH + 2];

@@ -1266,6 +1266,13 @@ std::string WASMApplication::applicationName() const
     return "App";  // This is only used on menus on macOS
 }
 
+std::string WASMApplication::appDataPath() const
+{
+    // This is in Emscripten's filesystem; include files or directory with
+    // --preload-file on link.
+    return "/";
+}
+
 std::string WASMApplication::tempDir() const
 {
     return "./";  // This will be in Emscripten's filesystem

@@ -197,6 +197,11 @@ std::string Application::applicationName() const
     return mImpl->osApp->applicationName();
 }
 
+std::string Application::appDataPath() const
+{
+    return mImpl->osApp->appDataPath();
+}
+
 std::string Application::tempDir() const
 {
     return mImpl->osApp->tempDir();
