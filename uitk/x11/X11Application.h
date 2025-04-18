@@ -48,6 +48,7 @@ public:
     void cancelScheduled(SchedulingId id) override;
 
     std::string applicationName() const override;
+    std::string appDataPath() const override;
     std::string tempDir() const override;
     std::vector<std::string> availableFontFamilies() const override;
 

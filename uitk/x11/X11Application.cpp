@@ -49,7 +49,11 @@
 #include <X11/Xresource.h>
 #include <X11/Xutil.h>
 
+#include <sys/types.h>
+#include <dirent.h>
 #include <locale.h>
+#include <string.h>  // for memset()
+#include <unistd.h>
 
 #include <chrono>
 #include <iostream>
@@ -552,7 +556,7 @@ X11Application::X11Application()
     char* modstr = XSetLocaleModifiers("");  // read from $XMODIFIERS env variable
     mImpl->xim = XOpenIM(mImpl->display, 0, 0, 0);
     if (!mImpl->xim) {
-        std::cerr << "Could not open input method in XMODIFIERS (" << modstr << ")" << std::endl;
+        std::cerr << "[uitk] Could not open input method in XMODIFIERS (" << modstr << ")" << std::endl;
         XSetLocaleModifiers("@im=none");
         mImpl->xim = XOpenIM(mImpl->display, 0, 0, 0);
     }
@@ -573,6 +577,36 @@ void X11Application::setExitWhenLastWindowCloses(bool exits)
 std::string X11Application::applicationName() const
 {
     return std::string(gBinaryName);
+}
+
+std::string X11Application::appDataPath() const
+{
+    char dest[PATH_MAX + 1];
+    memset(dest,0,sizeof(dest)); // readlink() does not null terminate!
+    if (readlink("/proc/self/exe", dest, PATH_MAX) == -1) {
+        std::cerr << "[uitk] appDataPath(): could not read /proc/self/exe" << std::endl;
+        strcpy(dest, "./");
+    }
+    std::string exePath(dest);
+    auto lastSlash = exePath.rfind('/');
+    auto firstSlash = exePath.find('/');
+    if (lastSlash == firstSlash) {  // unlikely...
+        return "/";
+    }
+    auto exeDir = exePath.substr(0, lastSlash);
+    auto startExeDir = exeDir.rfind('/');
+    auto dirname = exeDir.substr(startExeDir + 1);
+    if (dirname == "bin") {
+        auto shareDir = exeDir.substr(0, startExeDir) + "/share";
+        // If shareDir exists, return it as the data dir
+        DIR *dir = opendir(shareDir.c_str());
+        if (dir) { // exists
+            closedir(dir);
+            return shareDir;
+        }
+        // does not exist
+    }
+    return exeDir;
 }
 
 std::string X11Application::tempDir() const
