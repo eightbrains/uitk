@@ -495,10 +495,10 @@ Widget::EventResult StringEdit::mouse(const MouseEvent& e)
             }
             mImpl->popup = new MenuUITK();
             mImpl->popup->addItem("Cut", 1,
-                                  [this]() { mImpl->editor.cutToClipboard(); setNeedsDraw(); });
-            mImpl->popup->addItem("Copy", 2, [this]() { mImpl->editor.copyToClipboard(); });
+                                  [this](Window*) { mImpl->editor.cutToClipboard(); setNeedsDraw(); });
+            mImpl->popup->addItem("Copy", 2, [this](Window*) { mImpl->editor.copyToClipboard(); });
             mImpl->popup->addItem("Paste", 3,
-                                  [this]() { mImpl->editor.pasteFromClipboard(); setNeedsDraw(); });
+                                  [this](Window*) { mImpl->editor.pasteFromClipboard(); setNeedsDraw(); });
             bool canCopy = (sel.start < sel.end && !isPassword());
             mImpl->popup->setItemEnabled(1, canCopy);
             mImpl->popup->setItemEnabled(2, canCopy);

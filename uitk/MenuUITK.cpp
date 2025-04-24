@@ -784,7 +784,7 @@ struct MenuUITK::Impl
 {
     struct ItemData {
         MenuItemWidget* item;  // this acts as a reference (but we can't use a reference b/c no copy constructor)
-        std::function<void()> onSelected;
+        std::function<void(Window*)> onSelected;
     };
 
     std::vector<MenuItemWidget*> items;  // we own these
@@ -817,7 +817,7 @@ struct MenuUITK::Impl
         return nullptr;
     }
 
-    void insertItem(int index, MenuItemWidget *item, MenuId id, std::function<void()> onItem)
+    void insertItem(int index, MenuItemWidget *item, MenuId id, std::function<void(Window*)> onItem)
     {
         index = std::min(index, int(this->items.size()));
         item->setText(removeMenuItemMnemonics(item->text()));
@@ -825,7 +825,7 @@ struct MenuUITK::Impl
         this->items.insert(this->items.begin() + index, item);
     }
 
-    void addItem(MenuItemWidget *item, MenuId id, std::function<void()> onItem)
+    void addItem(MenuItemWidget *item, MenuId id, std::function<void(Window*)> onItem)
     {
         insertItem(int(this->items.size()), item, id, onItem);
     }
@@ -878,28 +878,28 @@ void MenuUITK::clear()
 
 int MenuUITK::size() const { return int(mImpl->items.size()); }
 
-void MenuUITK::addItem(const std::string& text, MenuId id,
-                       const ShortcutKey& shortcut)
+void MenuUITK::addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut,
+                       std::function<void(Window*)> onSelected)
 {
-    mImpl->addItem(new StringMenuItem(text, shortcut), id, nullptr);
+    mImpl->addItem(new StringMenuItem(text, shortcut), id, onSelected);
     Application::instance().keyboardShortcuts().add(id, shortcut);
 }
 
-void MenuUITK::addItem(const std::string& text, MenuId id, std::function<void()> onSelected)
+void MenuUITK::addItem(const std::string& text, MenuId id, std::function<void(Window*)> onSelected)
 {
     mImpl->addItem(new StringMenuItem(text, ShortcutKey::kNone), id, onSelected);
 }
 
-void MenuUITK::addItem(CellWidget *item, MenuId id, const ShortcutKey& shortcut)
+void MenuUITK::addItem(CellWidget *item, MenuId id, const ShortcutKey& shortcut,
+                       std::function<void(Window*)> onClicked)
 {
-    mImpl->addItem(new CustomMenuItem(item, shortcut), id, nullptr);
+    mImpl->addItem(new CustomMenuItem(item, shortcut), id, onClicked);
     Application::instance().keyboardShortcuts().add(id, shortcut);
 }
 
-void MenuUITK::addItem(CellWidget *item, MenuId id, std::function<void()> onSelected)
+void MenuUITK::addItem(CellWidget *item, MenuId id, std::function<void(Window*)> onSelected)
 {
     mImpl->addItem(new CustomMenuItem(item, ShortcutKey::kNone), id, onSelected);
-
 }
 
 void MenuUITK::addMenu(const std::string& text, Menu *menu)
@@ -913,14 +913,14 @@ void MenuUITK::addSeparator()
 }
 
 void MenuUITK::insertItem(int index, const std::string& text, MenuId id,
-                          const ShortcutKey& shortcut)
+                          const ShortcutKey& shortcut, std::function<void(Window*)> onSelected)
 {
-    mImpl->insertItem(index, new StringMenuItem(text, shortcut), id, nullptr);
+    mImpl->insertItem(index, new StringMenuItem(text, shortcut), id, onSelected);
     Application::instance().keyboardShortcuts().add(id, shortcut);
 }
 
 void MenuUITK::insertItem(int index, const std::string& text, MenuId id,
-                         std::function<void()> onSelected)
+                         std::function<void(Window*)> onSelected)
 {
     mImpl->insertItem(index, new StringMenuItem(text, ShortcutKey::kNone), id, onSelected);
 }
@@ -1372,10 +1372,10 @@ void MenuUITK::show(Window *w, const Point& upperLeftWindowCoord,
                 if (idx >= 0 && idx < int(mImpl->items.size())) {
                     for (auto &kv : mImpl->id2item) {
                         if (kv.second.item == mImpl->items[idx]) {
+                            auto *mainWindow = Application::instance().activeWindow();
                             if (kv.second.onSelected) {
-                                kv.second.onSelected();
+                                kv.second.onSelected(mainWindow);
                             } else {
-                                auto *mainWindow = Application::instance().activeWindow();
                                 mainWindow->onMenuActivated(kv.first);
                             }
                             break;

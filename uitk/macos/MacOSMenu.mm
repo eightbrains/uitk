@@ -24,6 +24,7 @@
 
 #include "../Application.h"
 #include "../Menu.h"
+#include "../OSMenubar.h"
 #include "../Window.h"
 #include "../private/Utils.h"
 
@@ -42,9 +43,8 @@
 @implementation MenuActivatedReceiver
 - (void)menuActivated:(NSMenuItem*)sender
 {
-    if (auto *w = uitk::Application::instance().activeWindow()) {
-        w->onMenuActivated(uitk::MenuId(sender.tag));
-    }
+    auto &app = uitk::Application::instance();
+    app.menubar().activateItemId(uitk::MenuId(sender.tag));
 }
 @end
 
@@ -188,6 +188,8 @@ NSMenuItem* createMenuItem(const std::string& title, MenuId id, const ShortcutKe
 
 struct MacOSMenu::Impl
 {
+    static std::map<MenuId, std::function<void(Window*)>> callbacks;
+
     NSMenu* menu;
     // Since the OSMenu interface takes ownership of the submenu pointers we need
     // to keep them somewhere.
@@ -214,6 +216,7 @@ struct MacOSMenu::Impl
         return nil;
     }
 };
+std::map<MenuId, std::function<void(Window*)>> MacOSMenu::Impl::callbacks;
 
 MacOSMenu::MacOSMenu()
     : mImpl(new Impl())
@@ -241,9 +244,13 @@ int MacOSMenu::size() const
     return int(mImpl->menu.numberOfItems);
 }
 
-void MacOSMenu::addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut)
+void MacOSMenu::addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut,
+                        std::function<void(Window*)> onClicked)
 {
     [mImpl->menu addItem:createMenuItem(text, id, shortcut)];
+    if (onClicked) {
+        mImpl->callbacks[id] = onClicked;
+    }
 }
 
 void MacOSMenu::addMenu(const std::string& text, Menu *menu)
@@ -256,9 +263,13 @@ void MacOSMenu::addSeparator()
     [mImpl->menu addItem:[NSMenuItem separatorItem]];
 }
 
-void MacOSMenu::insertItem(int index, const std::string& text, MenuId id, const ShortcutKey& shortcut)
+void MacOSMenu::insertItem(int index, const std::string& text, MenuId id, const ShortcutKey& shortcut,
+                           std::function<void(Window*)> onClicked)
 {
     [mImpl->menu insertItem:createMenuItem(text, id, shortcut) atIndex:index];
+    if (onClicked) {
+        mImpl->callbacks[id] = onClicked;
+    }
 }
 
 void MacOSMenu::insertMenu(int index, const std::string& text, Menu *menu)
@@ -462,7 +473,15 @@ OSMenu::ItemFound MacOSMenu::activateItem(MenuId id, Window *activeWindow) const
     if (it != nil) {
         auto idx = [it.menu indexOfItemWithTag:id];
         if (idx >= 0) {
-            [it.menu performActionForItemAtIndex:idx];
+//            [it.menu performActionForItemAtIndex:idx];
+            auto cbIt = mImpl->callbacks.find(id);
+//            auto dbg1 = (cbIt != mImpl->callbacks.end());  // debugging; remove
+//            auto dbg2 = (cbIt->second != nullptr);  // debugging; remove
+            if (cbIt != mImpl->callbacks.end() && cbIt->second != nullptr) {
+                cbIt->second(activeWindow);
+            } else if (activeWindow) {
+                activeWindow->onMenuActivated(id);
+            }
         }
     }
     return (it != nil ? ItemFound::kYes : ItemFound::kNo);

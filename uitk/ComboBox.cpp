@@ -78,7 +78,7 @@ ComboBox* ComboBox::addItem(const std::string& text, int value /*= 0*/)
     auto id = mImpl->nextId++;
     int idx = int(mImpl->items.size());
     mImpl->items.push_back({id, value});
-    mImpl->menu->addItem(text, id, [this, idx]() {
+    mImpl->menu->addItem(text, id, [this, idx](Window*) {
         setSelectedIndex(idx);
         if (mImpl->onSelectionChanged) {
             mImpl->onSelectionChanged(this);
@@ -96,7 +96,7 @@ ComboBox* ComboBox::addItem(CellWidget *item, int value /*= 0*/)
     auto id = mImpl->nextId++;
     int idx = int(mImpl->items.size());
     mImpl->items.push_back({id, value});
-    mImpl->menu->addItem(item, id, [this, idx]() {
+    mImpl->menu->addItem(item, id, [this, idx](Window*) {
         setSelectedIndex(idx);
         if (mImpl->onSelectionChanged) {
             mImpl->onSelectionChanged(this);

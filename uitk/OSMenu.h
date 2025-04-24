@@ -55,12 +55,14 @@ public:
     /// Returns the number of items in this menu; does not include items
     /// in submenus.
     virtual int size() const = 0;
-    virtual void addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut) = 0;
+    virtual void addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut,
+                         std::function<void(Window*)> onClicked = nullptr) = 0;
     /// Takes ownership of menu
     virtual void addMenu(const std::string& text, Menu *menu) = 0;
     virtual void addSeparator() = 0;
 
-    virtual void insertItem(int index, const std::string& text, MenuId id, const ShortcutKey& shortcut) = 0;
+    virtual void insertItem(int index, const std::string& text, MenuId id, const ShortcutKey& shortcut,
+                            std::function<void(Window*)> onClicked = nullptr) = 0;
     /// Takes ownership of menu
     virtual void insertMenu(int index, const std::string& text, Menu *menu) = 0;
     virtual void insertSeparator(int index) = 0;

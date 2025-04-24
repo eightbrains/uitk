@@ -47,17 +47,19 @@ public:
     /// Adds item with the given string. When using native menus on Windows, an underscore
     /// marks the key navigation for the menu item; on all other platform underscores are
     /// removed.
-    void addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut) override;
+    void addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut,
+                 std::function<void(Window*)> onSelected = nullptr) override;
 
     /// Adds an item with a callback function this is called when the item is clicked.
     /// This should only be used for popup menus.
-    void addItem(const std::string& text, MenuId id, std::function<void()> onSelected);
+    void addItem(const std::string& text, MenuId id, std::function<void(Window*)> onSelected);
     /// Adds a custom item to the text area of a menu. Takes ownership of the pointer.
     /// This should only be used for popup menus.
-    void addItem(CellWidget *item, MenuId id, const ShortcutKey& shortcut);
+    void addItem(CellWidget *item, MenuId id, const ShortcutKey& shortcut,
+                 std::function<void(Window*)> onSelected);
     /// Adds a custom item to the text area of a menu. Takes ownership of the pointer.
     /// This should only be used for popup menus.
-    void addItem(CellWidget *item, MenuId id, std::function<void()> onSelected);
+    void addItem(CellWidget *item, MenuId id, std::function<void(Window*)> onSelected);
 
     /// Takes ownership of menu.
     void addMenu(const std::string& text, Menu *menu) override;
@@ -67,10 +69,11 @@ public:
     /// an underscore marks the key navigation for the menu item; on all other platform
     /// underscores are removed.
     void insertItem(int index, const std::string& text, MenuId id,
-                    const ShortcutKey& shortcut) override;
+                    const ShortcutKey& shortcut,
+                    std::function<void(Window*)> onSelected = nullptr) override;
     /// Inserts an item with a callback function at the index.
     /// This should only be used for popup menus.
-    void insertItem(int index, const std::string& text, MenuId id, std::function<void()> onSelected);
+    void insertItem(int index, const std::string& text, MenuId id, std::function<void(Window*)> onSelected);
     /// Takes ownership of menu.
     void insertMenu(int index, const std::string& text, Menu *menu) override;
     void insertSeparator(int index) override;

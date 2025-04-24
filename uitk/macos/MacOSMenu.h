@@ -35,11 +35,13 @@ public:
 
     void clear() override;
     int size() const override;
-    void addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut) override;
+    void addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut,
+                 std::function<void(Window*)> onClicked) override;
     void addMenu(const std::string& text, Menu *menu) override;
     void addSeparator() override;
 
-    void insertItem(int index, const std::string& text, MenuId id, const ShortcutKey& shortcut) override;
+    void insertItem(int index, const std::string& text, MenuId id, const ShortcutKey& shortcut,
+                    std::function<void(Window*)> onClicked) override;
     void insertMenu(int index, const std::string& text, Menu *menu) override;
     void insertSeparator(int index) override;
 
