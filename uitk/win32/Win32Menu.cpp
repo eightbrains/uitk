@@ -56,6 +56,7 @@ struct Win32Menu::Impl
 		MenuId id;
 		std::string text;
 		ShortcutKey shortcut;
+		std::function<void(Window*)> onSelected;
 		std::unique_ptr<Menu> submenu;
 		bool checked = false;
 		bool enabled = true;
@@ -143,9 +144,10 @@ void Win32Menu::clear()
 int Win32Menu::size() const { return int(mImpl->items.size()); }
 
 
-void Win32Menu::addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut)
+void Win32Menu::addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut,
+						std::function<void(Window*)> onSelected /*= nullptr*/)
 {
-	insertItem(int(mImpl->items.size()), text, id, shortcut);
+	insertItem(int(mImpl->items.size()), text, id, shortcut, onSelected);
 }
 
 void Win32Menu::addMenu(const std::string& text, Menu* menu)
@@ -158,10 +160,11 @@ void Win32Menu::addSeparator()
 	insertSeparator(int(mImpl->items.size()));
 }
 
-void Win32Menu::insertItem(int index, const std::string& text, MenuId id, const ShortcutKey& shortcut)
+void Win32Menu::insertItem(int index, const std::string& text, MenuId id, const ShortcutKey& shortcut,
+						   std::function<void(Window*)> onSelected /*= nullptr*/)
 {
 	index = std::min(index, int(mImpl->items.size()));
-	mImpl->items.insert(mImpl->items.begin() + index, new Impl::MenuItem{ id, text, shortcut });
+	mImpl->items.insert(mImpl->items.begin() + index, new Impl::MenuItem{ id, text, shortcut, onSelected });
 	updateMenubars();
 	// Windows has keyboard accelerators, but it does not really offer us any benefit,
 	// since they make us create an accelerator table and add each key, so we might
@@ -173,7 +176,7 @@ void Win32Menu::insertMenu(int index, const std::string& text, Menu* menu)
 {
 	index = std::min(index, int(mImpl->items.size()));
 	mImpl->items.insert(mImpl->items.begin() + index,
-						new Impl::MenuItem{ kInvalidId, text, ShortcutKey(), std::unique_ptr<Menu>(menu) });
+						new Impl::MenuItem{ kInvalidId, text, ShortcutKey(), nullptr, std::unique_ptr<Menu>(menu) });
 	updateMenubars();
 }
 
@@ -328,7 +331,9 @@ OSMenu::ItemFound Win32Menu::activateItem(MenuId id, Window* activeWindow) const
 		if (!item->enabled) {
 			return ItemFound::kDisabled;
 		}
-		if (activeWindow) {
+		if (item->onSelected) {
+			item->onSelected(activeWindow);
+		} else if (activeWindow) {
 			activeWindow->onMenuActivated(id);
 		}
 		return ItemFound::kYes;
