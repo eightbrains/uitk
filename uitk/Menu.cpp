@@ -81,9 +81,10 @@ void Menu::clear()
     mImpl->menu->clear();
 }
 
-Menu* Menu::addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut)
+Menu* Menu::addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut,
+                    std::function<void(Window*)> onClicked)
 {
-    mImpl->menu->addItem(text, id, shortcut);
+    mImpl->menu->addItem(text, id, shortcut, onClicked);
     return this;
 }
 
@@ -101,9 +102,10 @@ Menu* Menu::addSeparator()
     return this;
 }
 
-Menu* Menu::insertItem(int index, const std::string& text, MenuId id, const ShortcutKey& shortcut)
+Menu* Menu::insertItem(int index, const std::string& text, MenuId id, const ShortcutKey& shortcut,
+                       std::function<void(Window*)> onClicked)
 {
-    mImpl->menu->insertItem(index, text, id, shortcut);
+    mImpl->menu->insertItem(index, text, id, shortcut, onClicked);
     return this;
 }
 

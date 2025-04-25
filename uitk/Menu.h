@@ -32,6 +32,7 @@ namespace uitk {
 
 struct KeyEvent;
 class MenuUITK;
+class Window;
 
 /// This is passed to the callback given to Window::setOnMenuItemNeedsUpdate()
 /// Design notes: ideally this would be Menu::Item, but it is not possible to
@@ -57,7 +58,10 @@ public:
 /// on Window; use Window::setOnMenuActivated() FOR EACH WINDOW to set a
 /// callback that for each menu items. This callback is also triggered if
 /// the menu item's shortcut key is pressed; the shortcut is exactly like
-/// clicking through the menus.
+/// clicking through the menus. Items that are relevant if there is no
+/// window (macOS), for example, New, or Preferences should use the callback
+/// function. (One can always use the callback function, but then you have
+/// to dispatch yourself from the active window that is provided.)
 /// - To set an item dis/en-abled or (un)checked, set Window's
 /// onMenuItemNeedsUpdate callback with Window::setOnMenuItemNeedsUpdate().
 /// Like macOS, but unlike Windows and Linux, a menu is the same for all
@@ -72,38 +76,40 @@ public:
 /// <i>state</i> and can only be changed from the onMenuItemNeedsUpdate
 /// callback.
 ///
-/// Design notes:
-/// Q: Why not register a callback with each menu item instead of this
-///    onMenuActivated callback?
-/// A: This gets inconvenient in the case where there are multiple windows:
-///    how does the callback know what object it should be operating on?
-///    The best it can know is the Window, but then it will need to look
-///    up the object from a Window -> object mapping.
-/// Q: Why not use something like QAction, then?
-/// A: We dislike spooky action at a distance: it is hard to debug, and it
-///    it is hard to reason about at the destination code (when is this
-///    code called?). You would still need to register a different Action
-///    per Window anyway.
-/// Q: Why enforce macOS' global menubar on all the other operating systems?
-/// A: Support needs to be there for macOS, and it is very rare that two
-///    main windows of an application need different menus. For that case,
-///    you can override Window::onMenuWillShow() and change out the menus.
-/// Q: Having to case out in the onMenuItemNeedsUpdate seems kind of clunky.
-/// A: The original design was to call e.g. Menu::setItemChecked(itemId) as
-///    necessary in an onMenuWillShow() callback. However, that involves a
-///    linear search through the menu hierarchy for each call to
-///    setItemChecked() and setItemEnabled(), which would be O(n^2) in the
-///    worst case. Not great if your menus include a list of 100 fonts,
-///    or 195 countries, or different language/encoding settings (such as
-///    is in a web browser), and the natural approach for, say a list of
-///    fonts, would be to iterate over all the items and set unchecked
-///    unless that font is current; this would be an instant O(100^2).
-///    The menu could keep a id -> item mapping, but updating that is error
-///    prone and clunky itself. Cocoa/NextStep (macOS) has been doing it
-///    this way for decades, and it at least is a simple and understandable
-///    approach. It also is simple to explain what goes on underneath--the
-///    callback gets called for each menu item before a menu is shown--which
-///    means it is easy to for people to understand.
+// Design notes:
+// Q: Why not register a callback with each menu item instead of this
+//    onMenuActivated callback?
+// A: This gets inconvenient in the case where there are multiple windows:
+//    how does the callback know what object it should be operating on?
+//    The best it can know is the Window, but then it will need to look
+//    up the object from a Window -> object mapping. We had to add the
+//    callback, anyway, since macOS might have no window but things like
+//    New, Open, and Quit should still work.
+// Q: Why not use something like QAction, then?
+// A: We dislike spooky action at a distance: it is hard to debug, and it
+//    it is hard to reason about at the destination code (when is this
+//    code called?). You would still need to register a different Action
+//    per Window anyway.
+// Q: Why enforce macOS' global menubar on all the other operating systems?
+// A: Support needs to be there for macOS, and it is very rare that two
+//    main windows of an application need different menus. For that case,
+//    you can override Window::onMenuWillShow() and change out the menus.
+// Q: Having to case out in the onMenuItemNeedsUpdate seems kind of clunky.
+// A: The original design was to call e.g. Menu::setItemChecked(itemId) as
+//    necessary in an onMenuWillShow() callback. However, that involves a
+//    linear search through the menu hierarchy for each call to
+//    setItemChecked() and setItemEnabled(), which would be O(n^2) in the
+//    worst case. Not great if your menus include a list of 100 fonts,
+//    or 195 countries, or different language/encoding settings (such as
+//    is in a web browser), and the natural approach for, say a list of
+//    fonts, would be to iterate over all the items and set unchecked
+//    unless that font is current; this would be an instant O(100^2).
+//    The menu could keep a id -> item mapping, but updating that is error
+//    prone and clunky itself. Cocoa/NextStep (macOS) has been doing it
+//    this way for decades, and it at least is a simple and understandable
+//    approach. It also is simple to explain what goes on underneath--the
+//    callback gets called for each menu item before a menu is shown--which
+//    means it is easy to for people to understand.
 class Menu
 {
     friend class Menubar;
@@ -113,22 +119,35 @@ public:
     static MenuId kInvalidId;
 
     Menu();
+    Menu(const Menu& src) = delete;
     virtual ~Menu();
 
     int size() const;
     void clear();
-    /// Adds item with the given string. When using native menus on Windows, an ampersand
-    /// marks the key navigation for the menu item; on all other platform ampersands are
-    /// removed.
-    Menu* addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut);
+    /// Adds item with the given string. When using native menus on Windows, an
+    /// ampersand marks the key navigation for the menu item; on all other
+    /// platform ampersands are removed. If provided, the callback is called with
+    /// the active window, otherwise the active window's onMenuActivated() method
+    /// will be called. On macOS applications, can be running with no active
+    /// windows, but some menu items are still application, such as New and Open.
+    /// If the item is usable without a window, it should use a callback so that
+    /// macOS works as expected.
+    Menu* addItem(const std::string& text, MenuId id, const ShortcutKey& shortcut,
+                  std::function<void(Window*)> onClicked = nullptr);
     /// Takes ownership of menu
     Menu* addMenu(const std::string& text, Menu *menu);
     Menu* addSeparator();
 
-    /// Inserts item with the given string at the index. When using native menus on Windows,
-    /// an ampersand marks the key navigation for the menu item; on all other platform
-    /// ampersands are removed.
-    Menu* insertItem(int index, const std::string& text, MenuId id, const ShortcutKey& shortcut);
+    /// Inserts item with the given string at the index. When using native
+    /// menus on Windows, an ampersand marks the key navigation for the menu
+    /// item; on all other platform ampersands are removed. If provided, the
+    /// callback is called with the active window, otherwise the active window's
+    /// onMenuActivated() method will be called. On macOS applications, can be
+    /// running with no active windows, but some menu items are still application,
+    /// such as New and Open. If the item is usable without a window, it should
+    /// use a callback so that macOS works as expected.
+    Menu* insertItem(int index, const std::string& text, MenuId id, const ShortcutKey& shortcut,
+                     std::function<void(Window*)> onClicked = nullptr);
     /// Takes ownership of menu
     Menu* insertMenu(int index, const std::string& text, Menu *menu);
     Menu* insertSeparator(int index);

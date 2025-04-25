@@ -1123,7 +1123,7 @@ LRESULT CALLBACK UITKWndProc(HWND hwnd, UINT message,
             // and it does not work for submenus, so that is not an option.
             if (HIWORD(wParam) == 0 ||  // user clicked on a menu
                 HIWORD(wParam) == 1) {  // user pressed accelerator key
-                w->onMenuActivated(MenuId(LOWORD(wParam)));
+                Application::instance().menubar().activateItemId(LOWORD(wParam));
                 return 0;  // return 0: handled
             }
             // This is a control message. Not sure if we need to pass to

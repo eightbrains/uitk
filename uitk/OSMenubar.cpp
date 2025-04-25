@@ -79,6 +79,8 @@ void OSMenubar::addStandardItems(Menu **file, Menu **edit, Menu **window, Menu *
         }
     };
 
+    auto quitCallback = [](Window *) { Application::instance().quit(); };
+
 #if defined(__APPLE__)
     Menu *app = macosApplicationMenu();
     int idx = 0;
@@ -253,7 +255,9 @@ void OSMenubar::addStandardItem(Menu *menu, StandardItem item, int index)
                              ShortcutKey(KeyModifier::kAlt, Key::kF4));
 #elif defined(__APPLE__)
             menu->insertItem(index, "Quit " + Application::instance().applicationName(), MenuId(item),
-                             ShortcutKey(KeyModifier::kCtrl, Key::kQ));
+                             ShortcutKey(KeyModifier::kCtrl, Key::kQ),
+                             // use callback, so will work when there is no window
+                             [](Window *) { Application::instance().quit(); });
 #else
             menu->insertItem(index, "Quit", MenuId(item), ShortcutKey(KeyModifier::kCtrl, Key::kQ));
 #endif
