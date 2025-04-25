@@ -95,6 +95,7 @@ static const MenuId kMenuIdPrint = 3;
 static const MenuId kMenuIdDisabled = 10;
 static const MenuId kMenuIdCheckable = 11;
 static const MenuId kMenuIdAddItem = 12;
+static const MenuId kMenuIdDirectCallback = 13;
 static const MenuId kMenuIdAlpha = 30;
 static const MenuId kMenuIdBeta = 31;
 static const MenuId kMenuIdToggleAlpha = 32;
@@ -420,7 +421,9 @@ int main(int argc, char *argv[])
             ->addMenu("Submenu", submenu)
             ->addMenu("Submenu 2", submenu2)
             ->addSeparator()
-            ->addItem("Add Item to Menu", kMenuIdAddItem, ShortcutKey::kNone);
+            ->addItem("Add Item to Menu", kMenuIdAddItem, ShortcutKey::kNone)
+            ->addItem("Direct callback", kMenuIdDirectCallback, ShortcutKey::kNone,
+                      [](Window *w) { Dialog::showAlert(w, "Test", "Test >> Direct callback menu item activated", ""); });
     auto *emptyMenu =
         app.menubar().newMenu("Empty");
     auto *windowMenu =
