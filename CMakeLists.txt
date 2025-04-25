@@ -37,4 +37,5 @@ endif()
 # ---- UITK ----
 add_subdirectory(uitk)  # library
 add_subdirectory(tests)
+add_Subdirectory(tools)
 add_Subdirectory(examples)

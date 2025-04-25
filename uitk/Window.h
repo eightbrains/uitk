@@ -248,6 +248,7 @@ public:
     /// considered to be incorrect, as it may have been set for a different
     /// window.
     /// The usual pattern for the callback is:
+    /// <pre>
     ///   void itemNeedsUpdate(Menu::Item& item) {
     ///     switch (item.id()) {
     ///       case Feature1ActionItemId:
@@ -259,7 +260,7 @@ public:
     ///       default:
     ///         break;  // these items will always be enabled and unchecked
     ///     }
-    ///   }
+    ///   }</pre>
     void setOnMenuItemNeedsUpdate(std::function<void(MenuItem&)> onNeedsUpdate);
 
     /// Sets the callback when a menu item is activated/selected.
@@ -303,12 +304,13 @@ public:
     /// Returns the active popup window, or nullptr
     IPopupWindow* popupWindow() const;
 
-    // Takes ownership of the dialog and displays modal to this window,
-    // returning true. If a dialog is already displaying, returns false and does
-    // not take ownership. This is for use in implementing dialogs; use
-    // Dialog::showModal() instead.
+    /// Takes ownership of the dialog and displays modal to this window,
+    /// returning true. If a dialog is already displaying, returns false and does
+    /// not take ownership. This is for use in implementing dialogs; use
+    /// Dialog::showModal() instead.
     bool beginModalDialog(Dialog *d);
-    // Ends display of the dialog and returns ownership to the caller.
+    /// Ends display of the dialog from beginModalDialog() and returns
+    /// ownership to the caller.
     Dialog* endModalDialog();
 
     void onResize(const DrawContext& dc) override;
