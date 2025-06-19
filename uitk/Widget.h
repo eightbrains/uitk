@@ -228,6 +228,12 @@ public:
 
     enum class EventResult { kIgnored, kConsumed };
 
+    /// 'p' is in local coordinates. Returns true if point is in widget,
+    /// false otherwise. The default implementation is simply
+    /// `frame().contains(p)`, but if a widget is irregularly shaped it
+    /// can override this to do more specific testing.
+    virtual bool hitTest(const Point& p);
+
     virtual EventResult mouse(const MouseEvent& e);
     virtual void mouseEntered();
     virtual void mouseExited();

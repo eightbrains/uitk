@@ -620,6 +620,11 @@ void Widget::layout(const LayoutContext& context)
     }
 }
 
+bool Widget::hitTest(const Point& p)
+{
+    return frame().contains(p + frame().upperLeft());
+}
+
 Widget::EventResult Widget::mouse(const MouseEvent& e)
 {
     if (!enabled()) {
@@ -690,7 +695,9 @@ Widget::EventResult Widget::mouseChild(const MouseEvent& e, Widget *child, Event
         return result;
     }
 
-    if (child->frame().contains(e.pos)) {
+    auto childE = e;
+    childE.pos -= child->frame().upperLeft();
+    if (child->hitTest(childE.pos)) {
         // Mouse is in child, check if we just entered
         switch (e.type) {
             case MouseEvent::Type::kMove:
@@ -712,8 +719,6 @@ Widget::EventResult Widget::mouseChild(const MouseEvent& e, Widget *child, Event
         // Send the event to the child if an earlier widget has not already
         // consumed this event.
         if (result != EventResult::kConsumed) {
-            auto childE = e;
-            childE.pos -= child->frame().upperLeft();
             if (child->mouse(childE) == EventResult::kConsumed) {
                 result = EventResult::kConsumed;
                 // When to grab the mouse is a bit tricky. We want grabbing to be fairly

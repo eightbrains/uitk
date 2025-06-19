@@ -1270,7 +1270,7 @@ void Window::onMouse(const MouseEvent& eOrig)
         auto *grabbed = mImpl->grabbedWidget;
         auto grabE = e;  // copy
         grabE.pos = grabbed->convertToLocalFromWindow(eOrig.pos);
-        if (grabbed->bounds().contains(grabE.pos)) {
+        if (grabbed->hitTest(grabE.pos)) {
             // If we are inside the widget, we should send the event normally.
             // This handles two cases:
             //   1) the user dragged outside the widget and is now back in,
