@@ -42,9 +42,10 @@ struct LayoutContext
     /// if the width is constrained. Note that these are not necessarily set
     /// in Widget::layout(), which should use Widget::bounds() to retrieve
     /// sizes.
+    static constexpr PicaPt kUnconstrained = PicaPt::fromPixels(100000.0f, 72.0f);
     struct {
-        PicaPt width = PicaPt::fromPixels(32000.0f, 72.0f);
-        PicaPt height = PicaPt::fromPixels(32000.0f, 72.0f);
+        PicaPt width = kUnconstrained;
+        PicaPt height = kUnconstrained;
     } constraints;
 
     LayoutContext withWidth(const PicaPt& w) const {
