@@ -49,7 +49,7 @@ Size getRequestedSize(Widget *w, const LayoutContext& context)
 enum class FitMajorAxis { kNo = 0, kYes, kYesIfPositive };
 std::vector<PicaPt> calcSizes(Dir dir, const PicaPt& majorAxisSize,
                               const PicaPt& onePx, const std::vector<PicaPt>& sizes,
-                              PicaPt& spacing, FitMajorAxis fit)
+                              const PicaPt& spacing, FitMajorAxis fit)
 {
     auto totalSize = majorAxisSize - spacing * float(std::max(size_t(0), sizes.size() - size_t(1)));
 
@@ -593,11 +593,114 @@ struct GridLayout::Impl
         }
 
         for (auto &c : *colSizes) {
-            c = context.dc.roundToNearestPixel(c);
+            c = context.dc.ceilToNearestPixel(c);
         }
         for (auto &r : *rowSizes) {
-            r = context.dc.roundToNearestPixel(r);
+            r = context.dc.ceilToNearestPixel(r);
         }
+    }
+
+    std::vector<std::vector<Rect>> calcFrames(const LayoutContext& context, const Size& contentSize,
+                                              const PicaPt& spacing, int alignment)
+    {
+        std::vector<std::vector<Rect>> frames;
+        frames.reserve(this->rows.size());
+        for (auto &r : this->rows) {
+            frames.push_back({});
+            frames.back().resize(r.size());
+        }
+
+        std::vector<PicaPt> colSizes;
+        std::vector<PicaPt> rowSizes;
+        this->calcPreferredRowColSize(context, &colSizes, &rowSizes);
+        auto w = contentSize.width;
+        if (w == PicaPt::kZero && !colSizes.empty()) {
+            for (auto &cz : colSizes) {
+                w += cz;
+            }
+            w += spacing * int(colSizes.size() - 1);
+        }
+
+        Rect rect(PicaPt::kZero, PicaPt::kZero, std::min(w, context.constraints.width), contentSize.height);
+        colSizes = calcSizes(Dir::kHoriz, rect.width, context.dc.onePixel(), colSizes, spacing,
+                             (this->expandToWidth ? FitMajorAxis::kYesIfPositive : FitMajorAxis::kNo));
+        // Recalc rows, in case column widths change that
+        std::vector<std::vector<Size>> prefsConstrained;
+        prefsConstrained.reserve(this->rows.size());
+        for (size_t r = 0;  r < this->rows.size();  ++r) {
+            auto &row = this->rows[r];
+            prefsConstrained.push_back({});
+            prefsConstrained.reserve(row.size());
+            auto h = PicaPt::kZero;
+            for (size_t c = 0;  c < row.size();  ++c) {
+                if (row[c]) {
+                    auto pref = row[c]->preferredSize(context.withWidth(colSizes[c]));
+                    h = std::max(h, context.dc.ceilToNearestPixel(pref.height));
+                    prefsConstrained[r].push_back(pref);
+                }
+            }
+            rowSizes[r] = std::max(rowSizes[r], h);
+        }
+        if (rect.height == PicaPt::kZero) {
+            for (auto &cz : rowSizes) {
+                rect.height += cz;
+            }
+        }
+        rowSizes = calcSizes(Dir::kVert, rect.height, context.dc.onePixel(), rowSizes, spacing,
+                             (this->expandToHeight ? FitMajorAxis::kYesIfPositive : FitMajorAxis::kNo));
+
+        int halign = (alignment & Alignment::kHorizMask);
+        int valign = (alignment & Alignment::kVertMask);
+
+        auto y = rect.y;
+        for (size_t r = 0;  r < this->rows.size();  ++r) {
+            auto &row = this->rows[r];
+            auto x = rect.x;
+            for (size_t c = 0;  c < row.size();  ++c) {
+                Rect f(x, y, colSizes[c], rowSizes[r]);
+                if (row[c]) {
+                    Size pref = ((halign || valign) ? getRequestedSize(row[c], context) : Size::kZero);
+                    if (pref.width > colSizes[c]) {
+                        pref = prefsConstrained[r][c];
+                    }
+                    if (halign == 0) {
+                        ; // nothing to do, but be clear about that
+                    } else {
+                        if (pref.width < f.width) {
+                            if (halign & Alignment::kLeft) {
+                                f.width = context.dc.roundToNearestPixel(pref.width);
+                            } else if (halign & Alignment::kHCenter) {
+                                f.x = context.dc.roundToNearestPixel(f.midX() - 0.5f * pref.width);
+                                f.width = context.dc.roundToNearestPixel(pref.width);
+                            } else if (halign & Alignment::kRight) {
+                                f.x = context.dc.roundToNearestPixel(f.maxX()) - context.dc.roundToNearestPixel(pref.width);
+                                f.width = context.dc.roundToNearestPixel(pref.width);
+                            }
+                        }
+                    }
+                    if (valign == 0) {
+                        ; // nothing to do, but be clear about that
+                    } else {
+                        if (pref.height < f.height) {
+                            if (valign & Alignment::kTop) {
+                                f.height = context.dc.roundToNearestPixel(pref.height);
+                            } else if (valign & Alignment::kVCenter) {
+                                f.y = context.dc.roundToNearestPixel(f.midY() - 0.5f * pref.height);
+                                f.height = context.dc.roundToNearestPixel(pref.height);
+                            } else if (valign & Alignment::kBottom) {
+                                f.y = context.dc.roundToNearestPixel(f.maxY()) - context.dc.roundToNearestPixel(pref.height);
+                                f.height = context.dc.roundToNearestPixel(pref.height);
+                            }
+                        }
+                    }
+                }
+                frames[r][c] = f;
+                x += colSizes[c] + spacing;
+            }
+            y += rowSizes[r] + spacing;
+        }
+
+        return frames;
     }
 };
 
@@ -661,19 +764,18 @@ Size GridLayout::preferredSize(const LayoutContext &context) const
         border = context.dc.roundToNearestPixel(borderWidth());
     }
 
-    std::vector<PicaPt> cols;
-    std::vector<PicaPt> rows;
-    mImpl->calcPreferredRowColSize(context, &cols, &rows);
+    Size pref;
+    auto frames = mImpl->calcFrames(context, Size::kZero, spacing, alignment());
+    if (!frames.empty() && !frames.back().empty()) {
+        pref.width = frames.back().back().maxX();
+        for (auto &f : frames.back()) {
+            pref.height = std::max(pref.height, f.maxY());
+        }
+    }
 
-    Size pref = Size::kZero;
-    for (auto &c : cols) {
-        pref.width += c;
-    }
-    for (auto &r : rows) {
-        pref.height += r;
-    }
-    pref.width += margins[0] + margins[2] + float(std::max(size_t(0), cols.size() - size_t(1))) * spacing + 2.0f * border;
-    pref.height += margins[1] + margins[3] + float(std::max(size_t(0), rows.size() - size_t(1))) * spacing + 2.0f * border;
+    pref.width += margins[0] + margins[2] + 2.0f * border;
+    pref.height += margins[1] + margins[3] + 2.0f * border;
+
     return pref;
 }
 
@@ -687,66 +789,23 @@ void GridLayout::layout(const LayoutContext& context)
         border = context.dc.roundToNearestPixel(borderWidth());
     }
 
-    std::vector<PicaPt> cols;
-    std::vector<PicaPt> rows;
-    mImpl->calcPreferredRowColSize(context, &cols, &rows);
+    int nCols = 0;
+    for (size_t r = 0;  r < mImpl->rows.size();  ++r) {
+        nCols = std::max(nCols, int(mImpl->rows[r].size()));
+    }
 
-    auto rect = bounds();
-    rect = Rect(rect.x + margins[0] + border,
-                rect.y + margins[1] + border,
-                rect.width - margins[0] - margins[2] - 2.0f * border,
-                rect.height - margins[1] - margins[3] - 2.0f * border);
-    cols = calcSizes(Dir::kHoriz, rect.width, context.dc.onePixel(), cols, spacing,
-                     (mImpl->expandToWidth ? FitMajorAxis::kYesIfPositive : FitMajorAxis::kNo));
-    rows = calcSizes(Dir::kVert, rect.height, context.dc.onePixel(), rows, spacing,
-                     (mImpl->expandToHeight ? FitMajorAxis::kYesIfPositive : FitMajorAxis::kNo));
-
-    int halign = (alignment() & Alignment::kHorizMask);
-    int valign = (alignment() & Alignment::kVertMask);
-
-    auto y = rect.y;
+    auto size = bounds().size();
+    size.width -= margins[0] + margins[2] + 2.0f * border;
+    size.height -= margins[1] + margins[3] + 2.0f * border;
+    auto frames = mImpl->calcFrames(context.withWidth(size.width), size, spacing, alignment());
     for (size_t r = 0;  r < mImpl->rows.size();  ++r) {
         auto &row = mImpl->rows[r];
-        auto x = rect.x;
         for (size_t c = 0;  c < row.size();  ++c) {
             if (row[c]) {
-                Size pref = ((halign || valign) ? getRequestedSize(row[c], context) : Size::kZero);
-                Rect f(x, y, cols[c], rows[r]);
-                if (halign == 0) {
-                    ; // nothing to do, but be clear about that
-                } else {
-                    if (pref.width < f.width) {
-                        if (halign & Alignment::kLeft) {
-                            f.width = context.dc.roundToNearestPixel(pref.width);
-                        } else if (halign & Alignment::kHCenter) {
-                            f.x = context.dc.roundToNearestPixel(f.midX() - 0.5f * pref.width);
-                            f.width = context.dc.roundToNearestPixel(pref.width);
-                        } else if (halign & Alignment::kRight) {
-                            f.x = context.dc.roundToNearestPixel(f.maxX()) - context.dc.roundToNearestPixel(pref.width);
-                            f.width = context.dc.roundToNearestPixel(pref.width);
-                        }
-                    }
-                }
-                if (valign == 0) {
-                    ; // nothing to do, but be clear about that
-                } else {
-                    if (pref.height < f.height) {
-                        if (valign & Alignment::kTop) {
-                            f.height = context.dc.roundToNearestPixel(pref.height);
-                        } else if (valign & Alignment::kVCenter) {
-                            f.y = context.dc.roundToNearestPixel(f.midY() - 0.5f * pref.height);
-                            f.height = context.dc.roundToNearestPixel(pref.height);
-                        } else if (valign & Alignment::kBottom) {
-                            f.y = context.dc.roundToNearestPixel(f.maxY()) - context.dc.roundToNearestPixel(pref.height);
-                            f.height = context.dc.roundToNearestPixel(pref.height);
-                        }
-                    }
-                }
-                row[c]->setFrame(f);
+                frames[r][c].translate(margins[0] + border, margins[1] + border);
+                row[c]->setFrame(frames[r][c]);
             }
-            x += cols[c] + spacing;
         }
-        y += rows[r] + spacing;
     }
 
     Super::layout(context);
